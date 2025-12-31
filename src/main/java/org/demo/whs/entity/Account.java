@@ -1,21 +1,29 @@
 package org.demo.whs.entity;
 
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import lombok.*;
 import org.demo.whs.entity.enums.AccountStatus;
 
+@Entity
+@Table(name = "accounts")
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class Account extends BaseEntity {
-    @Column(unique = true, nullable = false)
+
+    @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false, length = 100)
     private String password;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "status",
+            nullable = false,
+            columnDefinition = "enum('ACTIVE','INACTIVE','SUSPENDED','DELETED')"
+    )
     private AccountStatus status;
 }

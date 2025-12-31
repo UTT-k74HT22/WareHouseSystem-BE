@@ -9,6 +9,7 @@ public enum ErrorCode {
     AUTH_001("AUTH_001", "Invalid credentials"),
     AUTH_002("AUTH_002", "User not found"),
     AUTH_003("AUTH_003", "Access denied"),
+    AUTH_004("AUTH_004", "Plese active your account"),
 
 
     // Common errors

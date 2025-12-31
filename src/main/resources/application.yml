@@ -55,7 +55,7 @@ spring:
   # RabbitMQ Configuration
   rabbitmq:
     host: localhost
-    port: 5672
+    port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_DEFAULT_USER}
     password: ${RABBITMQ_DEFAULT_PASS}
     listener:
@@ -72,17 +72,17 @@ spring:
         multiplier: 2
 
   # Mail Configuration (placeholder)
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:example@gmail.com}
-    password: ${MAIL_PASSWORD:your-email-password}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+#  mail:
+#    host: ${MAIL_HOST:smtp.gmail.com}
+#    port: ${MAIL_PORT:587}
+#    username: ${MAIL_USERNAME:example@gmail.com}
+#    password: ${MAIL_PASSWORD:your-email-password}
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
 
 # Server Configuration
 server:
@@ -116,7 +116,8 @@ logging:
 app:
   jwt:
     secret: ${JWT_SECRET:default_jwt_secret_key}
-    expiration: 86400000 # 24 hours in milliseconds
+    access-token-expiration: 3600s # 1 hour
+    refresh-token-expiration: 86400s # 24 hours
   cors:
     allowed-origins: http://localhost:3000,http://localhost:8080
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
