@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.response.BaseResponse;
+import org.demo.whs.exception.ErrorCode;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -41,8 +42,8 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
         BaseResponse<Void> errorResponse = BaseResponse.<Void>builder()
                 .success(false)
-                .errorCode("AUTH_403")
-                .message("You don't have permission to access this resource.")
+                .errorCode(ErrorCode.AUTH_003.getCode())
+                .message(ErrorCode.AUTH_003.getMessage())
                 .data(null)
                 .fieldErrors(null)
                 .timestamp(java.time.LocalDateTime.now())

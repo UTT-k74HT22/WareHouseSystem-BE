@@ -94,6 +94,21 @@ public class GlobalExceptionHandle {
     }
 
     /**
+     * Handle access denied exceptions
+     * @param ex the exception
+     * @return ResponseEntity with error response
+     */
+    @ExceptionHandler({
+            org.springframework.security.access.AccessDeniedException.class,
+            org.springframework.security.authorization.AuthorizationDeniedException.class
+    })
+    public ResponseEntity<BaseResponse<Void>> handleAccessDeniedException(Exception ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN) // Trả về 403
+                .body(BaseResponse.error(ErrorCode.AUTH_003.getCode(),  ErrorCode.AUTH_003.getMessage(), null));
+    }
+
+    /**
      * Handle unexpected exceptions
      * @param ex the exception
      * @return ResponseEntity with error response
