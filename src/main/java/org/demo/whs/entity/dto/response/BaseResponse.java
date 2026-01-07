@@ -22,6 +22,7 @@ public class BaseResponse<T> {
 
     private Boolean success;
     private String errorCode;
+    private String message;
     private T data;
     private List<FieldError> fieldErrors;
     private LocalDateTime timestamp;
@@ -30,16 +31,29 @@ public class BaseResponse<T> {
         return BaseResponse.<T>builder()
                 .success(true)
                 .errorCode(null)
+                .message("Success")
                 .data(data)
                 .fieldErrors(null)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static <T> BaseResponse<T> error(String errorCode, List<FieldError> fieldErrors) {
+    public static <T> BaseResponse<T> success(T data, String message) {
+        return BaseResponse.<T>builder()
+                .success(true)
+                .errorCode(null)
+                .message(message)
+                .data(data)
+                .fieldErrors(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static <T> BaseResponse<T> error(String errorCode, String message, List<FieldError> fieldErrors) {
         return BaseResponse.<T>builder()
                 .success(false)
                 .errorCode(errorCode)
+                .message(message)
                 .data(null)
                 .fieldErrors(fieldErrors)
                 .timestamp(LocalDateTime.now())

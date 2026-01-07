@@ -6,16 +6,22 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ErrorCode {
-    AUTH_001("AUTH_001", "Invalid credentials"),
+    // Authentication errors
+    AUTH_001("AUTH_001", "Invalid username or password"),
     AUTH_002("AUTH_002", "User not found"),
-    AUTH_003("AUTH_003", "Access denied"),
-    AUTH_004("AUTH_004", "Plese active your account"),
-
+    AUTH_003("AUTH_003", "Access denied - insufficient permissions"),
+    AUTH_004("AUTH_004", "Please activate your account before logging in"),
+    AUTH_005("AUTH_005", "Invalid or expired token"),
+    AUTH_006("AUTH_006", "Refresh token is invalid or expired"),
+    AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
+    AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
 
     // Common errors
-    COM_001("COM_001", "Validation error"),
-    COM_002("COM_002", "Internal server error"),
-    COM_003("COM_003", "Bad request");
+    COM_001("COM_001", "Validation error - please check your input"),
+    COM_002("COM_002", "Internal server error - please contact support"),
+    COM_003("COM_003", "Bad request - malformed JSON or invalid data format"),
+    COM_004("COM_004", "Resource not found"),
+    COM_005("COM_005", "Duplicate entry - resource already exists");
 
     private final String code;
     private final String message;

@@ -1,7 +1,9 @@
 package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.LoginRequest;
+import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
+import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 
 /**
  * Service Interface for managing authentication and authorization.
@@ -16,4 +18,11 @@ public interface AuthService {
      */
     AuthResponse authenticate(LoginRequest request);
 
+    /**
+     * Refreshes the access token using a valid refresh token.
+     *
+     * @param request the refresh token request
+     * @return a new access token and its expiration
+     */
+    RefreshTokenResponse refreshToken(RefreshTokenRequest request);
 }

@@ -2,6 +2,8 @@ package org.demo.whs.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +27,34 @@ public class JwtProvider {
     private Duration refreshExpiration;
     @Value("${app.jwt.issuer:whs-api}")
     private String issuer;
+
+    /**
+     * Validate JWT configuration on startup
+     */
+    @PostConstruct
+    public void init() {
+        try {
+            // Decode and validate secret key
+            byte[] keyBytes = java.util.Base64.getDecoder().decode(secret);
+
+            // HS512 requires at least 512 bits (64 bytes)
+            if (keyBytes.length < 64) {
+                throw new IllegalArgumentException(
+                    "JWT secret key must be at least 512 bits (64 bytes) for HS512 algorithm. " +
+                    "Current size: " + (keyBytes.length * 8) + " bits"
+                );
+            }
+
+            log.info("JWT configuration validated successfully");
+            log.info("Access token expiration: {}", accessExpiration);
+            log.info("Refresh token expiration: {}", refreshExpiration);
+            log.info("JWT Issuer: {}", issuer);
+
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid JWT secret key configuration: {}", e.getMessage());
+            throw new IllegalStateException("JWT secret key configuration is invalid. Please check application.yml", e);
+        }
+    }
 
     /**
      * Tạo access token với thông tin account và roles
@@ -105,19 +135,19 @@ public class JwtProvider {
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token);
-            return true;
+            return false;
         } catch (MalformedJwtException e) {
-            log.error("Token không hợp lệ: {}", e.getMessage());
+            log.error("Invalid token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            log.error("Token đã hết hạn: {}", e.getMessage());
+            log.error("Token has expired: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            log.error("Token không được hỗ trợ: {}", e.getMessage());
+            log.error("Tokens are not supported: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.error("Token rỗng: {}", e.getMessage());
+            log.error("Empty tokens: {}", e.getMessage());
         } catch (SignatureException e) {
-            log.error("Chữ ký token không hợp lệ: {}", e.getMessage());
+            log.error("Invalid token signature: {}", e.getMessage());
         }
-        return false;
+        return true;
     }
 
     /**
