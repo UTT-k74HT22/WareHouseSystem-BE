@@ -20,10 +20,7 @@ public class Account extends BaseEntity {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(
-            name = "status",
-            nullable = false,
-            columnDefinition = "enum('ACTIVE','INACTIVE','SUSPENDED','DELETED')"
-    )
+    @Column(name = "status", nullable = false)
     private AccountStatus status;
 }
+

@@ -9,10 +9,14 @@ import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.exception.BadRequest;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.AccountRepository;
+import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.security.JwtProvider;
 import org.demo.whs.service.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+
 import static org.demo.whs.exception.ErrorCode.*;
 
 /**
@@ -24,6 +28,7 @@ import static org.demo.whs.exception.ErrorCode.*;
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
 
@@ -47,11 +52,20 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequest("User account is inactive", AUTH_004);
         }
 
-        String accessToken = jwtProvider.buildAccessToken(account);
-        String refreshToken = jwtProvider.buildRefreshToken(account.getUsername());
+        List<String> roles = roleRepository.findRoleNamesByUsername(account.getUsername());
+
+        String accessToken = jwtProvider.buildAccessToken(account, roles);
+        String refreshToken = jwtProvider.buildRefreshToken(account);
+        String expireAccessToken = jwtProvider.getExpirationAccessToken(accessToken);
+        String expireRefreshToken = jwtProvider.getExpirationRefreshToken(refreshToken);
+
+        log.info("User {} authenticated successfully", request.getUsername());
+
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .expireAccessToken(expireAccessToken)
+                .expireRefreshToken(expireRefreshToken)
                 .build();
     }
 }
