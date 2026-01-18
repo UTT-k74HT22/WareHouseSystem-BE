@@ -8,6 +8,7 @@ import org.demo.whs.annotation.RateLimit;
 import org.demo.whs.entity.enums.RateLimitType;
 import org.demo.whs.exception.RateLimitExceededException;
 import org.demo.whs.entity.dto.RateLimitDTO;
+import org.demo.whs.security.RateLimitFilter;
 import org.demo.whs.service.RateLimitService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 /**
  * Interceptor để kiểm tra rate limit trước khi request được xử lý
  * 
+ * @deprecated Sử dụng {@link RateLimitFilter} thay thế
+ * Lý do: Filter chạy TẠI CỔNG VÀO (trước Security Filter Chain),
+ * trong khi Interceptor chạy SAU controllers mapping
+ * 
  * Flow:
  * 1. Lấy annotation @RateLimit từ method hoặc class
  * 2. Xác định identifier dựa trên RateLimitType (IP, USER, API, GLOBAL)
@@ -25,6 +30,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 4. Nếu exceeded, throw RateLimitExceededException
  * 5. Nếu allowed, thêm rate limit headers vào response và cho phép request tiếp tục
  */
+@Deprecated(since = "2.0", forRemoval = true)
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -65,8 +71,10 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         log.debug("Rate limit check for endpoint: {}, type: {}, identifier: {}", 
             request.getRequestURI(), rateLimitAnnotation.type(), identifier);
         
-        // Check rate limit
-        RateLimitDTO rateLimitDTO = rateLimitService.checkRateLimit(rateLimitAnnotation, identifier);
+        // Check rate limit - using deprecated method signature
+        // NOTE: Using empty routeKey since interceptor doesn't have access to best matching pattern
+        String routeKey = request.getMethod() + ":" + request.getRequestURI();
+        RateLimitDTO rateLimitDTO = rateLimitService.checkRateLimit(rateLimitAnnotation, identifier, routeKey);
         
         // Thêm rate limit headers vào response
         addRateLimitHeaders(response, rateLimitDTO);

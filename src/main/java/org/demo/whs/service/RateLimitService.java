@@ -8,22 +8,22 @@ import org.demo.whs.entity.enums.RateLimitType;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Service xử lý logic rate limiting sử dụng Redis
  * 
- * Implementation sử dụng Sliding Window Counter algorithm với Redis
+ * Implementation sử dụng Sliding Window Counter algorithm với Redis + Lua script
  * - Key format: rate_limit:{type}:{key}:{identifier}
  * - Value: số lượng request đã thực hiện
  * - TTL: duration của rate limit window
  * 
- * Algorithm:
- * 1. Tạo key dựa trên type, key và identifier (IP/UserID)
- * 2. Increment counter trong Redis
- * 3. Set TTL nếu là lần đầu tiên
- * 4. Check nếu counter > limit thì reject request
+ * Improvements:
+ * 1. Lua script returns TTL để tránh extra round-trip
+ * 2. Hardened TTL logic - ALWAYS set expire, kể cả khi INCR fail
+ * 3. Proper fallback mode per endpoint (fail-open vs fail-closed)
+ * 4. Semantically correct retryAfter (chỉ khi 429)
  */
 @Slf4j
 @Service
@@ -35,103 +35,148 @@ public class RateLimitService {
     private static final String RATE_LIMIT_KEY_PREFIX = "rate_limit:";
     
     /**
-     * Lua script để thực hiện atomic increment và check limit
-     * Script này đảm bảo rằng việc increment và check là atomic
+     * Improved Lua script với hardened TTL và return TTL
      * 
      * KEYS[1]: Redis key
-     * ARGV[1]: limit
+     * ARGV[1]: limit (int)
      * ARGV[2]: duration (TTL in seconds)
      * 
-     * Return:
-     * - remaining count nếu allowed
-     * - -1 nếu rate limit exceeded
+     * Return array: {remaining, ttl}
+     * - remaining: số request còn lại (-1 nếu exceeded)
+     * - ttl: số giây còn lại của window (luôn > 0)
+     * 
+     * Hardened TTL logic:
+     * - Luôn EXPIRE sau INCR để tránh key tồn tại vĩnh viễn
+     * - Nếu key mới (INCR = 1), set TTL = duration
+     * - Nếu key cũ nhưng chưa có TTL (edge case), set TTL = duration
      */
     private static final String RATE_LIMIT_LUA_SCRIPT = 
-        "local current = redis.call('get', KEYS[1])\n" +
-        "if current and tonumber(current) >= tonumber(ARGV[1]) then\n" +
-        "    return -1\n" +
+        "local current = redis.call('GET', KEYS[1])\n" +
+        "local limit = tonumber(ARGV[1])\n" +
+        "local duration = tonumber(ARGV[2])\n" +
+        "\n" +
+        "-- Check if exceeded BEFORE increment\n" +
+        "if current and tonumber(current) >= limit then\n" +
+        "    local ttl = redis.call('TTL', KEYS[1])\n" +
+        "    if ttl < 0 then\n" +
+        "        -- Edge case: key exists but no TTL, fix it\n" +
+        "        redis.call('EXPIRE', KEYS[1], duration)\n" +
+        "        ttl = duration\n" +
+        "    end\n" +
+        "    return {-1, ttl}\n" +
         "end\n" +
-        "current = redis.call('incr', KEYS[1])\n" +
-        "if tonumber(current) == 1 then\n" +
-        "    redis.call('expire', KEYS[1], ARGV[2])\n" +
+        "\n" +
+        "-- Increment counter\n" +
+        "current = redis.call('INCR', KEYS[1])\n" +
+        "\n" +
+        "-- ALWAYS ensure TTL is set (hardened)\n" +
+        "local ttl = redis.call('TTL', KEYS[1])\n" +
+        "if ttl < 0 then\n" +
+        "    redis.call('EXPIRE', KEYS[1], duration)\n" +
+        "    ttl = duration\n" +
         "end\n" +
-        "return tonumber(ARGV[1]) - tonumber(current)";
+        "\n" +
+        "local remaining = limit - current\n" +
+        "return {remaining, ttl}";
     
     /**
      * Check xem request có được phép hay không dựa trên rate limit config
      * 
      * @param rateLimitAnnotation Annotation chứa config
      * @param identifier Identifier để phân biệt request (IP address hoặc username)
-     * @return RateLimitInfo chứa thông tin về rate limit state
+     * @param routeKey Route key (METHOD:pattern) để tránh cardinality explosion
+     * @return RateLimitDTO chứa thông tin về rate limit state
      */
-    public RateLimitDTO checkRateLimit(RateLimit rateLimitAnnotation, String identifier) {
-        String key = buildKey(rateLimitAnnotation.type(), rateLimitAnnotation.key(), identifier);
+    public RateLimitDTO checkRateLimit(RateLimit rateLimitAnnotation, String identifier, String routeKey) {
+        String key = buildKey(rateLimitAnnotation.type(), rateLimitAnnotation.key(), identifier, routeKey);
         int limit = rateLimitAnnotation.limit();
         int duration = rateLimitAnnotation.duration();
+        boolean failClosed = rateLimitAnnotation.failClosed();
         
-        log.debug("Checking rate limit for key: {}, limit: {}, duration: {}s", key, limit, duration);
+        log.debug("Checking rate limit for key: {}, limit: {}, duration: {}s, failClosed: {}", 
+            key, limit, duration, failClosed);
         
         try {
-            // Execute Lua script
-            DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+            // Execute Lua script - returns {remaining, ttl}
+            DefaultRedisScript<java.util.List> script = new DefaultRedisScript<>();
             script.setScriptText(RATE_LIMIT_LUA_SCRIPT);
-            script.setResultType(Long.class);
+            script.setResultType(java.util.List.class);
             
-            Long remaining = redisTemplate.execute(
+            java.util.List<Long> result = redisTemplate.execute(
                 script,
-                Collections.singletonList(key),
+                Arrays.asList(key),
                 limit,
                 duration
             );
             
-            if (remaining == null) {
-                log.error("Redis script returned null for key: {}", key);
-                // Fallback: allow request nếu Redis có vấn đề
-                return new RateLimitDTO(true, limit, 0, System.currentTimeMillis() / 1000 + duration, limit);
+            if (result == null || result.size() != 2) {
+                log.error("Redis script returned invalid result for key: {}, result: {}", key, result);
+                return handleRedisFallback(limit, duration, failClosed);
             }
             
-            // Nếu remaining = -1 nghĩa là rate limit exceeded
+            long remaining = result.get(0);
+            long ttl = result.get(1);
+            long now = System.currentTimeMillis() / 1000;
+            long resetTime = now + ttl;
+            
+            // Rate limit exceeded
             if (remaining == -1) {
-                Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
-                long retryAfter = ttl != null && ttl > 0 ? ttl : duration;
-                long resetTime = System.currentTimeMillis() / 1000 + retryAfter;
-                
-                log.warn("Rate limit exceeded for key: {}, retry after: {}s", key, retryAfter);
-                
-                return new RateLimitDTO(false, 0, retryAfter, resetTime, limit);
+                log.warn("Rate limit exceeded for key: {}, retry after: {}s", key, ttl);
+                return new RateLimitDTO(false, 0, limit, resetTime, ttl);
             }
             
-            // Request được phép
-            Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
-            long retryAfter = ttl != null && ttl > 0 ? ttl : duration;
-            long resetTime = System.currentTimeMillis() / 1000 + retryAfter;
-            
-            log.debug("Rate limit check passed for key: {}, remaining: {}", key, remaining);
-            
-            return new RateLimitDTO(true, remaining.intValue(), retryAfter, resetTime, limit);
+            // Request allowed
+            log.debug("Rate limit check passed for key: {}, remaining: {}, resetTime: {}", 
+                key, remaining, resetTime);
+            return new RateLimitDTO(true, (int) remaining, limit, resetTime, null);
             
         } catch (Exception e) {
             log.error("Error checking rate limit for key: {}", key, e);
-            // Fallback: allow request nếu có lỗi để tránh block toàn bộ hệ thống
-            return new RateLimitDTO(true, limit, 0, System.currentTimeMillis() / 1000 + duration, limit);
+            return handleRedisFallback(limit, duration, failClosed);
         }
     }
     
     /**
-     * Build Redis key theo format: rate_limit:{type}:{key}:{identifier}
+     * Handle fallback khi Redis unavailable
+     * 
+     * @param limit Rate limit
+     * @param duration Duration
+     * @param failClosed Fail-closed mode (true = block, false = allow)
+     * @return RateLimitDTO
+     */
+    private RateLimitDTO handleRedisFallback(int limit, int duration, boolean failClosed) {
+        if (failClosed) {
+            // Fail-closed: Block requests khi Redis down (cho sensitive endpoints)
+            log.warn("Redis unavailable - FAIL CLOSED mode, blocking request");
+            long now = System.currentTimeMillis() / 1000;
+            return new RateLimitDTO(false, 0, limit, now + duration, (long) duration);
+        } else {
+            // Fail-open: Allow requests khi Redis down (default)
+            log.warn("Redis unavailable - FAIL OPEN mode, allowing request");
+            long now = System.currentTimeMillis() / 1000;
+            return new RateLimitDTO(true, limit, limit, now + duration, null);
+        }
+    }
+    
+    /**
+     * Build Redis key theo format: rate_limit:{type}:{key}:{routeKey}:{identifier}
+     * 
+     * Route key sử dụng METHOD + best matching pattern để tránh cardinality explosion
      * 
      * Examples:
-     * - rate_limit:IP:login:192.168.1.1
-     * - rate_limit:USER:api:john.doe
-     * - rate_limit:GLOBAL:system:global
+     * - rate_limit:IP:login:POST:/api/v1/auth/login:192.168.1.1
+     * - rate_limit:USER:api:GET:/api/v1/products/**:john.doe
+     * - rate_limit:GLOBAL:system:*:*:global
      * 
      * @param type Rate limit type
      * @param key Rate limit key từ annotation
      * @param identifier IP address hoặc username
+     * @param routeKey Route key (METHOD:pattern)
      * @return Redis key
      */
-    private String buildKey(RateLimitType type, String key, String identifier) {
-        return String.format("%s%s:%s:%s", RATE_LIMIT_KEY_PREFIX, type.name(), key, identifier);
+    private String buildKey(RateLimitType type, String key, String identifier, String routeKey) {
+        return String.format("%s%s:%s:%s:%s", 
+            RATE_LIMIT_KEY_PREFIX, type.name(), key, routeKey, identifier);
     }
     
     /**
@@ -140,9 +185,10 @@ public class RateLimitService {
      * @param type Rate limit type
      * @param key Rate limit key
      * @param identifier Identifier
+     * @param routeKey Route key
      */
-    public void resetRateLimit(RateLimitType type, String key, String identifier) {
-        String redisKey = buildKey(type, key, identifier);
+    public void resetRateLimit(RateLimitType type, String key, String identifier, String routeKey) {
+        String redisKey = buildKey(type, key, identifier, routeKey);
         redisTemplate.delete(redisKey);
         log.info("Reset rate limit for key: {}", redisKey);
     }
@@ -153,12 +199,14 @@ public class RateLimitService {
      * @param type Rate limit type
      * @param key Rate limit key
      * @param identifier Identifier
+     * @param routeKey Route key
      * @param limit Limit config
      * @param duration Duration config
-     * @return RateLimitInfo
+     * @return RateLimitDTO
      */
-    public RateLimitDTO getRateLimitInfo(RateLimitType type, String key, String identifier, int limit, int duration) {
-        String redisKey = buildKey(type, key, identifier);
+    public RateLimitDTO getRateLimitInfo(RateLimitType type, String key, String identifier, 
+                                         String routeKey, int limit, int duration) {
+        String redisKey = buildKey(type, key, identifier, routeKey);
         
         try {
             Object currentObj = redisTemplate.opsForValue().get(redisKey);
@@ -166,13 +214,18 @@ public class RateLimitService {
             int remaining = Math.max(0, limit - current);
             
             Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
-            long retryAfter = ttl != null && ttl > 0 ? ttl : duration;
-            long resetTime = System.currentTimeMillis() / 1000 + retryAfter;
+            long ttlSeconds = ttl != null && ttl > 0 ? ttl : duration;
+            long now = System.currentTimeMillis() / 1000;
+            long resetTime = now + ttlSeconds;
             
-            return new RateLimitDTO(current < limit, remaining, retryAfter, resetTime, limit);
+            boolean allowed = current < limit;
+            Long retryAfter = allowed ? null : ttlSeconds;
+            
+            return new RateLimitDTO(allowed, remaining, limit, resetTime, retryAfter);
         } catch (Exception e) {
             log.error("Error getting rate limit info for key: {}", redisKey, e);
-            return new RateLimitDTO(true, limit, 0, System.currentTimeMillis() / 1000 + duration, limit);
+            long now = System.currentTimeMillis() / 1000;
+            return new RateLimitDTO(true, limit, limit, now + duration, null);
         }
     }
 }

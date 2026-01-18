@@ -45,6 +45,9 @@ public class AuthControllerTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private org.demo.whs.service.RateLimitService rateLimitService;
+
     @Nested
     @DisplayName("Tests cho Login")
     class LoginTests {

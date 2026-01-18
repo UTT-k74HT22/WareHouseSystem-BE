@@ -52,4 +52,11 @@ public @interface RateLimit {
      * Default: "Rate limit exceeded. Please try again later."
      */
     String message() default "Rate limit exceeded. Please try again later.";
+    
+    /**
+     * Fallback mode khi Redis unavailable
+     * - FAIL_OPEN (false): Allow requests nếu Redis down (default cho read endpoints)
+     * - FAIL_CLOSED (true): Block requests nếu Redis down (cho sensitive endpoints như login)
+     */
+    boolean failClosed() default false;
 }

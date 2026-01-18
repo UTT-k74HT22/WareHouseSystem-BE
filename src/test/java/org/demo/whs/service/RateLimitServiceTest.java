@@ -84,6 +84,11 @@ class RateLimitServiceTest {
             }
 
             @Override
+            public boolean failClosed() {
+                return false;
+            }
+
+            @Override
             public Class<? extends Annotation> annotationType() {
                 return RateLimit.class;
             }
@@ -95,26 +100,26 @@ class RateLimitServiceTest {
     void testCheckRateLimit_AllowedRequest() {
         // Given
         String identifier = "192.168.1.1";
-        Long remaining = 7L; // 10 - 3 = 7 remaining
-        Long ttl = 45L; // 45 seconds remaining
+        String routeKey = "POST:/api/v1/test";
+        // New Lua script returns List<Long> with {remaining, ttl}
+        java.util.List<Long> luaResult = java.util.Arrays.asList(7L, 45L);
 
         when(redisTemplate.execute(
                 any(RedisScript.class),
                 anyList(),
                 anyInt(),
                 anyInt()
-        )).thenReturn(remaining);
-        when(redisTemplate.getExpire(anyString(), eq(TimeUnit.SECONDS))).thenReturn(ttl);
+        )).thenReturn(luaResult);
 
         // When
-        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier);
+        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier, routeKey);
 
         // Then
         assertThat(result).isNotNull();
         assertThat(result.isAllowed()).isTrue();
         assertThat(result.getRemaining()).isEqualTo(7);
         assertThat(result.getLimit()).isEqualTo(10);
-        assertThat(result.getRetryAfter()).isEqualTo(45);
+        assertThat(result.getRetryAfter()).isNull(); // null when allowed
 
         verify(redisTemplate).execute(
                 any(RedisScript.class),
@@ -129,25 +134,25 @@ class RateLimitServiceTest {
     void testCheckRateLimit_ExceededLimit() {
         // Given
         String identifier = "192.168.1.1";
-        Long remaining = -1L; // Rate limit exceeded indicator
-        Long ttl = 30L; // 30 seconds until reset
+        String routeKey = "POST:/api/v1/test";
+        // Lua returns {-1, ttl} when exceeded
+        java.util.List<Long> luaResult = java.util.Arrays.asList(-1L, 30L);
 
         when(redisTemplate.execute(
                 any(RedisScript.class),
                 anyList(),
                 anyInt(),
                 anyInt()
-        )).thenReturn(remaining);
-        when(redisTemplate.getExpire(anyString(), eq(TimeUnit.SECONDS))).thenReturn(ttl);
+        )).thenReturn(luaResult);
 
         // When
-        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier);
+        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier, routeKey);
 
         // Then
         assertThat(result).isNotNull();
         assertThat(result.isAllowed()).isFalse();
         assertThat(result.getRemaining()).isZero();
-        assertThat(result.getRetryAfter()).isEqualTo(30);
+        assertThat(result.getRetryAfter()).isEqualTo(30L); // Non-null when exceeded
         assertThat(result.getLimit()).isEqualTo(10);
     }
 
@@ -156,6 +161,7 @@ class RateLimitServiceTest {
     void testCheckRateLimit_RedisReturnsNull_ShouldFallback() {
         // Given
         String identifier = "192.168.1.1";
+        String routeKey = "POST:/api/v1/test";
         when(redisTemplate.execute(
                 any(RedisScript.class),
                 anyList(),
@@ -164,9 +170,9 @@ class RateLimitServiceTest {
         )).thenReturn(null);
 
         // When
-        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier);
+        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier, routeKey);
 
-        // Then - Should allow request as fallback
+        // Then - Should allow request as fallback (fail-open by default)
         assertThat(result).isNotNull();
         assertThat(result.isAllowed()).isTrue();
         assertThat(result.getRemaining()).isEqualTo(10);
@@ -178,6 +184,7 @@ class RateLimitServiceTest {
     void testCheckRateLimit_RedisThrowsException_ShouldFallback() {
         // Given
         String identifier = "192.168.1.1";
+        String routeKey = "POST:/api/v1/test";
         when(redisTemplate.execute(
                 any(RedisScript.class),
                 anyList(),
@@ -186,9 +193,9 @@ class RateLimitServiceTest {
         )).thenThrow(new RuntimeException("Redis connection failed"));
 
         // When
-        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier);
+        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier, routeKey);
 
-        // Then - Should allow request as fallback to prevent blocking entire system
+        // Then - Should allow request as fallback (fail-open)
         assertThat(result).isNotNull();
         assertThat(result.isAllowed()).isTrue();
     }
@@ -198,12 +205,13 @@ class RateLimitServiceTest {
     void testResetRateLimit() {
         // Given
         String identifier = "192.168.1.1";
-        String expectedKey = "rate_limit:IP:test-key:192.168.1.1";
+        String routeKey = "POST:/api/v1/test";
+        String expectedKey = "rate_limit:IP:test-key:POST:/api/v1/test:192.168.1.1";
 
         when(redisTemplate.delete(expectedKey)).thenReturn(true);
 
         // When
-        rateLimitService.resetRateLimit(RateLimitType.IP, "test-key", identifier);
+        rateLimitService.resetRateLimit(RateLimitType.IP, "test-key", identifier, routeKey);
 
         // Then
         verify(redisTemplate).delete(expectedKey);
@@ -214,7 +222,8 @@ class RateLimitServiceTest {
     void testGetRateLimitInfo() {
         // Given
         String identifier = "192.168.1.1";
-        String expectedKey = "rate_limit:IP:test-key:192.168.1.1";
+        String routeKey = "POST:/api/v1/test";
+        String expectedKey = "rate_limit:IP:test-key:POST:/api/v1/test:192.168.1.1";
         Integer currentCount = 3;
         Long ttl = 45L;
 
@@ -227,6 +236,7 @@ class RateLimitServiceTest {
                 RateLimitType.IP,
                 "test-key",
                 identifier,
+                routeKey,
                 10,
                 60
         );
@@ -236,7 +246,7 @@ class RateLimitServiceTest {
         assertThat(result.isAllowed()).isTrue();
         assertThat(result.getRemaining()).isEqualTo(7); // 10 - 3
         assertThat(result.getLimit()).isEqualTo(10);
-        assertThat(result.getRetryAfter()).isEqualTo(45);
+        assertThat(result.getRetryAfter()).isNull(); // null when allowed
 
         verify(valueOperations).get(expectedKey);
         verify(redisTemplate, never()).execute(any(RedisScript.class), anyList(), any(), any());
@@ -248,16 +258,15 @@ class RateLimitServiceTest {
         // Test IP type
         RateLimit ipAnnotation = createAnnotation("ip-key", RateLimitType.IP);
         when(redisTemplate.execute(any(RedisScript.class), anyList(), anyInt(), anyInt()))
-                .thenReturn(5L);
-        when(redisTemplate.getExpire(anyString(), any())).thenReturn(30L);
+                .thenReturn(java.util.Arrays.asList(5L, 30L));
 
-        RateLimitDTO result = rateLimitService.checkRateLimit(ipAnnotation, "192.168.1.1");
+        RateLimitDTO result = rateLimitService.checkRateLimit(ipAnnotation, "192.168.1.1", "GET:/api/test");
         assertThat(result.isAllowed()).isTrue();
 
         // Verify Redis key contains IP type
         verify(redisTemplate).execute(
                 any(RedisScript.class),
-                argThat((List<String> keys) -> keys.get(0).contains("IP")),
+                argThat((java.util.List<String> keys) -> keys.get(0).contains("IP")),
                 anyInt(),
                 anyInt()
         );
@@ -268,17 +277,19 @@ class RateLimitServiceTest {
     void testCheckRateLimit_NullTTL_ShouldUseDefault() {
         // Given
         String identifier = "192.168.1.1";
-        Long remaining = 5L;
+        String routeKey = "POST:/api/v1/test";
+        // Lua script now returns TTL, so this test is not applicable
+        // But we can test edge case where Lua returns TTL = duration
+        java.util.List<Long> luaResult = java.util.Arrays.asList(5L, 60L);
 
         when(redisTemplate.execute(any(RedisScript.class), anyList(), anyInt(), anyInt()))
-                .thenReturn(remaining);
-        when(redisTemplate.getExpire(anyString(), eq(TimeUnit.SECONDS))).thenReturn(null);
+                .thenReturn(luaResult);
 
         // When
-        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier);
+        RateLimitDTO result = rateLimitService.checkRateLimit(mockRateLimitAnnotation, identifier, routeKey);
 
-        // Then
-        assertThat(result.getRetryAfter()).isEqualTo(60); // Default duration
+        // Then - resetTime should be now + ttl
+        assertThat(result.getResetTime()).isGreaterThan(System.currentTimeMillis() / 1000);
     }
 
     @Test
@@ -286,7 +297,8 @@ class RateLimitServiceTest {
     void testGetRateLimitInfo_KeyNotExists() {
         // Given
         String identifier = "192.168.1.1";
-        String expectedKey = "rate_limit:IP:test-key:192.168.1.1";
+        String routeKey = "POST:/api/v1/test";
+        String expectedKey = "rate_limit:IP:test-key:POST:/api/v1/test:192.168.1.1";
 
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(expectedKey)).thenReturn(null);
@@ -297,6 +309,7 @@ class RateLimitServiceTest {
                 RateLimitType.IP,
                 "test-key",
                 identifier,
+                routeKey,
                 10,
                 60
         );
@@ -333,6 +346,11 @@ class RateLimitServiceTest {
             @Override
             public String message() {
                 return "Rate limit exceeded";
+            }
+
+            @Override
+            public boolean failClosed() {
+                return false;
             }
 
             @Override

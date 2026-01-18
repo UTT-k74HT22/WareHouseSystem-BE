@@ -34,6 +34,7 @@ public class AuthController {
     /**
      * Endpoint for user login.
      * Rate limited: 5 requests per 5 minutes per IP address to prevent brute force attacks
+     * FAIL-CLOSED: Block all requests nếu Redis down (security-critical endpoint)
      *
      * @param request the login request containing user credentials
      * @return a response entity containing the authentication response
@@ -44,7 +45,8 @@ public class AuthController {
         limit = 5,
         duration = 300, // 5 phút
         type = RateLimitType.IP,
-        message = "Too many login attempts. Please try again after 5 minutes."
+        message = "Too many login attempts. Please try again after 5 minutes.",
+        failClosed = true  // CRITICAL: Block requests nếu Redis down
     )
     public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request) {
         log.debug("Login attempt for username: {}", request.getUsername());

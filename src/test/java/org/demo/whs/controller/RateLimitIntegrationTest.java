@@ -9,14 +9,19 @@ import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,6 +34,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ImportAutoConfiguration(exclude = {
+        FlywayAutoConfiguration.class,
+        RedisAutoConfiguration.class,
+        org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration.class,
+        RabbitAutoConfiguration.class
+})
+@ComponentScan(excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                org.demo.whs.configuration.RedisConfig.class,
+                org.demo.whs.configuration.RabbitMQConfig.class
+        })
+})
 @DisplayName("Rate Limiting Integration Tests")
 class RateLimitIntegrationTest {
 
@@ -38,13 +55,13 @@ class RateLimitIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private AuthService authService;
 
-    @MockBean
+    @MockitoBean
     private RateLimitService rateLimitService;
 
-    @MockBean
+    @MockitoBean
     private RedisTemplate<String, Object> redisTemplate;
 
     @Test
@@ -61,16 +78,10 @@ class RateLimitIntegrationTest {
                 .ip("127.0.0.1")
                 .build();
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(
-                true,
-                4, // 4 remaining
-                300, // 5 minutes
-                System.currentTimeMillis() / 1000 + 300,
-                5 // limit
-        );
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
         when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // When & Then
         mockMvc.perform(post("/api/v1/auth/login")
@@ -83,8 +94,8 @@ class RateLimitIntegrationTest {
                 .andExpect(header().string("X-RateLimit-Remaining", "4"))
                 .andExpect(header().exists("X-RateLimit-Reset"))
                 .andExpect(header().doesNotExist("Retry-After"))
-                .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data.accessToken").value("access-token"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.access_token").value("access-token"));
     }
 
     @Test
@@ -93,15 +104,9 @@ class RateLimitIntegrationTest {
         // Given
         LoginRequest loginRequest = new LoginRequest("testuser", "password123");
 
-        RateLimitDTO exceededInfo = new RateLimitDTO(
-                false,
-                0, // no remaining
-                180, // retry after 3 minutes
-                System.currentTimeMillis() / 1000 + 180,
-                5 // limit
-        );
+        RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 5, System.currentTimeMillis() / 1000 + 180, 180L);
 
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(exceededInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(exceededInfo);
 
         // When & Then
         mockMvc.perform(post("/api/v1/auth/login")
@@ -112,9 +117,9 @@ class RateLimitIntegrationTest {
                 .andExpect(header().string("X-RateLimit-Remaining", "0"))
                 .andExpect(header().exists("Retry-After"))
                 .andExpect(header().string("Retry-After", "180"))
-                .andExpect(jsonPath("$.code").value("RATE_001"))
+                .andExpect(jsonPath("$.error_code").value("RATE_001"))
                 .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.retryAfter").value(180));
+                .andExpect(jsonPath("$.retry_after").value(180));
     }
 
     @Test
@@ -131,10 +136,10 @@ class RateLimitIntegrationTest {
                 .ip("127.0.0.1")
                 .build();
 
-        RateLimitDTO loginRateLimit = new RateLimitDTO(true, 4, 300, System.currentTimeMillis() / 1000 + 300, 5);
+        RateLimitDTO loginRateLimit = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
         when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(loginRateLimit);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(loginRateLimit);
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -157,10 +162,10 @@ class RateLimitIntegrationTest {
                 .ip("192.168.1.100")
                 .build();
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 300, System.currentTimeMillis() / 1000 + 300, 5);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
         when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // Request from different IP
         mockMvc.perform(post("/api/v1/auth/login")
@@ -188,10 +193,10 @@ class RateLimitIntegrationTest {
                 .ip("203.0.113.1")
                 .build();
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 300, System.currentTimeMillis() / 1000 + 300, 5);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
         when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // Request with X-Forwarded-For header
         mockMvc.perform(post("/api/v1/auth/login")
@@ -208,9 +213,9 @@ class RateLimitIntegrationTest {
         // Given
         LoginRequest loginRequest = new LoginRequest("testuser", "password123");
 
-        RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 300, System.currentTimeMillis() / 1000 + 300, 5);
+        RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 5, System.currentTimeMillis() / 1000 + 300, 300L);
 
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(exceededInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(exceededInfo);
 
         // When & Then
         mockMvc.perform(post("/api/v1/auth/login")
@@ -220,3 +225,5 @@ class RateLimitIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Too many login attempts. Please try again after 5 minutes."));
     }
 }
+
+

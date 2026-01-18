@@ -85,6 +85,11 @@ class RateLimitInterceptorTest {
             }
 
             @Override
+            public boolean failClosed() {
+                return false;
+            }
+
+            @Override
             public Class<? extends Annotation> annotationType() {
                 return RateLimit.class;
             }
@@ -100,10 +105,10 @@ class RateLimitInterceptorTest {
         request.setRemoteAddr("192.168.1.1");
         request.setRequestURI("/api/v1/test");
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(mockRateLimitAnnotation);
-        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), anyString())).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), anyString(), anyString())).thenReturn(allowedInfo);
 
         // When
         boolean result = rateLimitInterceptor.preHandle(request, response, handlerMethod);
@@ -115,7 +120,7 @@ class RateLimitInterceptorTest {
         assertThat(response.getHeader("X-RateLimit-Reset")).isNotNull();
         assertThat(response.getHeader("Retry-After")).isNull();
 
-        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("192.168.1.1"));
+        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("192.168.1.1"), anyString());
     }
 
     @Test
@@ -125,10 +130,10 @@ class RateLimitInterceptorTest {
         request.setRemoteAddr("192.168.1.1");
         request.setRequestURI("/api/v1/test");
 
-        RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 30, System.currentTimeMillis() / 1000 + 30, 10);
+        RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 10, System.currentTimeMillis() / 1000 + 30, 30L);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(mockRateLimitAnnotation);
-        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), anyString())).thenReturn(exceededInfo);
+        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), anyString(), anyString())).thenReturn(exceededInfo);
 
         // When & Then
         assertThatThrownBy(() -> rateLimitInterceptor.preHandle(request, response, handlerMethod))
@@ -153,7 +158,7 @@ class RateLimitInterceptorTest {
 
         // Then
         assertThat(result).isTrue();
-        verify(rateLimitService, never()).checkRateLimit(any(), any());
+        verify(rateLimitService, never()).checkRateLimit(any(), any(), any());
     }
 
     @Test
@@ -163,17 +168,17 @@ class RateLimitInterceptorTest {
         request.addHeader("X-Forwarded-For", "203.0.113.1, 198.51.100.1");
         request.setRequestURI("/api/v1/test");
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(mockRateLimitAnnotation);
-        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.1"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.1"), anyString())).thenReturn(allowedInfo);
 
         // When
         boolean result = rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
         assertThat(result).isTrue();
-        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.1"));
+        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.1"), anyString());
     }
 
     @Test
@@ -183,16 +188,16 @@ class RateLimitInterceptorTest {
         request.addHeader("X-Real-IP", "203.0.113.5");
         request.setRequestURI("/api/v1/test");
 
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(mockRateLimitAnnotation);
-        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.5"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.5"), anyString())).thenReturn(allowedInfo);
 
         // When
         rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
-        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.5"));
+        verify(rateLimitService).checkRateLimit(eq(mockRateLimitAnnotation), eq("203.0.113.5"), anyString());
     }
 
     @Test
@@ -207,17 +212,17 @@ class RateLimitInterceptorTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         request.setRequestURI("/api/v1/user");
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(userAnnotation);
-        when(rateLimitService.checkRateLimit(eq(userAnnotation), eq("john.doe"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(userAnnotation), eq("john.doe"), anyString())).thenReturn(allowedInfo);
 
         // When
         boolean result = rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
         assertThat(result).isTrue();
-        verify(rateLimitService).checkRateLimit(eq(userAnnotation), eq("john.doe"));
+        verify(rateLimitService).checkRateLimit(eq(userAnnotation), eq("john.doe"), anyString());
     }
 
     @Test
@@ -227,16 +232,16 @@ class RateLimitInterceptorTest {
         RateLimit userAnnotation = createAnnotation("user-api", RateLimitType.USER);
 
         request.setRequestURI("/api/v1/user");
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(userAnnotation);
-        when(rateLimitService.checkRateLimit(eq(userAnnotation), eq("anonymous"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(userAnnotation), eq("anonymous"), anyString())).thenReturn(allowedInfo);
 
         // When
         rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
-        verify(rateLimitService).checkRateLimit(eq(userAnnotation), eq("anonymous"));
+        verify(rateLimitService).checkRateLimit(eq(userAnnotation), eq("anonymous"), anyString());
     }
 
     @Test
@@ -246,16 +251,16 @@ class RateLimitInterceptorTest {
         RateLimit apiAnnotation = createAnnotation("api-endpoint", RateLimitType.API);
 
         request.setRequestURI("/api/v1/products");
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(apiAnnotation);
-        when(rateLimitService.checkRateLimit(eq(apiAnnotation), eq("/api/v1/products"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(apiAnnotation), eq("/api/v1/products"), anyString())).thenReturn(allowedInfo);
 
         // When
         rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
-        verify(rateLimitService).checkRateLimit(eq(apiAnnotation), eq("/api/v1/products"));
+        verify(rateLimitService).checkRateLimit(eq(apiAnnotation), eq("/api/v1/products"), anyString());
     }
 
     @Test
@@ -265,16 +270,16 @@ class RateLimitInterceptorTest {
         RateLimit globalAnnotation = createAnnotation("global-limit", RateLimitType.GLOBAL);
 
         request.setRequestURI("/api/v1/test");
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(globalAnnotation);
-        when(rateLimitService.checkRateLimit(eq(globalAnnotation), eq("global"))).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(eq(globalAnnotation), eq("global"), anyString())).thenReturn(allowedInfo);
 
         // When
         rateLimitInterceptor.preHandle(request, response, handlerMethod);
 
         // Then
-        verify(rateLimitService).checkRateLimit(eq(globalAnnotation), eq("global"));
+        verify(rateLimitService).checkRateLimit(eq(globalAnnotation), eq("global"), anyString());
     }
 
     @Test
@@ -282,11 +287,11 @@ class RateLimitInterceptorTest {
     void testPreHandle_ClassLevelAnnotation() throws Exception {
         // Given
         request.setRemoteAddr("192.168.1.1");
-        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 45, System.currentTimeMillis() / 1000 + 45, 10);
+        RateLimitDTO allowedInfo = new RateLimitDTO(true, 5, 10, System.currentTimeMillis() / 1000 + 45, null);
 
         when(handlerMethod.getMethodAnnotation(RateLimit.class)).thenReturn(null);
         when(handlerMethod.getBeanType()).thenReturn((Class) TestController.class);
-        when(rateLimitService.checkRateLimit(any(), anyString())).thenReturn(allowedInfo);
+        when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // When
         boolean result = rateLimitInterceptor.preHandle(request, response, handlerMethod);
@@ -306,7 +311,7 @@ class RateLimitInterceptorTest {
 
         // Then
         assertThat(result).isTrue();
-        verify(rateLimitService, never()).checkRateLimit(any(), any());
+        verify(rateLimitService, never()).checkRateLimit(any(), any(), any());
     }
 
     // Helper method to create mock annotation
@@ -338,6 +343,11 @@ class RateLimitInterceptorTest {
             }
 
             @Override
+            public boolean failClosed() {
+                return false;
+            }
+
+            @Override
             public Class<? extends Annotation> annotationType() {
                 return RateLimit.class;
             }
@@ -350,3 +360,5 @@ class RateLimitInterceptorTest {
         }
     }
 }
+
+
