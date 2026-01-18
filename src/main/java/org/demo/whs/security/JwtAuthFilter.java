@@ -40,8 +40,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // Validate token
-            if (jwtProvider.validateToken(token)) {
+            if (!jwtProvider.validateToken(token)) {
                 log.warn("Invalid JWT token for request: {}", request.getRequestURI());
                 filterChain.doFilter(request, response);
                 return;
@@ -62,7 +61,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             log.debug("Successfully authenticated user: {} for URI: {}", username, request.getRequestURI());
-
         } catch (Exception ex) {
             log.error("Failed to set user authentication in security context: {}", ex.getMessage());
             SecurityContextHolder.clearContext();

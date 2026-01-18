@@ -21,7 +21,10 @@ public enum ErrorCode {
     COM_002("COM_002", "Internal server error - please contact support"),
     COM_003("COM_003", "Bad request - malformed JSON or invalid data format"),
     COM_004("COM_004", "Resource not found"),
-    COM_005("COM_005", "Duplicate entry - resource already exists");
+    COM_005("COM_005", "Duplicate entry - resource already exists"),
+
+    // Rate limiting errors
+    RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests");
 
     private final String code;
     private final String message;

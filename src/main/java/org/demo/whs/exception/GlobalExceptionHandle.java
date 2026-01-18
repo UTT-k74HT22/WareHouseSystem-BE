@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.FieldError;
+import org.demo.whs.entity.dto.response.RateLimitErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -106,6 +107,33 @@ public class GlobalExceptionHandle {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN) // Trả về 403
                 .body(BaseResponse.error(ErrorCode.AUTH_003.getCode(),  ErrorCode.AUTH_003.getMessage(), null));
+    }
+
+    /**
+     * Handle rate limit exceeded exceptions
+     * @param ex the RateLimitExceededException
+     * @return ResponseEntity with rate limit error response
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<RateLimitErrorResponse> handleRateLimitExceededException(
+            RateLimitExceededException ex) {
+        log.warn("Rate limit exceeded: {} - retry after: {}s", ex.getMessage(), ex.getRetryAfter());
+        
+        long resetTime = System.currentTimeMillis() / 1000 + ex.getRetryAfter();
+        
+        RateLimitErrorResponse response = new RateLimitErrorResponse(
+            ex.getErrorCode(),
+            ex.getMessage(),
+            ex.getRetryAfter(),
+            null,  // limit will be set by interceptor via headers
+            0,     // remaining = 0 when exceeded
+            resetTime
+        );
+        
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS) // 429
+                .header("Retry-After", String.valueOf(ex.getRetryAfter()))
+                .body(response);
     }
 
     /**

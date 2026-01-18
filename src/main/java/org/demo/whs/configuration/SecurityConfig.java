@@ -1,6 +1,7 @@
 package org.demo.whs.configuration;
 
 import lombok.RequiredArgsConstructor;
+import org.demo.whs.security.RateLimitFilter;
 import org.demo.whs.security.CustomUserDetailsService;
 import org.demo.whs.security.JwtAccessDeniedHandler;
 import org.demo.whs.security.JwtAuthenticationEntryPoint;
@@ -25,6 +26,7 @@ import java.util.List;
  * Security Configuration for JWT-based authentication
  * - Stateless session management
  * - JWT authentication filter
+ * - Rate limiting filter (BEFORE JWT filter)
  * - CORS configuration from application.yml
  * - Role-based authorization
  */
@@ -37,6 +39,7 @@ public class SecurityConfig {
     private final JwtAccessDeniedHandler accessDeniedHandler;
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final RateLimitFilter rateLimitFilter;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -99,8 +102,12 @@ public class SecurityConfig {
                 )
 
 
-                // JWT filter
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                // JWT filter AFTER rate limiting
+                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+                
+                // Rate limiting filter - runs FIRST (before JWT authentication)
+                // This ensures rate limiting happens at entry point
+                .addFilterBefore(rateLimitFilter, JwtAuthFilter.class);
 
         return http.build();
     }

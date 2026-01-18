@@ -122,4 +122,23 @@ app:
     allowed-origins: http://localhost:3000,http://localhost:8080
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "*"
+  
+  # Rate Limiting Configuration
+  rate-limit:
+    enabled: true
+    # Default rate limit cho tất cả endpoints nếu không có custom config
+    default:
+      limit: 100
+      duration: 60 # seconds
+    # Custom rate limit cho các endpoints cụ thể
+    endpoints:
+      login:
+        limit: 5
+        duration: 300 # 5 phút - chống brute force
+      register:
+        limit: 3
+        duration: 3600 # 1 giờ
+      refresh-token:
+        limit: 10
+        duration: 60
 
