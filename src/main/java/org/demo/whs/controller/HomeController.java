@@ -1,6 +1,6 @@
 package org.demo.whs.controller;
 
-import org.demo.whs.annotation.RateLimit;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.enums.RateLimitType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

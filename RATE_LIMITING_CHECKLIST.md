@@ -45,7 +45,7 @@
   - `failClosed=false` (default): Allow requests khi Redis down (read endpoints)
   - `failClosed=true`: Block requests khi Redis down (sensitive endpoints như login)
 - **Files Changed**: 
-  - [RateLimit.java](src/main/java/org/demo/whs/annotation/RateLimit.java)
+  - [RateLimit.java](src/main/java/org/demo/whs/utils/annotation/RateLimit.java)
   - [AuthController.java](src/main/java/org/demo/whs/controller/AuthController.java)
 
 ### 6. ✅ Review JwtAuthFilter validateToken Logic

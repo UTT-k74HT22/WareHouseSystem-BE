@@ -2,7 +2,7 @@ package org.demo.whs.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.annotation.RateLimit;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.RateLimitDTO;
 import org.demo.whs.entity.enums.RateLimitType;
 import org.springframework.data.redis.core.RedisTemplate;

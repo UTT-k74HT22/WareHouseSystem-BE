@@ -1,6 +1,6 @@
 package org.demo.whs.service;
 
-import org.demo.whs.annotation.RateLimit;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.RateLimitDTO;
 import org.demo.whs.entity.enums.RateLimitType;
 import org.junit.jupiter.api.BeforeEach;

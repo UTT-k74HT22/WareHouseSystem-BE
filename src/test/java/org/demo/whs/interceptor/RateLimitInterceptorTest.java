@@ -1,6 +1,6 @@
 package org.demo.whs.interceptor;
 
-import org.demo.whs.annotation.RateLimit;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.enums.RateLimitType;
 import org.demo.whs.exception.RateLimitExceededException;
 import org.demo.whs.entity.dto.RateLimitDTO;

@@ -6,7 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.annotation.RateLimit;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.RateLimitDTO;
 import org.demo.whs.entity.dto.response.RateLimitErrorResponse;
 import org.demo.whs.entity.enums.RateLimitType;

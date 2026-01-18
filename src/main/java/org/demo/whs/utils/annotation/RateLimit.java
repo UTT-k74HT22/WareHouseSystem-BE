@@ -1,4 +1,4 @@
-package org.demo.whs.annotation;
+package org.demo.whs.utils.annotation;
 
 import org.demo.whs.entity.enums.RateLimitType;
 
