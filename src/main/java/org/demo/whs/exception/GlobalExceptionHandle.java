@@ -27,10 +27,10 @@ public class GlobalExceptionHandle {
      */
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<BaseResponse<Void>> handleBaseException(BaseException ex) {
-        log.warn("{}: {}", ex.getClass().getSimpleName(), ex.getMessage());
+        log.warn("{}: {} - errorCode={}", ex.getClass().getSimpleName(), ex.getMessage(), ex.getErrorCode());
         return ResponseEntity
                 .status(ex.getStatus())
-                .body(BaseResponse.error(ex.getErrorCode(), null));
+                .body(BaseResponse.error(ex.getErrorCode(), ex.getMessage(), null));
     }
 
     /**
@@ -41,7 +41,7 @@ public class GlobalExceptionHandle {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException ex) {
-        log.warn("MethodArgumentNotValidException: {}", ex.getMessage());
+        log.warn("Validation failed: {} field errors", ex.getBindingResult().getFieldErrorCount());
 
         List<FieldError> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> FieldError.builder()
@@ -53,7 +53,7 @@ public class GlobalExceptionHandle {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), errors));
+                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), ErrorCode.COM_001.getMessage(), errors));
     }
 
     /**
@@ -64,7 +64,7 @@ public class GlobalExceptionHandle {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<BaseResponse<Void>> handleConstraintViolationException(
             ConstraintViolationException ex) {
-        log.warn("ConstraintViolationException: {}", ex.getMessage());
+        log.warn("Constraint violation: {} violations", ex.getConstraintViolations().size());
 
         List<FieldError> errors = ex.getConstraintViolations().stream()
                 .map(violation -> FieldError.builder()
@@ -76,7 +76,7 @@ public class GlobalExceptionHandle {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), errors));
+                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), ErrorCode.COM_001.getMessage(), errors));
     }
 
     /**
@@ -87,10 +87,25 @@ public class GlobalExceptionHandle {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException ex) {
-        log.warn("HttpMessageNotReadableException: {}", ex.getMessage());
+        log.warn("Malformed JSON request: {}", ex.getMostSpecificCause().getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(BaseResponse.error(ErrorCode.COM_003.getCode(), null));
+                .body(BaseResponse.error(ErrorCode.COM_003.getCode(), ErrorCode.COM_003.getMessage(), null));
+    }
+
+    /**
+     * Handle access denied exceptions
+     * @param ex the exception
+     * @return ResponseEntity with error response
+     */
+    @ExceptionHandler({
+            org.springframework.security.access.AccessDeniedException.class,
+            org.springframework.security.authorization.AuthorizationDeniedException.class
+    })
+    public ResponseEntity<BaseResponse<Void>> handleAccessDeniedException(Exception ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN) // Trả về 403
+                .body(BaseResponse.error(ErrorCode.AUTH_003.getCode(),  ErrorCode.AUTH_003.getMessage(), null));
     }
 
     /**
@@ -100,9 +115,9 @@ public class GlobalExceptionHandle {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleException(Exception ex) {
-        log.error("Unexpected exception: ", ex);
+        log.error("Unexpected exception occurred: {}", ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(BaseResponse.error(ErrorCode.COM_002.getCode(), null));
+                .body(BaseResponse.error(ErrorCode.COM_002.getCode(), ErrorCode.COM_002.getMessage(), null));
     }
 }

@@ -1,13 +1,10 @@
 package org.demo.whs.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.*;
 import lombok.NoArgsConstructor;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -19,27 +16,37 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public abstract class BaseEntity {
-
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(
+            name = "id",
+            nullable = false,
+            updatable = false,
+            length = 36,
+            columnDefinition = "char(36)"
+    )
     private String id;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private  LocalDate updatedAt;
+    private LocalDateTime updatedAt;
 
-    @Column(name = "created_by", nullable = false, updatable = false)
+    @Column(name = "created_by", length = 50, updatable = false)
     private String createdBy;
 
-    @Column(name = "updated_by", nullable = false)
+    @Column(name = "updated_by", length = 50)
     private String updatedBy;
 
     @PrePersist
-    public void prePersist() {
-        if (this.id == null) {
-            this.id = UUID.randomUUID().toString();
-        }
+    protected void onCreate() {
+        this.id = this.id == null ? UUID.randomUUID().toString() : this.id;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }
