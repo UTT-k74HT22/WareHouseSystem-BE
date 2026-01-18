@@ -3,11 +3,13 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.enums.RateLimitType;
 import org.demo.whs.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -31,11 +33,19 @@ public class AuthController {
 
     /**
      * Endpoint for user login.
+     * Rate limited: 5 requests per 5 minutes per IP address to prevent brute force attacks
      *
      * @param request the login request containing user credentials
      * @return a response entity containing the authentication response
      */
     @PostMapping("/login")
+    @RateLimit(
+        key = "login",
+        limit = 5,
+        duration = 300, // 5 phút
+        type = RateLimitType.IP,
+        message = "Too many login attempts. Please try again after 5 minutes."
+    )
     public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request) {
         log.debug("Login attempt for username: {}", request.getUsername());
         AuthResponse authResponse = authService.authenticate(request);
@@ -45,11 +55,19 @@ public class AuthController {
 
     /**
      * Endpoint for refreshing access token.
+     * Rate limited: 10 requests per minute per user to prevent token abuse
      *
      * @param request the refresh token request
      * @return a response entity containing the new access token
      */
     @PostMapping("/refresh-token")
+    @RateLimit(
+        key = "refresh-token",
+        limit = 10,
+        duration = 60,
+        type = RateLimitType.USER,
+        message = "Too many token refresh requests. Please try again later."
+    )
     public ResponseEntity<BaseResponse<RefreshTokenResponse>> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
         log.debug("Refresh token request received");
         RefreshTokenResponse response = authService.refreshToken(request);
