@@ -1,0 +1,60 @@
+spring:
+  # Tắt các auto-config không cần trong test
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      # (tuỳ chọn) nếu bạn đang dùng Spring Session Redis, tắt luôn session auto-config
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+
+  flyway:
+    enabled: false
+
+  # KHÔNG dùng Redis session trong test
+  session:
+    store-type: none
+
+  # Nếu code ở đâu đó vẫn đọc spring.data.redis.*, set default để khỏi nổ placeholder
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+
+  # H2 database cho testing
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+
+  main:
+    allow-bean-definition-overriding: true
+
+app:
+  jwt:
+    secret: "p1zs6HE4bebUL6aVjJhSEtj/Bp4rhQPK3vUR2gpcA06muNhYO77Z9kzb3U5sDXBkdpEZwECJfm0tNuDRiVu29g=="
+    access-token-expiration: 3600s
+    refresh-token-expiration: 86400s
+
+logging:
+  level:
+    root: INFO               # Mặc định toàn hệ thống
+    org.demo.whs: DEBUG      # Package code của bạn – thấy log service/repo
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: DEBUG # In ra câu SQL
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # In binding param (tuỳ, nếu thấy ồn quá thì bỏ)

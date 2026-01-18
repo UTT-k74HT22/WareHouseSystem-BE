@@ -34,8 +34,8 @@ spring:
   data:
     redis:
       host: localhost
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       timeout: 60000
       lettuce:
         pool:
@@ -55,9 +55,9 @@ spring:
   # RabbitMQ Configuration
   rabbitmq:
     host: localhost
-    port: ${RABBITMQ_PORT}
-    username: ${RABBITMQ_DEFAULT_USER}
-    password: ${RABBITMQ_DEFAULT_PASS}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:guest}
+    password: ${RABBITMQ_DEFAULT_PASS:guest}
     listener:
       simple:
         acknowledge-mode: auto
