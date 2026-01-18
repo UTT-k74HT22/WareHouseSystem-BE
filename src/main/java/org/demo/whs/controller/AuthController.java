@@ -40,7 +40,7 @@ public class AuthController {
         log.debug("Login attempt for username: {}", request.getUsername());
         AuthResponse authResponse = authService.authenticate(request);
         log.info("User logged in successfully: {}", request.getUsername());
-        return ResponseEntity.ok(BaseResponse.success(authResponse, "Login successful"));
+        return ResponseEntity.ok(BaseResponse.success(authResponse));
     }
 
     /**
@@ -53,6 +53,6 @@ public class AuthController {
     public ResponseEntity<BaseResponse<RefreshTokenResponse>> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
         log.debug("Refresh token request received");
         RefreshTokenResponse response = authService.refreshToken(request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Token refreshed successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }
