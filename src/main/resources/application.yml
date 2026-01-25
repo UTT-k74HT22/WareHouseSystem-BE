@@ -71,18 +71,28 @@ spring:
         max-attempts: 3
         multiplier: 2
 
-  # Mail Configuration (placeholder)
-#  mail:
-#    host: ${MAIL_HOST:smtp.gmail.com}
-#    port: ${MAIL_PORT:587}
-#    username: ${MAIL_USERNAME:example@gmail.com}
-#    password: ${MAIL_PASSWORD:your-email-password}
-#    properties:
-#      mail:
-#        smtp:
-#          auth: true
-#          starttls:
-#            enable: true
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: false   # dev cho dễ debug
+
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:example@gmail.com}
+    password: ${MAIL_PASSWORD:your-email-password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
 
 # Server Configuration
 server:
@@ -141,4 +151,19 @@ app:
       refresh-token:
         limit: 10
         duration: 60
+
+  # Email Configuration
+  email:
+    enabled: true
+    from: ${EMAIL_FROM:noreply@warehouse.com}
+    from-name: ${EMAIL_FROM_NAME:Warehouse Management System}
+    max-retry: 3
+    retry-delay-seconds: 60
+    async-by-default: true
+    attachment-path: ${EMAIL_ATTACHMENT_PATH:temp/email-attachments}
+    max-attachment-size-mb: 10
+    log-retention-days: 90
+    queue-name: wms.email.queue
+    exchange-name: wms.email.exchange
+    routing-key: wms.email.send
 

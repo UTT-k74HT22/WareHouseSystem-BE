@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.*;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ import java.util.UUID;
 @MappedSuperclass
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 public abstract class BaseEntity {
     @Id
     @Column(
