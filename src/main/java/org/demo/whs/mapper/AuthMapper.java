@@ -1,7 +1,12 @@
 package org.demo.whs.mapper;
 
+import org.demo.whs.entity.Account;
+import org.demo.whs.entity.dto.request.RegisterRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.enums.AccountStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,6 +14,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class AuthMapper {
+
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
 
     /**
      * Convert access and refresh tokens to an AuthResponse DTO.
@@ -32,5 +40,13 @@ public class AuthMapper {
                 .accessToken(accessToken)
                 .expireAccessToken(expireAccessToken)
                 .build();
+    }
+
+    public Account getNewAccount(RegisterRequest request) {
+        Account newAccount = new Account();
+        newAccount.setUsername(request.getUsername());
+        newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        newAccount.setStatus(AccountStatus.INACTIVE);
+        return newAccount;
     }
 }

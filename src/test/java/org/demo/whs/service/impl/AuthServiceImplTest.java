@@ -326,4 +326,6 @@ class AuthServiceImplTest {
             verify(roleRepository, never()).findRoleNamesByUsername(anyString());
         }
     }
+
+    //TODO: IMPLEMENT REGISTER TESTS
 }

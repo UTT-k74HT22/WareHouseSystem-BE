@@ -143,4 +143,6 @@ public class AuthControllerTest {
                     .andExpect(status().isUnauthorized());
         }
     }
+
+    //TODO: IMPLEMENT REGISTER TESTS
 }

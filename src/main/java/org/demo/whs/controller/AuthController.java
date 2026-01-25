@@ -3,6 +3,7 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.RegisterRequest;
 import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -74,5 +75,26 @@ public class AuthController {
         log.debug("Refresh token request received");
         RefreshTokenResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Endpoint for user registration.
+     *
+     * @param request the registration request containing user details
+     * @return a response entity indicating successful registration
+     */
+    @PostMapping("/register")
+    @RateLimit(
+        key = "register",
+        limit = 5,
+        duration = 300, // 5 phút
+        type = RateLimitType.IP,
+        message = "Too many registration attempts. Please try again after 5 minutes."
+    )
+    public ResponseEntity<BaseResponse<Void>> register(@RequestBody @Valid RegisterRequest request) {
+        log.debug("Register attempt for username: {}", request.getUsername());
+        authService.register(request);
+        log.info("User registered successfully: {}", request.getUsername());
+        return ResponseEntity.ok(BaseResponse.success(null));
     }
 }

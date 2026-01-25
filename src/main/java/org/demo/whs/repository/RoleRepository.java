@@ -20,4 +20,11 @@ public interface RoleRepository extends JpaRepository<Role, String> {
     WHERE a.username = :username
     """, nativeQuery = true)
     List<String> findRoleNamesByUsername(@Param("username") String username);
+
+    @Query(value = """
+    SELECT id
+    FROM roles
+    WHERE name = :roleName
+    """, nativeQuery = true)
+    String findIdByName(@Param("roleName") String roleName);
 }

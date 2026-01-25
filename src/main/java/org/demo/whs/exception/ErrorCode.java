@@ -15,6 +15,10 @@ public enum ErrorCode {
     AUTH_006("AUTH_006", "Refresh token is invalid or expired"),
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
+    AUTH_009("AUTH_009", "Please register with new credentials"),
+    AUTH_010("AUTH_010", "Please input new username and password"),
+    AUTH_011("AUTH_011", "Please input password confirmation"),
+    AUTH_012("AUTH_012", "Password and confirmation do not match"),
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),

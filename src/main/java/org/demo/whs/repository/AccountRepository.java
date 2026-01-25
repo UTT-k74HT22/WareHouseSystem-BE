@@ -15,4 +15,11 @@ public interface AccountRepository extends JpaRepository<Account, String> {
      * @return an Optional containing the found account or empty if not found
      */
     Optional<Account> findByUsername(String username);
+
+    /** Check if an account exists by its username.
+     *
+     * @param username the username to check
+     * @return true if an account with the given username exists, false otherwise
+     */
+    boolean existsByUsername(String username);
 }
