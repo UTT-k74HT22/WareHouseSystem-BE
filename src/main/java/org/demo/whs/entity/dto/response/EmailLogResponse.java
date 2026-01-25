@@ -1,9 +1,10 @@
 package org.demo.whs.entity.dto.response;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.*;
 import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.entity.enums.EmailType;
-
 import java.time.LocalDateTime;
 
 /**
@@ -13,8 +14,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class EmailLogResponse {
-
     private String id;
     private String recipient;
     private String subject;

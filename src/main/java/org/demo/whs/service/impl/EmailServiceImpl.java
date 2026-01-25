@@ -45,7 +45,7 @@ public class EmailServiceImpl implements EmailService {
     private final AccountRepository accountRepository;
     private final EmailProperties emailProperties;
     private final SpringTemplateEngine templateEngine;
-    private final EmailProducerService emailProducerService;
+    private final Optional<EmailProducerService> emailProducerService;
 
     @Override
     @Transactional
@@ -99,10 +99,16 @@ public class EmailServiceImpl implements EmailService {
         emailLog.setStatus(EmailStatus.PENDING);
         emailLog = emailLogRepository.save(emailLog);
 
-        // Send to RabbitMQ queue
+        // Send to RabbitMQ queue if available, otherwise send synchronously
         try {
-            emailProducerService.sendEmailToQueue(emailLog);
-            log.info("Email queued successfully for: {}", request.getRecipient());
+            if (emailProducerService.isPresent()) {
+                emailProducerService.get().sendEmailToQueue(emailLog);
+                log.info("Email queued successfully for: {}", request.getRecipient());
+            } else {
+                log.warn("EmailProducerService not available, sending email synchronously instead");
+                // Send synchronously as fallback
+                return sendEmail(request);
+            }
         } catch (Exception e) {
             log.error("Failed to queue email for: {}", request.getRecipient(), e);
             emailLog.setStatus(EmailStatus.FAILED);
@@ -194,8 +200,13 @@ public class EmailServiceImpl implements EmailService {
         emailLog.setRetryCount(emailLog.getRetryCount() + 1);
         emailLog = emailLogRepository.save(emailLog);
 
-        // Queue for retry
-        emailProducerService.sendEmailToQueue(emailLog);
+        // Queue for retry if producer is available
+        if (emailProducerService.isPresent()) {
+            emailProducerService.get().sendEmailToQueue(emailLog);
+        } else {
+            log.warn("EmailProducerService not available, cannot retry email asynchronously");
+            throw new IllegalStateException("Email producer service not available");
+        }
 
         return emailLog;
     }
@@ -237,6 +248,11 @@ public class EmailServiceImpl implements EmailService {
     public void processPendingEmails() {
         log.info("Processing pending emails...");
 
+        if (emailProducerService.isEmpty()) {
+            log.warn("EmailProducerService not available, cannot process pending emails");
+            return;
+        }
+
         List<EmailStatus> statuses = Arrays.asList(EmailStatus.PENDING, EmailStatus.RETRY);
         List<EmailLog> pendingEmails = emailLogRepository.findPendingEmails(statuses, LocalDateTime.now());
 
@@ -244,7 +260,7 @@ public class EmailServiceImpl implements EmailService {
 
         for (EmailLog emailLog : pendingEmails) {
             try {
-                emailProducerService.sendEmailToQueue(emailLog);
+                emailProducerService.get().sendEmailToQueue(emailLog);
             } catch (Exception e) {
                 log.error("Failed to queue pending email: {}", emailLog.getId(), e);
             }

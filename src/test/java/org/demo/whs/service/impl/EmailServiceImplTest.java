@@ -1,7 +1,6 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.configuration.EmailProperties;
-import org.demo.whs.entity.Account;
 import org.demo.whs.entity.EmailLog;
 import org.demo.whs.entity.dto.request.SendEmailRequest;
 import org.demo.whs.entity.dto.response.EmailLogResponse;
@@ -13,7 +12,6 @@ import org.demo.whs.repository.EmailLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -58,7 +56,6 @@ class EmailServiceImplTest {
     @Mock
     private MimeMessage mimeMessage;
 
-    @InjectMocks
     private EmailServiceImpl emailService;
 
     private SendEmailRequest sendEmailRequest;
@@ -66,12 +63,22 @@ class EmailServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize service with Optional<EmailProducerService>
+        emailService = new EmailServiceImpl(
+                mailSender,
+                emailLogRepository,
+                accountRepository,
+                emailProperties,
+                templateEngine,
+                Optional.of(emailProducerService)
+        );
+
         // Setup email properties
-        when(emailProperties.isEnabled()).thenReturn(true);
-        when(emailProperties.getFrom()).thenReturn("noreply@warehouse.com");
-        when(emailProperties.getFromName()).thenReturn("Warehouse Management System");
-        when(emailProperties.getMaxRetry()).thenReturn(3);
-        when(emailProperties.isAsyncByDefault()).thenReturn(false);
+        lenient().when(emailProperties.isEnabled()).thenReturn(true);
+        lenient().when(emailProperties.getFrom()).thenReturn("noreply@warehouse.com");
+        lenient().when(emailProperties.getFromName()).thenReturn("Warehouse Management System");
+        lenient().when(emailProperties.getMaxRetry()).thenReturn(3);
+        lenient().when(emailProperties.isAsyncByDefault()).thenReturn(false);
 
         // Setup send email request
         sendEmailRequest = SendEmailRequest.builder()
@@ -94,6 +101,7 @@ class EmailServiceImplTest {
                 .priority(5)
                 .hasAttachment(false)
                 .build();
+        emailLog.setId("test-id-123");
         emailLog.setCreatedAt(LocalDateTime.now());
         emailLog.setUpdatedAt(LocalDateTime.now());
     }
@@ -290,7 +298,6 @@ class EmailServiceImplTest {
     void testSendEmail_WhenEmailDisabled() {
         // Arrange
         when(emailProperties.isEnabled()).thenReturn(false);
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
         when(emailLogRepository.save(any(EmailLog.class))).thenReturn(emailLog);
 
         // Act
@@ -298,7 +305,7 @@ class EmailServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        verify(mailSender, times(1)).createMimeMessage();
+        verify(mailSender, never()).createMimeMessage();
         // Email should not be sent when disabled
     }
 

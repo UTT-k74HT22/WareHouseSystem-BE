@@ -43,7 +43,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ComponentScan(excludeFilters = {
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
                 org.demo.whs.configuration.RedisConfig.class,
-                org.demo.whs.configuration.RabbitMQConfig.class
+                org.demo.whs.configuration.RabbitMQConfig.class,
+                org.demo.whs.configuration.RabbitMQEmailConfig.class,
+                org.demo.whs.service.impl.EmailProducerService.class
         })
 })
 @DisplayName("Rate Limiting Integration Tests")

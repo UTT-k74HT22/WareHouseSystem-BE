@@ -2,6 +2,7 @@ package org.demo.whs.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.entity.enums.EmailType;
 
@@ -15,7 +16,7 @@ import org.demo.whs.entity.enums.EmailType;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class EmailLog extends BaseEntity {
 
     @Column(name = "recipient", nullable = false, length = 255)
