@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.EmailLogResponse;
 import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.entity.enums.EmailType;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.helpers.producer.EmailProducerService;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.EmailLogRepository;
 import org.junit.jupiter.api.BeforeEach;

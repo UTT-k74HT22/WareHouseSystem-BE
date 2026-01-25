@@ -1,4 +1,4 @@
-package org.demo.whs.service.impl;
+package org.demo.whs.helpers.scheduled;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

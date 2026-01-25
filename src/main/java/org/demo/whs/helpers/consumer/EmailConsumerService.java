@@ -1,4 +1,4 @@
-package org.demo.whs.service.impl;
+package org.demo.whs.helpers.consumer;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

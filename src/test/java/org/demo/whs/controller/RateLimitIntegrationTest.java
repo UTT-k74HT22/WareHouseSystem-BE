@@ -3,6 +3,7 @@ package org.demo.whs.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
+import org.demo.whs.helpers.producer.EmailProducerService;
 import org.demo.whs.service.AuthService;
 import org.demo.whs.entity.dto.RateLimitDTO;
 import org.demo.whs.service.RateLimitService;
@@ -45,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 org.demo.whs.configuration.RedisConfig.class,
                 org.demo.whs.configuration.RabbitMQConfig.class,
                 org.demo.whs.configuration.RabbitMQEmailConfig.class,
-                org.demo.whs.service.impl.EmailProducerService.class
+                EmailProducerService.class
         })
 })
 @DisplayName("Rate Limiting Integration Tests")
