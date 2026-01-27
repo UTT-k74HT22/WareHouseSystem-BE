@@ -19,7 +19,7 @@ public class EmailScheduledService {
     /**
      * Process pending emails every 5 minutes
      */
-    @Scheduled(fixedDelay = 300000) // 5 minutes
+    @Scheduled(fixedDelay = 300000, initialDelay = 60000)
     public void processPendingEmails() {
         log.info("Scheduled task: Processing pending emails");
         try {
@@ -32,7 +32,7 @@ public class EmailScheduledService {
     /**
      * Retry failed emails every 30 minutes
      */
-    @Scheduled(fixedDelay = 1800000) // 30 minutes
+    @Scheduled(fixedDelay = 1800000, initialDelay = 120000)
     public void retryFailedEmails() {
         log.info("Scheduled task: Retrying failed emails");
         try {

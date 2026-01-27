@@ -6,16 +6,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.configuration.EmailProperties;
 import org.demo.whs.entity.EmailLog;
+import org.demo.whs.entity.dto.EmailMessageDTO;
 import org.demo.whs.entity.enums.EmailStatus;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.EmailLogRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.io.File;
 import java.time.LocalDateTime;
+import static org.demo.whs.exception.ErrorCode.EMAIL_NOT_FOUND;
 
 /**
  * EmailConsumerService: Service to consume emails from RabbitMQ queue and send them
@@ -32,12 +34,19 @@ public class EmailConsumerService {
     /**
      * Listen to email queue and process emails
      *
-     * @param emailLog Email log from queue
+     * @param messageDTO Email log from queue
      */
-    @RabbitListener(queues = "#{emailProperties.queueName}")
+    @RabbitListener(queues = "#{emailProperties.queueName}",
+            containerFactory = "emailListenerContainerFactory"
+    )
     @Transactional
-    public void consumeEmail(EmailLog emailLog) {
-        log.info("Consuming email from queue for recipient: {}", emailLog.getRecipient());
+    public void consumeEmail(EmailMessageDTO messageDTO) {
+        log.info("Consuming email from queue for recipient: {}", messageDTO.getRecipient());
+
+
+        // Fetch the email log from DB
+        EmailLog emailLog = emailLogRepository.findById(messageDTO.getEmailLogId())
+                .orElseThrow(() -> new NotFoundException(EMAIL_NOT_FOUND.getCode(), EMAIL_NOT_FOUND));
 
         try {
             // Update status to SENDING
@@ -55,24 +64,16 @@ public class EmailConsumerService {
             log.info("Email sent successfully to: {}", emailLog.getRecipient());
 
         } catch (Exception e) {
-            log.error("Failed to send email to: {}", emailLog.getRecipient(), e);
-
-            // Update status to FAILED
-            emailLog.setStatus(EmailStatus.FAILED);
-            emailLog.setErrorMessage(e.getMessage());
+            log.error("Failed to send email to: {}", messageDTO.getRecipient(), e);
             emailLog.setRetryCount(emailLog.getRetryCount() + 1);
-            emailLogRepository.save(emailLog);
 
-            // Re-queue for retry if not exceeded max attempts
-            if (emailLog.getRetryCount() < emailLog.getMaxRetry()) {
-                log.info("Re-queueing email for retry (attempt {}/{})",
-                        emailLog.getRetryCount(), emailLog.getMaxRetry());
-                emailLog.setStatus(EmailStatus.RETRY);
-                emailLogRepository.save(emailLog);
-                // Could implement retry logic here with delay
+            if (emailLog.getRetryCount() >= emailLog.getMaxRetry()) {
+                emailLog.setStatus(EmailStatus.FAILED);
             } else {
-                log.error("Email permanently failed after {} attempts", emailLog.getMaxRetry());
+                emailLog.setStatus(EmailStatus.RETRY);
             }
+            emailLog.setErrorMessage(e.getMessage());
+            emailLogRepository.save(emailLog);
         }
     }
 

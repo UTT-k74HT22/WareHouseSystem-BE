@@ -14,6 +14,7 @@ import org.demo.whs.entity.enums.EmailType;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.helpers.producer.EmailProducerService;
+import org.demo.whs.mapper.EmailMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.EmailLogRepository;
 import org.demo.whs.service.EmailService;
@@ -25,16 +26,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
-
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * EmailServiceImpl: Implementation of EmailService
+ * EmailServiceImpl: Implementation of EmailService for email operations
  */
 @Service
 @RequiredArgsConstructor
@@ -47,25 +50,29 @@ public class EmailServiceImpl implements EmailService {
     private final EmailProperties emailProperties;
     private final SpringTemplateEngine templateEngine;
     private final Optional<EmailProducerService> emailProducerService;
+    private final EmailMapper emailMapper;
 
+    // Send email SYNC
     @Override
     @Transactional
     public EmailLog sendEmail(SendEmailRequest request) {
         log.info("Sending email synchronously to: {}", request.getRecipient());
 
-        // Create email log
+        // 1. Xác định content (template hoặc content trực tiếp)
+        String content = request.getContent();
+        if (request.getTemplateName() != null && !request.getTemplateName().isEmpty()) {
+            content = processTemplate(request.getTemplateName(), request.getTemplateVariables());
+        }
+
+        // 2. Tạo EmailLog
         EmailLog emailLog = createEmailLog(request);
         emailLog.setStatus(EmailStatus.SENDING);
+        // đảm bảo log lưu content đã render
+        emailLog.setContent(content);
         emailLog = emailLogRepository.save(emailLog);
 
         try {
-            // Determine content (template or direct content)
-            String content = request.getContent();
-            if (request.getTemplateName() != null && !request.getTemplateName().isEmpty()) {
-                content = processTemplate(request.getTemplateName(), request.getTemplateVariables());
-            }
-
-            // Send email
+            // 3. Gửi mail
             sendMimeMessage(
                     request.getRecipient(),
                     request.getCc(),
@@ -75,7 +82,7 @@ public class EmailServiceImpl implements EmailService {
                     request.getAttachmentPath()
             );
 
-            // Update status to SENT
+            // 4. Cập nhật trạng thái
             emailLog.setStatus(EmailStatus.SENT);
             emailLog.setSentAt(LocalDateTime.now());
             log.info("Email sent successfully to: {}", request.getRecipient());
@@ -90,36 +97,54 @@ public class EmailServiceImpl implements EmailService {
         return emailLogRepository.save(emailLog);
     }
 
+    // Send email ASYNC (RabbitMQ)
     @Override
     @Transactional
     public EmailLog sendEmailAsync(SendEmailRequest request) {
         log.info("Queuing email for async sending to: {}", request.getRecipient());
 
-        // Create email log with PENDING status
+        // 1. Render content nếu dùng template (để log + queue đều có content đầy đủ)
+        String content = request.getContent();
+        if (request.getTemplateName() != null && !request.getTemplateName().isEmpty()) {
+            content = processTemplate(request.getTemplateName(), request.getTemplateVariables());
+            request.setContent(content);
+        }
+
+        // 2. Tạo EmailLog với trạng thái PENDING
         EmailLog emailLog = createEmailLog(request);
         emailLog.setStatus(EmailStatus.PENDING);
+        emailLog.setContent(content);
         emailLog = emailLogRepository.save(emailLog);
 
-        // Send to RabbitMQ queue if available, otherwise send synchronously
-        try {
-            if (emailProducerService.isPresent()) {
-                emailProducerService.get().sendEmailToQueue(emailLog);
-                log.info("Email queued successfully for: {}", request.getRecipient());
-            } else {
-                log.warn("EmailProducerService not available, sending email synchronously instead");
-                // Send synchronously as fallback
-                return sendEmail(request);
-            }
-        } catch (Exception e) {
-            log.error("Failed to queue email for: {}", request.getRecipient(), e);
-            emailLog.setStatus(EmailStatus.FAILED);
-            emailLog.setErrorMessage("Failed to queue email: " + e.getMessage());
-            emailLog = emailLogRepository.save(emailLog);
+        // 3. Nếu không có EmailProducerService -> fallback về sync
+        if (emailProducerService.isEmpty()) {
+            log.warn("EmailProducerService not available, sending email synchronously instead");
+            // Gửi sync thêm 1 log khác – trường hợp này hiếm, chấp nhận duplication nhẹ
+            sendEmail(request);
+            return emailLog;
         }
+
+        // 4. Đăng ký callback sau khi transaction commit
+        EmailLog finalEmailLog = emailLog;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    log.info("Transaction committed, now sending email to queue for: {}",
+                            finalEmailLog.getRecipient());
+                    emailProducerService.get().sendEmailToQueue(finalEmailLog);
+                    log.info("Email queued successfully for: {}", finalEmailLog.getRecipient());
+                } catch (Exception e) {
+                    log.error("Failed to queue email AFTER COMMIT for: {}", finalEmailLog.getRecipient(), e);
+                    // ở đây DB đã commit, không rollback được nữa – có thể log thêm để scheduler pick lên
+                }
+            }
+        });
 
         return emailLog;
     }
 
+    // Convenience methods
     @Override
     @Transactional
     public void sendSimpleEmail(String to, String subject, String content, EmailType emailType) {
@@ -147,7 +172,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     public void sendTemplateEmail(String to, String subject, String templateName,
-                                   Map<String, Object> variables, EmailType emailType) {
+                                  Map<String, Object> variables, EmailType emailType) {
         SendEmailRequest request = SendEmailRequest.builder()
                 .recipient(to)
                 .subject(subject)
@@ -167,7 +192,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     public void sendEmailWithAttachment(String to, String subject, String content,
-                                         EmailType emailType, File attachmentFile) {
+                                        EmailType emailType, File attachmentFile) {
         SendEmailRequest request = SendEmailRequest.builder()
                 .recipient(to)
                 .subject(subject)
@@ -184,6 +209,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    // Retry 1 email
     @Override
     @Transactional
     public EmailLog retryEmail(String emailLogId) {
@@ -201,7 +227,6 @@ public class EmailServiceImpl implements EmailService {
         emailLog.setRetryCount(emailLog.getRetryCount() + 1);
         emailLog = emailLogRepository.save(emailLog);
 
-        // Queue for retry if producer is available
         if (emailProducerService.isPresent()) {
             emailProducerService.get().sendEmailToQueue(emailLog);
         } else {
@@ -217,33 +242,67 @@ public class EmailServiceImpl implements EmailService {
     public EmailLogResponse getEmailLog(String id) {
         EmailLog emailLog = emailLogRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Email log not found with ID: " + id, ErrorCode.EMAIL_NOT_FOUND));
-        return mapToResponse(emailLog);
+
+        String username = null;
+        if (emailLog.getTriggeredBy() != null) {
+            username = accountRepository.findById(emailLog.getTriggeredBy())
+                    .map(Account::getUsername)
+                    .orElse(null);
+        }
+
+        return emailMapper.mapToResponse(emailLog, username);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EmailLogResponse> getAllEmailLogs(Pageable pageable) {
-        return emailLogRepository.findAll(pageable).map(this::mapToResponse);
+        Page<EmailLog> page = emailLogRepository.findAll(pageable);
+        return mapPageWithTriggeredBy(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EmailLogResponse> getEmailLogsByStatus(EmailStatus status, Pageable pageable) {
-        return emailLogRepository.findByStatus(status, pageable).map(this::mapToResponse);
+        Page<EmailLog> page = emailLogRepository.findByStatus(status, pageable);
+        return mapPageWithTriggeredBy(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EmailLogResponse> getEmailLogsByType(EmailType emailType, Pageable pageable) {
-        return emailLogRepository.findByEmailType(emailType, pageable).map(this::mapToResponse);
+        Page<EmailLog> page = emailLogRepository.findByEmailType(emailType, pageable);
+        return mapPageWithTriggeredBy(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EmailLogResponse> getEmailLogsByRecipient(String recipient, Pageable pageable) {
-        return emailLogRepository.findByRecipient(recipient, pageable).map(this::mapToResponse);
+        Page<EmailLog> page = emailLogRepository.findByRecipient(recipient, pageable);
+        return mapPageWithTriggeredBy(page);
     }
 
+    private Page<EmailLogResponse> mapPageWithTriggeredBy(Page<EmailLog> page) {
+        // 1. Lấy tất cả accountId từ triggeredBy
+        Set<String> accountIds = page.getContent().stream()
+                .map(EmailLog::getTriggeredBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 2. Query 1 lần lấy hết Account
+        Map<String, String> usernameById = accountRepository.findAllById(accountIds).stream()
+                .collect(Collectors.toMap(Account::getId, Account::getUsername));
+
+        // 3. Map từng EmailLog -> EmailLogResponse, lookup username từ map
+        return page.map(emailLog -> {
+            String username = null;
+            if (emailLog.getTriggeredBy() != null) {
+                username = usernameById.get(emailLog.getTriggeredBy());
+            }
+            return emailMapper.mapToResponse(emailLog, username);
+        });
+    }
+
+    // Batch processing / cleanup / statistics
     @Override
     @Transactional
     public void processPendingEmails() {
@@ -301,18 +360,17 @@ public class EmailServiceImpl implements EmailService {
     @Transactional(readOnly = true)
     public Map<String, Long> getEmailStatistics() {
         Map<String, Long> stats = new HashMap<>();
-
         stats.put("total", emailLogRepository.count());
         stats.put("pending", emailLogRepository.countByStatus(EmailStatus.PENDING));
         stats.put("sent", emailLogRepository.countByStatus(EmailStatus.SENT));
         stats.put("failed", emailLogRepository.countByStatus(EmailStatus.FAILED));
         stats.put("retry", emailLogRepository.countByStatus(EmailStatus.RETRY));
-
         return stats;
     }
 
-    // ==================== Private Helper Methods ====================
-
+    // =============================================================================
+    // Private Helper Methods
+    // =============================================================================
     private EmailLog createEmailLog(SendEmailRequest request) {
         EmailLog emailLog = EmailLog.builder()
                 .recipient(request.getRecipient())
@@ -335,7 +393,7 @@ public class EmailServiceImpl implements EmailService {
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             String username = auth.getName();
             accountRepository.findByUsername(username).ifPresent(account ->
-                emailLog.setTriggeredBy(account.getId())
+                    emailLog.setTriggeredBy(account.getId())
             );
         }
 
@@ -343,7 +401,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private void sendMimeMessage(String to, List<String> cc, List<String> bcc,
-                                  String subject, String content, String attachmentPath)
+                                 String subject, String content, String attachmentPath)
             throws MessagingException {
 
         if (!emailProperties.isEnabled()) {
@@ -377,6 +435,8 @@ public class EmailServiceImpl implements EmailService {
             File file = new File(attachmentPath);
             if (file.exists()) {
                 helper.addAttachment(file.getName(), file);
+            } else {
+                log.warn("Attachment file not found: {}", attachmentPath);
             }
         }
 
@@ -389,32 +449,5 @@ public class EmailServiceImpl implements EmailService {
             context.setVariables(variables);
         }
         return templateEngine.process(templateName, context);
-    }
-
-    private EmailLogResponse mapToResponse(EmailLog emailLog) {
-        // Fetch username if triggeredBy ID exists
-        String triggeredByUsername = null;
-        if (emailLog.getTriggeredBy() != null) {
-            triggeredByUsername = accountRepository.findById(emailLog.getTriggeredBy())
-                    .map(Account::getUsername)
-                    .orElse(null);
-        }
-
-        return EmailLogResponse.builder()
-                .id(emailLog.getId())
-                .recipient(emailLog.getRecipient())
-                .subject(emailLog.getSubject())
-                .emailType(emailLog.getEmailType())
-                .status(emailLog.getStatus())
-                .retryCount(emailLog.getRetryCount())
-                .errorMessage(emailLog.getErrorMessage())
-                .sentAt(emailLog.getSentAt())
-                .hasAttachment(emailLog.getHasAttachment())
-                .priority(emailLog.getPriority())
-                .scheduledAt(emailLog.getScheduledAt())
-                .createdAt(emailLog.getCreatedAt())
-                .updatedAt(emailLog.getUpdatedAt())
-                .triggeredByUsername(triggeredByUsername)
-                .build();
     }
 }
