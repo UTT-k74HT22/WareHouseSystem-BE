@@ -28,7 +28,10 @@ public enum ErrorCode {
     COM_005("COM_005", "Duplicate entry - resource already exists"),
 
     // Rate limiting errors
-    RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests");
+    RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
+
+    // Email errors
+    EMAIL_NOT_FOUND("EMAIL_001", "Email log not found");
 
     private final String code;
     private final String message;
