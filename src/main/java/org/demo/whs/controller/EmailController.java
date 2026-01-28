@@ -55,7 +55,7 @@ public class EmailController {
 
         EmailLogResponse response = emailService.getEmailLog(emailLog.getId());
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
