@@ -1,7 +1,9 @@
 package org.demo.whs;
 
 import org.demo.whs.configuration.RabbitMQConfig;
+import org.demo.whs.configuration.RabbitMQEmailConfig;
 import org.demo.whs.configuration.RedisConfig;
+import org.demo.whs.helpers.producer.EmailProducerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
@@ -22,7 +24,9 @@ import org.springframework.test.context.ActiveProfiles;
 @ComponentScan(excludeFilters = {
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
                 RedisConfig.class,
-                RabbitMQConfig.class
+                RabbitMQConfig.class,
+                RabbitMQEmailConfig.class,
+                EmailProducerService.class
         })
 })
 class WhsApplicationTests {

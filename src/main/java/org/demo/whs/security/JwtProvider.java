@@ -135,19 +135,23 @@ public class JwtProvider {
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token);
-            return false;
+            return true;
         } catch (MalformedJwtException e) {
             log.error("Invalid token: {}", e.getMessage());
+            return false;
         } catch (ExpiredJwtException e) {
             log.error("Token has expired: {}", e.getMessage());
+            return false;
         } catch (UnsupportedJwtException e) {
             log.error("Tokens are not supported: {}", e.getMessage());
+            return false;
         } catch (IllegalArgumentException e) {
             log.error("Empty tokens: {}", e.getMessage());
+            return false;
         } catch (SignatureException e) {
             log.error("Invalid token signature: {}", e.getMessage());
+            return false;
         }
-        return true;
     }
 
     /**
