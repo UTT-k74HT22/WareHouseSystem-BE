@@ -156,6 +156,54 @@ sequenceDiagram
 
 ---
 
+### UC-MD-12 - Update Unit of Measure
+
+**Brief Description**: Update name or description of an existing UOM; code is immutable.
+
+**Primary Actor**: System Admin
+
+**Pre-conditions**:
+- User has UPDATE_UOM permission.
+- UOM exists.
+
+**Post-conditions**:
+- UOM updated with audit fields.
+
+**Main Flow**:
+1. User opens UOM detail.
+2. User clicks Edit.
+3. System displays update form (code read-only).
+4. User edits name/description.
+5. User clicks Save.
+6. System validates fields.
+7. System updates UOM.
+8. System returns success.
+
+**Rules & Constraints**:
+- code is immutable after creation.
+- name is required, max 50.
+
+---
+
+### UC-MD-13 - List and Search UOMs
+
+**Brief Description**: View and search UOMs for product creation.
+
+**Primary Actor**: Any authenticated user
+
+**Pre-conditions**:
+- User has VIEW_UOM permission.
+
+**Post-conditions**:
+- User sees a paginated list of UOMs.
+
+**Main Flow**:
+1. User opens UOM list.
+2. User searches by code or name.
+3. System returns matching results with pagination.
+
+---
+
 ## Step 4 - Acceptance Criteria
 
 **AC-MD-UOM-01 - Create UOM**
@@ -179,6 +227,14 @@ Then the system rejects the request with error "UOM is in use"
 Given I am creating a product
 When I open the UOM dropdown
 Then all active UOMs are listed
+```
+
+**AC-MD-UOM-04 - Update UOM**
+```gherkin
+Given I am a System Admin
+When I update the UOM name from "Pieces" to "Piece"
+Then the UOM is updated successfully
+And the code remains unchanged
 ```
 
 ---

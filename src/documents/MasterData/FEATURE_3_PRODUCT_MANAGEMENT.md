@@ -47,7 +47,7 @@
 - As an Inventory Controller, I want to set minimum and maximum stock levels, so that the system can alert me when stock is low.
 - As a System Admin, I want to import products in bulk from Excel, so that I can quickly onboard hundreds of products.
 - As a Warehouse Manager, I want to enable batch tracking for products with expiry dates, so that I can manage FIFO/FEFO properly.
-- As a Data Entry Operator, I want to search products by SKU, name, or category, so that I can quickly find and update product information.
+- As a Data Entry Operator, I want to search products by SKU, name, or category code, so that I can quickly find and update product information.
 
 ---
 
@@ -75,7 +75,7 @@
    - sku (unique, 1-50)
    - name (required, max 200)
    - description (optional)
-   - category (optional, max 50)
+   - category_id (optional, must exist and ACTIVE)
    - uom (required)
    - weight (optional, > 0)
    - dimensions (optional, format LxWxH in CM)
@@ -99,14 +99,13 @@
   - System returns error "Product SKU already exists".
 - A2: Invalid format (dimensions or negative values)
   - System returns validation errors with guidance.
-
-**Exception Flows**:
-- E1: Database error
-  - System returns a generic error; no record created.
+- A3: Invalid category
+  - System returns error "Category not found or inactive".
 
 **Rules & Constraints**:
 - SKU is immutable after creation.
 - UOM is required and must exist.
+- Category is optional but must exist and be ACTIVE if provided.
 - Dimensions must match pattern "LxWxH" in CM if provided.
 
 **Mermaid Diagram**:
@@ -335,7 +334,7 @@ And results are paginated
 
 ### API Impacts
 - `GET /api/products`
-  - Query params: search, category, status, batch_tracking, page, size, sort
+  - Query params: search, category_id, category_code, status, batch_tracking, page, size, sort
 - `GET /api/products/{id}`
 - `GET /api/products/sku/{sku}`
 - `POST /api/products`
@@ -349,6 +348,7 @@ And results are paginated
 - sku: required, 1-50, unique (case-insensitive)
 - name: required, max 200
 - uom_id: required, must exist
+- category_id: optional, must exist and ACTIVE
 - weight: positive if provided
 - dimensions: "LxWxH" in CM if provided
 - min_stock_level: >= 0
@@ -356,7 +356,7 @@ And results are paginated
 - reorder_point: >= min_stock_level if provided
 
 ### Response Data
-- id, sku, name, status, category, uom
+- id, sku, name, status, category_id, category_code, category_name, uom
 - weight, dimensions, batch_tracking
 - min_stock_level, max_stock_level, reorder_point
 - created_by, created_at, updated_by, updated_at
@@ -367,11 +367,12 @@ And results are paginated
 - PRODUCT_BATCH_TRACKING_INVALID
 - PRODUCT_IMPORT_FILE_INVALID
 - PRODUCT_IMPORT_ROW_INVALID
+- PRODUCT_CATEGORY_INVALID
 
 ### Database Impacts
 - Table: `products`
-- Key columns: sku, name, category, uom_id, status, batch_tracking
-- Indexes: idx_sku, idx_status, idx_category, idx_name
+- Key columns: sku, name, category_id, uom_id, status, batch_tracking
+- Indexes: idx_sku, idx_status, idx_category_id, idx_name
 
 ### Async / Background Jobs
 - Product import: queue `product.import`

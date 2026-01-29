@@ -199,6 +199,27 @@ CREATE TABLE units_of_measure (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+#### product_categories
+```sql
+CREATE TABLE product_categories (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    updated_by BIGINT,
+
+    INDEX idx_code (code),
+    INDEX idx_status (status),
+    INDEX idx_name (name),
+    FOREIGN KEY (created_by) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by) REFERENCES accounts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
 #### warehouses
 ```sql
 CREATE TABLE warehouses (
@@ -264,7 +285,7 @@ CREATE TABLE products (
     sku VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    category VARCHAR(50),
+    category_id BIGINT,
     uom_id BIGINT NOT NULL,
     weight DECIMAL(10,3) COMMENT 'Weight in KG',
     dimensions VARCHAR(50) COMMENT 'LxWxH in CM',
@@ -281,12 +302,13 @@ CREATE TABLE products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by BIGINT,
     updated_by BIGINT,
-    
+
     INDEX idx_sku (sku),
     INDEX idx_status (status),
-    INDEX idx_category (category),
+    INDEX idx_category_id (category_id),
     INDEX idx_name (name),
     FULLTEXT idx_search (name, description),
+    FOREIGN KEY (category_id) REFERENCES product_categories(id),
     FOREIGN KEY (uom_id) REFERENCES units_of_measure(id),
     FOREIGN KEY (created_by) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES accounts(id) ON DELETE SET NULL
@@ -789,6 +811,13 @@ CREATE INDEX idx_so_status_date ON sales_orders(status, order_date DESC);
 
 ## 📊 Sample Data
 
+### Insert Categories
+```sql
+INSERT INTO product_categories (code, name, description, status) VALUES
+('ELEC', 'Electronics', 'Electronic devices and accessories', 'ACTIVE'),
+('FOOD', 'Food', 'Perishable and non-perishable food items', 'ACTIVE');
+```
+
 ### Insert UOMs
 ```sql
 INSERT INTO units_of_measure (code, name, description) VALUES
@@ -816,6 +845,5 @@ INSERT INTO warehouses (code, name, address, city, country, type, status) VALUES
 
 ---
 
-**Cập nhật lần cuối:** 21/01/2026  
-**Version:** 1.0
-
+**Cập nhật lần cuối:** 29/01/2026  
+**Version:** 2.0
