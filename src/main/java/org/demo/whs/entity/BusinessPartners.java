@@ -5,6 +5,8 @@ import lombok.*;
 import org.demo.whs.entity.enums.BusinessPartnerStatus;
 import org.demo.whs.entity.enums.BusinessPartnerType;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "business_partners")
 @Getter
@@ -49,7 +51,7 @@ public class BusinessPartners extends BaseEntity {
     private String paymentTerms;
 
     @Column(name = "credit_limit")
-    private Double creditLimit;
+    private BigDecimal creditLimit;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

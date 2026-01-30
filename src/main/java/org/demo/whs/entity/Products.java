@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.demo.whs.entity.enums.ProductStatus;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "products")
 @Getter
@@ -29,7 +31,7 @@ public class Products extends BaseEntity {
     private String uomId;
 
     @Column(name = "weight")
-    private Double weight;
+    private BigDecimal weight;
 
     @Column(name = "dimensions", length = 100)
     private String dimensions;
@@ -39,19 +41,19 @@ public class Products extends BaseEntity {
     private ProductStatus status;
 
     @Column(name = "min_stock_level")
-    private Double minStockLevel;
+    private BigDecimal minStockLevel;
 
     @Column(name = "max_stock_level")
-    private Double maxStockLevel;
+    private BigDecimal maxStockLevel;
 
     @Column(name = "reorder_point")
-    private Double reOrderPoint;
+    private BigDecimal reOrderPoint;
 
     @Column(name = "cost_price")
-    private Double costPrice;
+    private BigDecimal costPrice;
 
     @Column(name = "selling_price")
-    private Double sellingPrice;
+    private BigDecimal sellingPrice;
 
     @Column(name = "barcode", length = 100)
     private String barcode;

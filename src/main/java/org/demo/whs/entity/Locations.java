@@ -5,6 +5,8 @@ import lombok.*;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "locations")
 @Getter
@@ -31,12 +33,12 @@ public class Locations extends BaseEntity {
     private LocationType type;
 
     @Column(name = "capacity")
-    private Double capacity;
+    private BigDecimal capacity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private LocationStatus status;
 
-    @Column(name = "notes", length = 255)
+    @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 }

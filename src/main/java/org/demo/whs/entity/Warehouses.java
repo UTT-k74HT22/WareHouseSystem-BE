@@ -5,6 +5,8 @@ import lombok.*;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.entity.enums.WareHouseType;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "warehouses")
 @Getter
@@ -50,7 +52,7 @@ public class Warehouses extends BaseEntity {
     private WareHouseStatus status;
 
     @Column(name = "capacity")
-    private Double capacity;
+    private BigDecimal capacity;
 
     @Column(name = "manager_id", columnDefinition = "char(36)")
     private String managerId;
