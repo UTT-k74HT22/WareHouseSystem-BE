@@ -50,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
         String expireAccessToken = jwtProvider.getExpirationAccessToken(accessToken);
         String expireRefreshToken = jwtProvider.getExpirationRefreshToken(refreshToken);
         log.info("User authenticated successfully: {}", request.getUsername());
-        return authMapper.toResponse(accessToken, expireAccessToken, refreshToken, expireRefreshToken, null);
+        return authMapper.toResponse(accessToken, refreshToken, expireAccessToken, expireRefreshToken, null);
     }
 
     private void validAccount(LoginRequest request, Account account) {
