@@ -25,9 +25,10 @@
 6. [Feature 3: Product Management](#feature-3-product-management)
 7. [Feature 4: Unit of Measure (UOM) Management](#feature-4-unit-of-measure-uom-management)
 8. [Feature 5: Business Partner Management](#feature-5-business-partner-management)
-9. [API Impact Summary](#api-impact-summary)
-10. [Database Impact Summary](#database-impact-summary)
-11. [Background Job Requirements](#background-job-requirements)
+9. [Feature 6: Category Management](#feature-6-category-management)
+10. [API Impact Summary](#api-impact-summary)
+11. [Database Impact Summary](#database-impact-summary)
+12. [Background Job Requirements](#background-job-requirements)
 
 ---
 
@@ -73,8 +74,9 @@ Master Data Management is the foundation module that manages all reference data 
 1. **Warehouses** - Physical warehouse locations where inventory is stored
 2. **Locations** - Specific storage positions within warehouses
 3. **Products** - Items that can be stored and tracked in inventory
-4. **Units of Measure (UOM)** - Standard measurement units (pieces, boxes, kg, etc.)
-5. **Business Partners** - Suppliers and customers
+4. **Product Categories** - Classification for products
+5. **Units of Measure (UOM)** - Standard measurement units (pieces, boxes, kg, etc.)
+6. **Business Partners** - Suppliers and customers
 
 ### Dependencies
 
@@ -894,7 +896,13 @@ And displays error "Partner is blacklisted"
 
 ---
 
-## 📊 API Impact Summary
+## 📋 Feature 6: Category Management
+
+See `FEATURE_6_CATEGORY_MANAGEMENT.md`.
+
+---
+
+## 📋 API Impact Summary
 
 ### New Endpoints Required
 
@@ -951,6 +959,15 @@ And displays error "Partner is blacklisted"
 | GET | `/api/partners/suppliers` | List only suppliers | All authenticated |
 | GET | `/api/partners/customers` | List only customers | All authenticated |
 
+#### Category APIs
+| Method | Endpoint | Description | Roles |
+|--------|----------|-------------|-------|
+| GET | `/api/categories` | List categories with filtering | All authenticated |
+| GET | `/api/categories/{id}` | Get category details | All authenticated |
+| POST | `/api/categories` | Create new category | ADMIN |
+| PUT | `/api/categories/{id}` | Update category | ADMIN |
+| PATCH | `/api/categories/{id}/status` | Change category status | ADMIN |
+
 ---
 
 ## 🗄️ Database Impact Summary
@@ -962,8 +979,9 @@ All tables are already defined in `04_DATABASE_SCHEMA.md`. This module implement
 1. **warehouses** - Complete CRUD
 2. **locations** - Complete CRUD + bulk creation
 3. **products** - Complete CRUD + bulk import/export
-4. **units_of_measure** - Complete CRUD
-5. **business_partners** - Complete CRUD
+4. **product_categories** - Complete CRUD
+5. **units_of_measure** - Complete CRUD
+6. **business_partners** - Complete CRUD
 
 ### Indexes Required
 
@@ -983,9 +1001,14 @@ Already defined in schema, but ensure these are present for performance:
 **products**:
 - `idx_sku` (for SKU-based lookups - most common)
 - `idx_status` (for filtering active products)
-- `idx_category` (for category filtering)
+- `idx_category_id` (for category filtering)
 - `idx_name` (for name-based sorting)
 - `idx_search` (full-text search on name and description)
+
+**product_categories**:
+- `idx_code` (for code-based lookups)
+- `idx_status` (for filtering active categories)
+- `idx_name` (for name-based sorting)
 
 **business_partners**:
 - `idx_code` (for code-based lookups)
@@ -1073,12 +1096,18 @@ Already defined in schema, but ensure these are present for performance:
 - `sku`: Required, alphanumeric with hyphens/underscores, 1-50 chars, unique (case-insensitive)
 - `name`: Required, max 200 chars
 - `uom_id`: Must reference existing UOM
+- `category_id`: Optional, must reference existing ACTIVE category
 - `weight`: Positive number if provided
 - `dimensions`: Format "LxWxH" in CM if provided
 - `min_stock_level`: Non-negative if provided
 - `max_stock_level`: Must be >= min_stock_level if both provided
 - `reorder_point`: Should be >= min_stock_level if provided
 - `cost_price`, `selling_price`: Non-negative if provided
+
+### Category Validation
+- `code`: Required, max 20 chars, unique, stored uppercase
+- `name`: Required, max 100 chars
+- `status`: Must be ACTIVE or INACTIVE
 
 ### UOM Validation
 - `code`: Required, max 10 chars, unique, stored in uppercase
@@ -1142,12 +1171,12 @@ Send email with report
 ### Example 3: Product Search with Filters
 
 ```
-User Action: Search "laptop" + category="Electronics"
+User Action: Search "laptop" + category_id=10
    ↓
-GET /api/products?search=laptop&category=Electronics&status=ACTIVE
+GET /api/products?search=laptop&category_id=10&status=ACTIVE
    ↓
 Query: WHERE (name LIKE '%laptop%' OR sku LIKE '%laptop%')
-       AND category = 'Electronics'
+       AND category_id = 10
        AND status = 'ACTIVE'
    ↓
 Return paginated results

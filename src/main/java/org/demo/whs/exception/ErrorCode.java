@@ -16,6 +16,21 @@ public enum ErrorCode {
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
 
+    // Ware House errors
+    WHS_001("WHS_001", "Warehouse not found"),
+    WHS_002("WHS_002", "Insufficient stock in warehouse"),
+    WHS_003("WHS_003", "Invalid warehouse operation"),
+
+    // Location errors
+    LOC_001("LOC_001", "Location not found"),
+    LOC_002("LOC_002", "Invalid location data"),
+
+    // Product errors
+    PROD_001("PROD_001", "Product not found"),
+    PROD_002("PROD_002", "Product already exists"),
+    PROD_003("PROD_003", "Invalid product data"),
+
+
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
     COM_002("COM_002", "Internal server error - please contact support"),
