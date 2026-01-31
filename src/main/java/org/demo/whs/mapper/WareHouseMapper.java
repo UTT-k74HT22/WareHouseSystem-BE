@@ -45,6 +45,7 @@ public class WareHouseMapper {
 
     /**
      * Updates an existing warehouse entity with data from UpdateWarehouseRequest.
+     * Only updates fields that are not null in the request.
      *
      * @param warehouse the existing warehouse entity to update
      * @param request   the update request containing new values
@@ -54,15 +55,48 @@ public class WareHouseMapper {
             return;
         }
 
-        warehouse.setName(request.getName());
-        warehouse.setAddress(request.getAddress());
-        warehouse.setPhone(request.getPhone());
-        warehouse.setEmail(request.getEmail());
+        if (request.getName() != null) {
+            warehouse.setName(request.getName());
+        }
+
+        if (request.getAddress() != null) {
+            warehouse.setAddress(request.getAddress());
+        }
+
+        if (request.getCity() != null) {
+            warehouse.setCity(request.getCity());
+        }
+
+        if (request.getState() != null) {
+            warehouse.setState(request.getState());
+        }
+
+        if (request.getCountry() != null) {
+            warehouse.setCountry(request.getCountry());
+        }
+
+        if (request.getPostalCode() != null) {
+            warehouse.setPostalCode(request.getPostalCode());
+        }
+
+        if (request.getPhone() != null) {
+            warehouse.setPhone(request.getPhone());
+        }
+
+        if (request.getEmail() != null) {
+            warehouse.setEmail(request.getEmail());
+        }
 
         if (request.getWareHouseType() != null) {
             warehouse.setType(request.getWareHouseType());
         }
 
-        warehouse.setManagerId(request.getManagerId());
+        if (request.getCapacity() != null) {
+            warehouse.setCapacity(request.getCapacity());
+        }
+
+        if (request.getManagerId() != null) {
+            warehouse.setManagerId(request.getManagerId());
+        }
     }
 }
