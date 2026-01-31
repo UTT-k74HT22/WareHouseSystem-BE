@@ -17,9 +17,10 @@ public enum ErrorCode {
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
 
     // Ware House errors
-    WHS_001("WHS_001", "Warehouse not found"),
-    WHS_002("WHS_002", "Insufficient stock in warehouse"),
-    WHS_003("WHS_003", "Invalid warehouse operation"),
+    WH_001("WHS_001", "Warehouse not found"),
+    WH_002("WHS_002", "Insufficient stock in warehouse"),
+    WH_003("WHS_003", "Invalid warehouse operation"),
+    WH_004("WHS_004", "Warehouse code already exists"),
 
     // Location errors
     LOC_001("LOC_001", "Location not found"),
