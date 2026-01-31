@@ -7,8 +7,20 @@
 1. [Database Overview](#database-overview)
 2. [ERD Diagram](#erd-diagram)
 3. [Table Definitions](#table-definitions)
-4. [Indexes & Constraints](#indexes--constraints)
+   - 1. Auth & User Management
+   - 2. Email Management
+   - 3. Master Data
+   - 4. Batch Management
+   - 5. Inventory
+   - 6. Inbound Operations
+   - 7. Outbound Operations
+   - 8. Stock Movement Audit
+   - 9. Reporting & Import Jobs
+4. [Indexes & Constraints](#indexes--constraints-summary)
 5. [Sample Data](#sample-data)
+6. [Database Schema Evolution](#database-schema-evolution)
+7. [Performance Considerations](#performance-considerations)
+8. [Data Integrity Rules](#data-integrity-rules)
 
 ---
 
@@ -24,12 +36,14 @@ Time Zone: UTC
 ```
 
 ### Design Principles
-1. ✅ **Normalized to 3NF** - Minimize data redundancy
-2. ✅ **Audit Trail** - Track who/when for all changes
-3. ✅ **Soft Delete** - Use status fields instead of hard deletes
-4. ✅ **Referential Integrity** - Foreign key constraints
-5. ✅ **Optimistic Locking** - Version fields for concurrency control
-6. ✅ **Indexing Strategy** - Optimize for common queries
+1. ✅ **UUID Primary Keys** - Using CHAR(36) for globally unique identifiers
+2. ✅ **Normalized to 3NF** - Minimize data redundancy
+3. ✅ **Audit Trail** - Track who/when for all changes (`created_at`, `updated_at`, `created_by`, `updated_by`)
+4. ✅ **Soft Delete** - Use status fields instead of hard deletes
+5. ✅ **Referential Integrity** - Foreign key constraints with CASCADE/SET NULL policies
+6. ✅ **Optimistic Locking** - Version fields for concurrency control (where needed)
+7. ✅ **Indexing Strategy** - Optimize for common queries and joins
+8. ✅ **ENUMs for Status** - Type-safe status values
 
 ---
 
@@ -37,51 +51,134 @@ Time Zone: UTC
 
 ### High-Level Entity Relationship
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  ACCOUNTS   │────▶│ACCOUNT_ROLES│◀────│   ROLES     │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                               │
-                                               ▼
-                                        ┌─────────────┐
-                                        │ROLE_PERMS   │
-                                        └─────────────┘
-                                               │
-                                               ▼
-                                        ┌─────────────┐
-                                        │ PERMISSIONS │
-                                        └─────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    AUTHENTICATION & AUTHORIZATION                │
+└─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ WAREHOUSES  │────▶│  LOCATIONS  │     │  PRODUCTS   │
-└─────────────┘     └─────────────┘     └─────────────┘
+│  ACCOUNTS   │────▶│ACCOUNT_ROLES│◀────│   ROLES     │
+│  (CHAR36)   │     │  (Junction) │     │  (CHAR36)   │
+└──────┬──────┘     └─────────────┘     └──────┬──────┘
+       │                                        │
+       │                                        ▼
+       │                                 ┌─────────────┐
+       │                                 │ROLE_PERMS   │
+       │                                 │ (Junction)  │
+       │                                 └──────┬──────┘
+       │                                        │
+       ▼                                        ▼
+┌─────────────┐                          ┌─────────────┐
+│USER_PROFILES│                          │ PERMISSIONS │
+│  (CHAR36)   │                          │  (CHAR36)   │
+└─────────────┘                          └─────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                         EMAIL MANAGEMENT                         │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐
+│ EMAIL_LOGS  │───triggered_by──▶ ACCOUNTS
+│  (CHAR36)   │
+└─────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    MASTER DATA (MODULE 2)                        │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ WAREHOUSES  │────▶│  LOCATIONS  │     │ CATEGORIES  │
+│  (CHAR36)   │     │  (CHAR36)   │     │  (CHAR36)   │
+└──────┬──────┘     └─────────────┘     └──────┬──────┘
+       │                                        │
+       │            ┌─────────────┐             │
+       │            │ UNITS_OF_   │             │
+       │            │  MEASURE    │             │
+       │            │  (CHAR36)   │             │
+       │            └──────┬──────┘             │
        │                   │                    │
-       │                   │                    ▼
-       │                   │             ┌─────────────┐
-       │                   │             │   BATCHES   │
-       │                   │             └─────────────┘
-       │                   │                    │
-       └───────────────────┼────────────────────┘
-                           ▼
+       │                   ▼                    ▼
+       │            ┌─────────────────────────────┐
+       │            │       PRODUCTS              │
+       │            │       (CHAR36)              │
+       │            │  - category_id ────────────┘
+       │            │  - uom_id                   
+       │            └──────┬──────────────────────┘
+       │                   │
+       │                   ▼
+       │            ┌─────────────┐
+       │            │   BATCHES   │ (If batch tracking)
+       │            │  (CHAR36)   │
+       │            └─────────────┘
+       │
+       └────────────────────┐
+                            │
+                            ▼
                     ┌─────────────┐
                     │  INVENTORY  │
-                    └─────────────┘
+                    │  (CHAR36)   │
+                    │ product_id  │
+                    │ warehouse_id│
+                    │ location_id │
+                    │ batch_id    │
+                    └──────┬──────┘
                            │
                            ▼
                     ┌─────────────┐
                     │   STOCK     │
                     │  MOVEMENTS  │
+                    │  (CHAR36)   │
                     └─────────────┘
 
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  BUSINESS   │────▶│  PURCHASE   │────▶│  INBOUND    │
-│  PARTNERS   │     │   ORDERS    │     │  RECEIPTS   │
-└─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    BUSINESS PARTNERS                             │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐
+│  BUSINESS   │
+│  PARTNERS   │ (type: SUPPLIER, CUSTOMER, BOTH)
+│  (CHAR36)   │
+└──────┬──────┘
        │
-       └───────────▶┌─────────────┐     ┌─────────────┐
-                    │   SALES     │────▶│  OUTBOUND   │
-                    │   ORDERS    │     │  SHIPMENTS  │
-                    └─────────────┘     └─────────────┘
+       ├─────▶ PURCHASE_ORDERS ────▶ INBOUND_RECEIPTS
+       │       (supplier_id)         
+       │
+       └─────▶ SALES_ORDERS ────▶ OUTBOUND_SHIPMENTS
+               (customer_id)
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    FUTURE MODULES (NOT YET)                      │
+└─────────────────────────────────────────────────────────────────┘
+
+- PURCHASE_ORDERS & PURCHASE_ORDER_LINES
+- INBOUND_RECEIPTS & INBOUND_RECEIPT_LINES
+- SALES_ORDERS & SALES_ORDER_LINES
+- OUTBOUND_SHIPMENTS & OUTBOUND_SHIPMENT_LINES
+- INVENTORY_ADJUSTMENTS
+- REPORT_JOBS
+- IMPORT_JOBS
 ```
+
+### Entity Relationships Summary
+
+**1-to-1 Relationships:**
+- `accounts` ←→ `user_profiles`
+
+**1-to-Many Relationships:**
+- `accounts` → `account_roles` (User has many roles)
+- `roles` → `role_permissions` (Role has many permissions)
+- `warehouses` → `locations` (Warehouse has many locations)
+- `categories` → `products` (Category has many products)
+- `units_of_measure` → `products` (UOM used by many products)
+- `products` → `batches` (Product has many batches)
+- `business_partners` → `purchase_orders` / `sales_orders`
+
+**Many-to-Many Relationships:**
+- `accounts` ←→ `roles` (through `account_roles`)
+- `roles` ←→ `permissions` (through `role_permissions`)
+
+**Composite Relationships:**
+- `inventory` references: `product`, `warehouse`, `location`, `batch`
+- `stock_movements` tracks all inventory changes with audit trail
 
 ---
 
@@ -92,126 +189,239 @@ Time Zone: UTC
 #### accounts
 ```sql
 CREATE TABLE accounts (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    status ENUM('ACTIVE', 'INACTIVE', 'LOCKED') DEFAULT 'ACTIVE',
-    failed_login_attempts INT DEFAULT 0,
-    locked_until TIMESTAMP NULL,
-    last_login_at TIMESTAMP NULL,
+    id CHAR(36) PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(100) NOT NULL,
+    status ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_username (username),
-    INDEX idx_email (email),
-    INDEX idx_status (status)
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `username`: VARCHAR(50) - Unique username
+- `password`: VARCHAR(100) - Encrypted password (BCrypt)
+- `status`: ENUM - Account status (ACTIVE, INACTIVE, SUSPENDED, DELETED)
+- `created_at`, `updated_at`: Audit timestamps
+- `created_by`, `updated_by`: Audit user tracking
+
+---
 
 #### roles
 ```sql
 CREATE TABLE roles (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(50) UNIQUE NOT NULL,
-    description VARCHAR(255),
+    id CHAR(36) PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    name ENUM('ADMIN', 'USER') NOT NULL UNIQUE,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_name (name)
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(50) - Unique role code (e.g., ROLE_ADMIN)
+- `name`: ENUM - Role name (ADMIN, USER)
+- `description`: TEXT - Role description
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
 
 #### permissions
 ```sql
 CREATE TABLE permissions (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    resource VARCHAR(50) NOT NULL,
-    action VARCHAR(50) NOT NULL,
-    description VARCHAR(255),
+    id CHAR(36) PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    UNIQUE KEY uk_resource_action (resource, action),
-    INDEX idx_resource (resource)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(50) - Unique permission code
+- `name`: VARCHAR(100) - Permission name
+- `description`: TEXT - Permission description
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
 
 #### account_roles (Junction Table)
 ```sql
 CREATE TABLE account_roles (
-    account_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    assigned_by BIGINT,
-    
+    account_id CHAR(36),
+    role_id CHAR(36),
     PRIMARY KEY (account_id, role_id),
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-    FOREIGN KEY (assigned_by) REFERENCES accounts(id) ON DELETE SET NULL
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**Purpose:** Many-to-many relationship between accounts and roles
+
+---
 
 #### role_permissions (Junction Table)
 ```sql
 CREATE TABLE role_permissions (
-    role_id BIGINT NOT NULL,
-    permission_id BIGINT NOT NULL,
-    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+    role_id CHAR(36),
+    permission_id CHAR(36),
     PRIMARY KEY (role_id, permission_id),
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Purpose:** Many-to-many relationship between roles and permissions
+
+---
+
 #### user_profiles
 ```sql
 CREATE TABLE user_profiles (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    account_id BIGINT UNIQUE NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    phone VARCHAR(20),
-    avatar_url VARCHAR(255),
+    id CHAR(36) PRIMARY KEY,
+    account_id CHAR(36) UNIQUE,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    email VARCHAR(100) NOT NULL UNIQUE,
+    phone_number VARCHAR(15),
+    address VARCHAR(255),
+    date_of_birth DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `account_id`: CHAR(36) - Foreign key to accounts table
+- `first_name`, `last_name`: User's name
+- `email`: VARCHAR(100) - Unique email address
+- `phone_number`: VARCHAR(15) - Contact number
+- `address`: VARCHAR(255) - Physical address
+- `date_of_birth`: DATE - User's birth date
+- Audit fields: created_at, updated_at, created_by, updated_by
+
 ---
 
-### 2. Master Data
+### 2. Email Management
+
+#### email_logs
+```sql
+CREATE TABLE IF NOT EXISTS email_logs (
+    id CHAR(36) NOT NULL PRIMARY KEY COMMENT 'UUID primary key',
+    recipient VARCHAR(255) NOT NULL COMMENT 'Email recipient',
+    cc VARCHAR(1000) NULL COMMENT 'CC recipients (comma-separated)',
+    bcc VARCHAR(1000) NULL COMMENT 'BCC recipients (comma-separated)',
+    subject VARCHAR(500) NOT NULL COMMENT 'Email subject',
+    content TEXT NOT NULL COMMENT 'Email content (HTML or plain text)',
+    email_type VARCHAR(50) NOT NULL COMMENT 'Type of email: WELCOME, PASSWORD_RESET, etc.',
+    status VARCHAR(20) NOT NULL COMMENT 'Status: PENDING, SENDING, SENT, FAILED, RETRY',
+    retry_count INT NOT NULL DEFAULT 0 COMMENT 'Number of retry attempts',
+    max_retry INT NOT NULL DEFAULT 3 COMMENT 'Maximum retry attempts',
+    error_message TEXT NULL COMMENT 'Error message if failed',
+    sent_at DATETIME NULL COMMENT 'Timestamp when email was successfully sent',
+    has_attachment BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Whether email has attachment',
+    attachment_path VARCHAR(500) NULL COMMENT 'Path to attachment file',
+    priority INT NOT NULL DEFAULT 5 COMMENT 'Priority (1=highest, 10=lowest)',
+    scheduled_at DATETIME NULL COMMENT 'Scheduled time to send email',
+    triggered_by CHAR(36) NULL COMMENT 'Account ID who triggered this email',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Record creation timestamp',
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Record update timestamp',
+    created_by VARCHAR(50) NULL COMMENT 'User who created this record',
+    updated_by VARCHAR(50) NULL COMMENT 'User who last updated this record',
+
+    INDEX idx_recipient (recipient),
+    INDEX idx_status (status),
+    INDEX idx_email_type (email_type),
+    INDEX idx_created_at (created_at),
+    INDEX idx_scheduled_at (scheduled_at),
+    INDEX idx_triggered_by (triggered_by)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Email sending history and logs';
+```
+
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `recipient`: VARCHAR(255) - Primary email recipient
+- `cc`: VARCHAR(1000) - CC recipients (comma-separated)
+- `bcc`: VARCHAR(1000) - BCC recipients (comma-separated)
+- `subject`: VARCHAR(500) - Email subject line
+- `content`: TEXT - Email content (HTML or plain text)
+- `email_type`: VARCHAR(50) - Email template type (WELCOME, PASSWORD_RESET, ORDER_CONFIRMATION, INVENTORY_ALERT)
+- `status`: VARCHAR(20) - Email status (PENDING, SENDING, SENT, FAILED, RETRY)
+- `retry_count`: INT - Current retry attempt count
+- `max_retry`: INT - Maximum allowed retry attempts (default: 3)
+- `error_message`: TEXT - Error details if sending failed
+- `sent_at`: DATETIME - Timestamp when successfully sent
+- `has_attachment`: BOOLEAN - Whether email includes attachments
+- `attachment_path`: VARCHAR(500) - File path to attachment
+- `priority`: INT - Email priority (1=highest, 10=lowest, default: 5)
+- `scheduled_at`: DATETIME - Scheduled delivery time
+- `triggered_by`: CHAR(36) - Account ID who triggered the email
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+**Purpose:** Track all email sending history, status, and retry logic for audit and debugging
+
+---
+
+### 3. Master Data
 
 #### units_of_measure
 ```sql
 CREATE TABLE units_of_measure (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(10) UNIQUE NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    description VARCHAR(255),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    type ENUM('LENGTH', 'WEIGHT', 'VOLUME', 'COUNT') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(36),
     
-    INDEX idx_code (code)
+    INDEX idx_code (code),
+    INDEX idx_type (type),
+    FOREIGN KEY (created_by) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-#### product_categories
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(10) - Unique UOM code (e.g., PCS, KG, M)
+- `name`: VARCHAR(100) - UOM name
+- `description`: TEXT - Detailed description
+- `type`: ENUM - UOM type (LENGTH, WEIGHT, VOLUME, COUNT)
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
+
+#### categories
 ```sql
-CREATE TABLE product_categories (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE categories (
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     description VARCHAR(255),
     status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT,
-    updated_by BIGINT,
-
+    created_by VARCHAR(50),
+    updated_by VARCHAR(36),
+    
     INDEX idx_code (code),
     INDEX idx_status (status),
     INDEX idx_name (name),
@@ -220,10 +430,20 @@ CREATE TABLE product_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(20) - Unique category code
+- `name`: VARCHAR(100) - Category name
+- `description`: VARCHAR(255) - Category description
+- `status`: ENUM - Status (ACTIVE, INACTIVE)
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
+
 #### warehouses
 ```sql
 CREATE TABLE warehouses (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     address VARCHAR(255),
@@ -236,11 +456,11 @@ CREATE TABLE warehouses (
     type ENUM('MAIN', 'SATELLITE', 'TRANSIT', 'RETURN') DEFAULT 'MAIN',
     status ENUM('ACTIVE', 'INACTIVE', 'MAINTENANCE') DEFAULT 'ACTIVE',
     capacity DECIMAL(15,2) COMMENT 'Total capacity in cubic meters',
-    manager_id BIGINT,
+    manager_id CHAR(36),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT,
-    updated_by BIGINT,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(36),
     
     INDEX idx_code (code),
     INDEX idx_status (status),
@@ -251,11 +471,25 @@ CREATE TABLE warehouses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(20) - Unique warehouse code
+- `name`: VARCHAR(100) - Warehouse name
+- `address`, `city`, `state`, `country`, `postal_code`: Location details
+- `phone`, `email`: Contact information
+- `type`: ENUM - Warehouse type (MAIN, SATELLITE, TRANSIT, RETURN)
+- `status`: ENUM - Status (ACTIVE, INACTIVE, MAINTENANCE)
+- `capacity`: DECIMAL(15,2) - Total capacity in cubic meters
+- `manager_id`: CHAR(36) - Foreign key to accounts table
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
+
 #### locations
 ```sql
 CREATE TABLE locations (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    warehouse_id BIGINT NOT NULL,
+    id CHAR(36) PRIMARY KEY,
+    warehouse_id CHAR(36) NOT NULL,
     code VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL,
     zone VARCHAR(50),
@@ -265,8 +499,8 @@ CREATE TABLE locations (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT,
-    updated_by BIGINT,
+    created_by VARCHAR(36),
+    updated_by VARCHAR(36),
     
     UNIQUE KEY uk_warehouse_code (warehouse_id, code),
     INDEX idx_warehouse_id (warehouse_id),
@@ -278,15 +512,29 @@ CREATE TABLE locations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `warehouse_id`: CHAR(36) - Foreign key to warehouses table
+- `code`: VARCHAR(50) - Location code (unique per warehouse)
+- `name`: VARCHAR(100) - Location name
+- `zone`: VARCHAR(50) - Zone designation
+- `type`: ENUM - Location type (STORAGE, PICKING, PACKING, STAGING, RETURN)
+- `capacity`: DECIMAL(15,2) - Capacity in cubic meters
+- `status`: ENUM - Status (ACTIVE, INACTIVE, FULL, MAINTENANCE)
+- `notes`: TEXT - Additional notes
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
+
 #### products
 ```sql
 CREATE TABLE products (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id CHAR(36) PRIMARY KEY,
     sku VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    category_id BIGINT,
-    uom_id BIGINT NOT NULL,
+    category_id CHAR(36) NOT NULL,
+    uom_id CHAR(36) NOT NULL,
     weight DECIMAL(10,3) COMMENT 'Weight in KG',
     dimensions VARCHAR(50) COMMENT 'LxWxH in CM',
     status ENUM('ACTIVE', 'INACTIVE', 'DISCONTINUED') DEFAULT 'ACTIVE',
@@ -300,25 +548,44 @@ CREATE TABLE products (
     requires_batch_tracking BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT,
-    updated_by BIGINT,
+    created_by VARCHAR(36),
+    updated_by VARCHAR(36),
 
     INDEX idx_sku (sku),
     INDEX idx_status (status),
-    INDEX idx_category_id (category_id),
     INDEX idx_name (name),
+    INDEX idx_category_id (category_id),
     FULLTEXT idx_search (name, description),
-    FOREIGN KEY (category_id) REFERENCES product_categories(id),
     FOREIGN KEY (uom_id) REFERENCES units_of_measure(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (created_by) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `sku`: VARCHAR(50) - Unique stock keeping unit code
+- `name`: VARCHAR(200) - Product name
+- `description`: TEXT - Product description
+- `category_id`: CHAR(36) - Foreign key to categories table
+- `uom_id`: CHAR(36) - Foreign key to units_of_measure table
+- `weight`: DECIMAL(10,3) - Product weight in KG
+- `dimensions`: VARCHAR(50) - Dimensions (LxWxH) in CM
+- `status`: ENUM - Product status (ACTIVE, INACTIVE, DISCONTINUED)
+- `min_stock_level`, `max_stock_level`, `reorder_point`: Inventory thresholds
+- `cost_price`, `selling_price`: DECIMAL(15,2) - Pricing information
+- `barcode`: VARCHAR(100) - Product barcode
+- `image_url`: VARCHAR(255) - Product image URL
+- `requires_batch_tracking`: BOOLEAN - Whether batch tracking is required
+- Audit fields: created_at, updated_at, created_by, updated_by
+
+---
+
 #### business_partners
 ```sql
 CREATE TABLE business_partners (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id CHAR(36) PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     type ENUM('SUPPLIER', 'CUSTOMER', 'BOTH') NOT NULL,
@@ -335,8 +602,8 @@ CREATE TABLE business_partners (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT,
-    updated_by BIGINT,
+    created_by VARCHAR(36),
+    updated_by VARCHAR(36),
     
     INDEX idx_code (code),
     INDEX idx_type (type),
@@ -347,9 +614,24 @@ CREATE TABLE business_partners (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+**Columns:**
+- `id`: UUID (CHAR(36)) - Primary key
+- `code`: VARCHAR(20) - Unique business partner code
+- `name`: VARCHAR(200) - Partner name
+- `type`: ENUM - Partner type (SUPPLIER, CUSTOMER, BOTH)
+- `contact_person`: VARCHAR(100) - Contact person name
+- `email`, `phone`: Contact information
+- `address`, `city`, `country`: Location details
+- `tax_id`: VARCHAR(50) - Tax identification number
+- `payment_terms`: VARCHAR(100) - Payment terms description
+- `credit_limit`: DECIMAL(15,2) - Credit limit amount
+- `status`: ENUM - Partner status (ACTIVE, INACTIVE, BLACKLISTED)
+- `notes`: TEXT - Additional notes
+- Audit fields: created_at, updated_at, created_by, updated_by
+
 ---
 
-### 3. Batch Management
+### 4. Batch Management
 
 #### batches
 ```sql
@@ -377,7 +659,7 @@ CREATE TABLE batches (
 
 ---
 
-### 4. Inventory
+### 5. Inventory
 
 #### inventory
 ```sql
@@ -447,7 +729,7 @@ CREATE TABLE inventory_adjustments (
 
 ---
 
-### 5. Inbound Operations
+### 6. Inbound Operations
 
 #### purchase_orders
 ```sql
@@ -561,7 +843,7 @@ CREATE TABLE inbound_receipt_lines (
 
 ---
 
-### 6. Outbound Operations
+### 7. Outbound Operations
 
 #### sales_orders
 ```sql
@@ -681,7 +963,7 @@ CREATE TABLE outbound_shipment_lines (
 
 ---
 
-### 7. Stock Movement Audit
+### 8. Stock Movement Audit
 
 #### stock_movements
 ```sql
@@ -719,7 +1001,7 @@ CREATE TABLE stock_movements (
 
 ---
 
-### 8. Reporting & Import Jobs
+### 9. Reporting & Import Jobs
 
 #### report_jobs
 ```sql
@@ -811,39 +1093,196 @@ CREATE INDEX idx_so_status_date ON sales_orders(status, order_date DESC);
 
 ## 📊 Sample Data
 
-### Insert Categories
+### Default Admin Account
 ```sql
-INSERT INTO product_categories (code, name, description, status) VALUES
-('ELEC', 'Electronics', 'Electronic devices and accessories', 'ACTIVE'),
-('FOOD', 'Food', 'Perishable and non-perishable food items', 'ACTIVE');
-```
-
-### Insert UOMs
-```sql
-INSERT INTO units_of_measure (code, name, description) VALUES
-('PCS', 'Pieces', 'Individual units'),
-('BOX', 'Box', 'Boxed items'),
-('KG', 'Kilogram', 'Weight in kilograms'),
-('LTR', 'Liter', 'Volume in liters'),
-('M', 'Meter', 'Length in meters');
+-- Password: admin123 (BCrypt hash)
+INSERT INTO accounts (id, username, password, status)
+VALUES (
+    UUID(),
+    'admin',
+    '$2a$10$2FrGg2/7Rtr7lQWRZ9UNV..WQblwoUUgJgOxWYnhP.okeEd3Jo5si',
+    'ACTIVE'
+);
 ```
 
 ### Insert Roles
 ```sql
-INSERT INTO roles (name, description) VALUES
-('ADMIN', 'System administrator with full access'),
-('WAREHOUSE_MANAGER', 'Warehouse manager with operational access'),
-('WAREHOUSE_STAFF', 'Warehouse staff for daily operations'),
-('VIEWER', 'Read-only access for reporting');
+INSERT INTO roles (id, code, name, description)
+VALUES (
+    UUID(),
+    'ROLE_ADMIN',
+    'ADMIN',
+    'Administrator role with full access'
+);
+
+INSERT INTO roles (id, code, name, description)
+VALUES (
+    UUID(),
+    'ROLE_USER',
+    'USER',
+    'Standard user role'
+);
+```
+
+### Link Admin Account with Role
+```sql
+INSERT INTO account_roles (account_id, role_id)
+SELECT a.id, r.id
+FROM accounts a
+JOIN roles r ON r.name = 'ADMIN'
+WHERE a.username = 'admin';
+```
+
+### Insert Admin User Profile
+```sql
+INSERT INTO user_profiles (id, account_id, first_name, last_name, email)
+SELECT
+    UUID(),
+    a.id,
+    'System',
+    'Administrator',
+    'admin@whs.local'
+FROM accounts a
+WHERE a.username = 'admin';
+```
+
+### Insert Categories
+```sql
+INSERT INTO categories (id, code, name, description, status)
+VALUES 
+    (UUID(), 'ELEC', 'Electronics', 'Electronic devices and accessories', 'ACTIVE'),
+    (UUID(), 'FOOD', 'Food', 'Perishable and non-perishable food items', 'ACTIVE'),
+    (UUID(), 'FURN', 'Furniture', 'Office and home furniture', 'ACTIVE'),
+    (UUID(), 'CHEM', 'Chemicals', 'Industrial chemicals', 'ACTIVE');
+```
+
+### Insert UOMs
+```sql
+INSERT INTO units_of_measure (id, code, name, description, type)
+VALUES
+    (UUID(), 'PCS', 'Pieces', 'Individual units', 'COUNT'),
+    (UUID(), 'BOX', 'Box', 'Boxed items', 'COUNT'),
+    (UUID(), 'KG', 'Kilogram', 'Weight in kilograms', 'WEIGHT'),
+    (UUID(), 'LTR', 'Liter', 'Volume in liters', 'VOLUME'),
+    (UUID(), 'M', 'Meter', 'Length in meters', 'LENGTH');
 ```
 
 ### Insert Sample Warehouse
 ```sql
-INSERT INTO warehouses (code, name, address, city, country, type, status) VALUES
-('WH-MAIN', 'Main Warehouse', '123 Main Street', 'Hanoi', 'Vietnam', 'MAIN', 'ACTIVE');
+INSERT INTO warehouses (id, code, name, address, city, country, type, status, capacity)
+VALUES (
+    UUID(),
+    'WH-HN01',
+    'Main Warehouse Hanoi',
+    '123 Giai Phong Street',
+    'Hanoi',
+    'Vietnam',
+    'MAIN',
+    'ACTIVE',
+    50000.00
+);
+```
+
+### Insert Sample Business Partners
+```sql
+-- Supplier
+INSERT INTO business_partners (id, code, name, type, contact_person, email, phone, status)
+VALUES (
+    UUID(),
+    'SUP001',
+    'ABC Electronics Supplier',
+    'SUPPLIER',
+    'John Doe',
+    'john@abc-electronics.com',
+    '+84901234567',
+    'ACTIVE'
+);
+
+-- Customer
+INSERT INTO business_partners (id, code, name, type, contact_person, email, phone, status)
+VALUES (
+    UUID(),
+    'CUS001',
+    'XYZ Retail Customer',
+    'CUSTOMER',
+    'Jane Smith',
+    'jane@xyz-retail.com',
+    '+84907654321',
+    'ACTIVE'
+);
 ```
 
 ---
 
-**Cập nhật lần cuối:** 29/01/2026  
-**Version:** 2.0
+## 🔄 Database Schema Evolution
+
+### Migration History
+1. **V20260107_01** - Create RBAC tables (accounts, roles, permissions, user_profiles)
+2. **V20260107_02** - Insert default admin account and role
+3. **V20260125_01** - Create email_logs table for email management
+4. **V20260129_01** - Create Module 2 Master Data tables (warehouses, locations, products, categories, UOMs, business_partners)
+
+### Key Changes from Initial Design
+- Changed from `BIGINT AUTO_INCREMENT` to `CHAR(36)` UUID for primary keys
+- Standardized audit fields: `created_at`, `updated_at`, `created_by`, `updated_by`
+- Added comprehensive indexes for performance optimization
+- Implemented proper foreign key constraints with CASCADE and SET NULL rules
+- Added `email_logs` table for email tracking and audit trail
+
+---
+
+## 📈 Performance Considerations
+
+### Indexes Strategy
+1. **Primary Keys**: UUID (CHAR(36)) - Unique identifier for all records
+2. **Unique Indexes**: Business codes (SKU, warehouse code, user email)
+3. **Foreign Key Indexes**: All FK columns for join performance
+4. **Composite Indexes**: Multi-column queries (product + warehouse + location)
+5. **Full-Text Indexes**: Product search by name and description
+6. **Date Indexes**: Time-based queries (created_at, order_date)
+
+### Optimization Tips
+```sql
+-- Example: Composite index for inventory lookups
+CREATE INDEX idx_inventory_lookup 
+ON inventory(product_id, warehouse_id, location_id);
+
+-- Example: Covering index for product search
+CREATE INDEX idx_product_search 
+ON products(status, category_id, name);
+
+-- Full-text search example
+SELECT * FROM products 
+WHERE MATCH(name, description) AGAINST('laptop' IN NATURAL LANGUAGE MODE);
+```
+
+---
+
+## 🔐 Data Integrity Rules
+
+### Foreign Key Policies
+- **CASCADE**: Delete child records when parent is deleted (order_lines, receipt_lines)
+- **SET NULL**: Preserve child records but clear FK when parent is deleted (created_by, updated_by)
+- **RESTRICT**: Prevent parent deletion if children exist (default for most cases)
+
+### Constraints
+```sql
+-- Prevent negative inventory
+CHECK (on_hand_quantity >= 0)
+CHECK (reserved_quantity >= 0)
+
+-- Ensure valid dates
+CHECK (expiry_date >= manufacture_date)
+CHECK (delivery_date >= order_date)
+
+-- Business logic constraints
+CHECK (selling_price >= cost_price)
+CHECK (max_stock_level >= min_stock_level)
+```
+
+---
+
+**Document Version:** 3.0  
+**Last Updated:** 31/01/2026  
+**Database Version:** MySQL 8.0  
+**Schema Status:** Production Ready ✅
