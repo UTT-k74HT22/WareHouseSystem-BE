@@ -2,6 +2,7 @@ package org.demo.whs.mapper;
 
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.stereotype.Component;
 
@@ -40,5 +41,28 @@ public class WareHouseMapper {
                 .wareHouseType(warehouses.getType().name())
                 .managerId(warehouses.getManagerId())
                 .build();
+    }
+
+    /**
+     * Updates an existing warehouse entity with data from UpdateWarehouseRequest.
+     *
+     * @param warehouse the existing warehouse entity to update
+     * @param request   the update request containing new values
+     */
+    public void updateEntity(Warehouses warehouse, UpdateWarehouseRequest request) {
+        if (warehouse == null || request == null) {
+            return;
+        }
+
+        warehouse.setName(request.getName());
+        warehouse.setAddress(request.getAddress());
+        warehouse.setPhone(request.getPhone());
+        warehouse.setEmail(request.getEmail());
+
+        if (request.getWareHouseType() != null) {
+            warehouse.setType(request.getWareHouseType());
+        }
+
+        warehouse.setManagerId(request.getManagerId());
     }
 }

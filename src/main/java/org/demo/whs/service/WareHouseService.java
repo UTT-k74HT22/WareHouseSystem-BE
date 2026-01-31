@@ -1,6 +1,8 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 
@@ -33,4 +35,22 @@ public interface WareHouseService {
      * @return the response containing warehouse information
      */
     WareHouseResponse getWareHouseById(String id);
+
+    /**
+     * Updates an existing warehouse.
+     *
+     * @param id      the unique identifier of the warehouse to update
+     * @param request the request containing updated warehouse details
+     * @return the response containing updated warehouse information
+     */
+    WareHouseResponse updateWareHouse(String id, UpdateWarehouseRequest request);
+
+    /**
+     * Changes the status of a warehouse.
+     *
+     * @param id      the unique identifier of the warehouse
+     * @param request the request containing the new status
+     * @return the response containing updated warehouse information
+     */
+    WareHouseResponse changeStatus(String id, ChangeStatusRequest request);
 }

@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.exception.BadRequestException;
@@ -48,15 +50,17 @@ public class WareHouseServiceImpl implements WareHouseService {
             throw new BadRequestException(ErrorCode.WH_004);
         }
         Warehouses warehouses = wareHouseMapper.toEntity(request);
-        String username = SecurityUtils.getCurrentUsername();
-        Account account = accountRepository.findByUsername(username)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.AUTH_002));
+        Account account = getCurrentUser();
+        setAuditField(warehouses, account);
+        wareHouseRepository.save(warehouses);
+        return wareHouseMapper.toResponse(warehouses);
+    }
+
+    private static void setAuditField(Warehouses warehouses, Account account) {
         warehouses.setCreatedBy(account.getId());
         warehouses.setUpdatedBy(account.getId());
         warehouses.setCreatedAt(LocalDateTime.now());
         warehouses.setUpdatedAt(LocalDateTime.now());
-        wareHouseRepository.save(warehouses);
-        return wareHouseMapper.toResponse(warehouses);
     }
 
     /**
@@ -89,5 +93,79 @@ public class WareHouseServiceImpl implements WareHouseService {
                     return new BadRequestException(ErrorCode.WH_001);
                 });
         return wareHouseMapper.toResponse(warehouses);
+    }
+
+    /**
+     * Updates an existing warehouse.
+     *
+     * @param id      the unique identifier of the warehouse to update
+     * @param request the request containing updated warehouse details
+     * @return the response containing updated warehouse information
+     */
+    @Override
+    @Transactional
+    public WareHouseResponse updateWareHouse(String id, UpdateWarehouseRequest request) {
+        log.info("Updating warehouse with id={}", id);
+
+        // Find the warehouse
+        Warehouses warehouse = wareHouseRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Warehouse not found with id={}", id);
+                    return new BadRequestException(ErrorCode.WH_001);
+                });
+
+        // Update the warehouse fields
+        wareHouseMapper.updateEntity(warehouse, request);
+
+        // Update metadata
+        Account account = getCurrentUser();
+        warehouse.setUpdatedBy(account.getId());
+        warehouse.setUpdatedAt(LocalDateTime.now());
+
+        // Save and return
+        wareHouseRepository.save(warehouse);
+        log.info("Warehouse updated successfully with id={}", id);
+
+        return wareHouseMapper.toResponse(warehouse);
+    }
+
+    /**
+     * Changes the status of a warehouse.
+     *
+     * @param id      the unique identifier of the warehouse
+     * @param request the request containing the new status
+     * @return the response containing updated warehouse information
+     */
+    @Override
+    @Transactional
+    public WareHouseResponse changeStatus(String id, ChangeStatusRequest request) {
+        log.info("Changing status for warehouse with id={} to status={}", id, request.getStatus());
+
+        // Find the warehouse
+        Warehouses warehouse = wareHouseRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Warehouse not found with id={}", id);
+                    return new BadRequestException(ErrorCode.WH_001);
+                });
+        if (warehouse.getStatus() == request.getStatus()) {
+            log.info("Warehouse status is already {}, no update needed", request.getStatus());
+            return wareHouseMapper.toResponse(warehouse);
+        }
+        // Update status
+        warehouse.setStatus(request.getStatus());
+        // Update metadata
+        Account account = getCurrentUser();
+        warehouse.setUpdatedBy(account.getId());
+        warehouse.setUpdatedAt(LocalDateTime.now());
+        // Save and return
+        wareHouseRepository.save(warehouse);
+        log.info("Warehouse status changed successfully for id={}", id);
+        return wareHouseMapper.toResponse(warehouse);
+    }
+
+    private Account getCurrentUser() {
+        String username = SecurityUtils.getCurrentUsername();
+        return accountRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException(ErrorCode.AUTH_002));
     }
 }

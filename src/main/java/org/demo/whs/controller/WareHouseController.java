@@ -3,7 +3,9 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
@@ -65,6 +67,41 @@ public class WareHouseController {
     public ResponseEntity<BaseResponse<WareHouseResponse>> getById(@PathVariable("id") String id) {
         log.info("Fetching warehouse with id: {}", id);
         WareHouseResponse response = wareHouseService.getWareHouseById(id);
+        BaseResponse<WareHouseResponse> baseResponse = BaseResponse.success(response);
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    /**
+     * Endpoint to update an existing warehouse.
+     *
+     * @param id      the unique identifier of the warehouse to update
+     * @param request the request containing updated warehouse details
+     * @return the response containing updated warehouse information
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<BaseResponse<WareHouseResponse>> update(
+            @PathVariable("id") String id,
+            @RequestBody @Valid UpdateWarehouseRequest request) {
+        log.info("Received request to update warehouse with id: {}", id);
+        WareHouseResponse response = wareHouseService.updateWareHouse(id, request);
+        BaseResponse<WareHouseResponse> baseResponse = BaseResponse.success(response);
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    /**
+     * Endpoint to change the status of a warehouse.
+     *
+     * @param id      the unique identifier of the warehouse
+     * @param request the request containing the new status
+     * @return the response containing updated warehouse information
+     */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<BaseResponse<WareHouseResponse>> changeStatus(
+            @PathVariable("id") String id,
+            @RequestBody @Valid ChangeStatusRequest request) {
+        log.info("Received request to change status for warehouse with id: {} to status: {}",
+                id, request.getStatus());
+        WareHouseResponse response = wareHouseService.changeStatus(id, request);
         BaseResponse<WareHouseResponse> baseResponse = BaseResponse.success(response);
         return ResponseEntity.ok(baseResponse);
     }
