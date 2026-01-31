@@ -90,6 +90,67 @@ java -jar target/whs-0.0.1-SNAPSHOT.jar
 - **Info**: http://localhost:8080/actuator/info
 - **Metrics**: http://localhost:8080/actuator/metrics
 
+## 🌐 CORS Configuration (Frontend Integration)
+
+Backend đã được cấu hình CORS đầy đủ để Frontend có thể gọi API.
+
+### Allowed Origins (Development)
+- ✅ `http://localhost:3000` - React (Create React App)
+- ✅ `http://localhost:5173` - Vite
+- ✅ `http://localhost:8080` - Swagger UI
+
+### Quick Start cho Frontend
+```javascript
+// 1. Install axios
+npm install axios
+
+// 2. Configure API client (src/api/axios.js)
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:8080/api/v1',
+  withCredentials: true,  // ⚠️ REQUIRED for JWT
+  timeout: 30000
+});
+
+// 3. Add JWT token interceptor
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export default api;
+
+// 4. Usage
+import api from './api/axios';
+
+// Login
+const response = await api.post('/auth/login', {
+  username: 'admin',
+  password: 'Admin@123'
+});
+localStorage.setItem('accessToken', response.data.accessToken);
+
+// Call protected API
+const users = await api.get('/users');
+```
+
+### 📚 CORS Documentation
+- **Quick Checklist:** `CORS_CHECKLIST.md`
+- **Frontend Integration Guide:** `src/documents/FRONTEND_INTEGRATION.md`
+- **CORS Configuration Guide:** `src/documents/CORS_CONFIGURATION_GUIDE.md`
+- **Testing Guide:** `src/documents/CORS_TESTING_GUIDE.md`
+- **Implementation Summary:** `src/documents/CORS_IMPLEMENTATION_SUMMARY.md`
+
+### Production Deployment
+Update environment variable:
+```bash
+export CORS_ALLOWED_ORIGINS=https://warehouse.yourdomain.com
+```
+
 ## Cấu hình Database
 
 ### MySQL Connection

@@ -457,9 +457,9 @@ Per-endpoint control:
 
 ✅ **Production Ready**: v2.0 implementation follows all security best practices  
 📖 **Full Checklist**: See [RATE_LIMITING_CHECKLIST.md](RATE_LIMITING_CHECKLIST.md)  
-🔧 **Core Logic**: [RateLimitService.java](../main/java/org/demo/whs/service/RateLimitService.java)  
+🔧 **Core Logic**: [RateLimitService.java](../../main/java/org/demo/whs/service/RateLimitService.java)  
 🚪 **Entry Point**: [RateLimitFilter.java](src/main/java/org/demo/whs/filter/RateLimitFilter.java)  
-🧪 **Tests**: [RateLimitServiceTest.java](../test/java/org/demo/whs/service/RateLimitServiceTest.java)  
+🧪 **Tests**: [RateLimitServiceTest.java](../../test/java/org/demo/whs/service/RateLimitServiceTest.java)  
 
 ### Troubleshooting
 
