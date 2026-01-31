@@ -1,9 +1,13 @@
 package org.demo.whs.repository;
 
 import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Repository interface for Warehouses entity.
@@ -18,4 +22,12 @@ public interface WareHouseRepository extends JpaRepository<Warehouses, String> {
      * @return true if a warehouse with the given code exists, false otherwise
      */
     boolean existsByCode(String code);
+
+    /**
+     * Finds warehouses by a collection of IDs.
+     *
+     * @param ids the collection of warehouse IDs
+     * @return list of warehouses matching the given IDs
+     */
+    List<Warehouses> findByIdIn(Collection<String> ids);
 }

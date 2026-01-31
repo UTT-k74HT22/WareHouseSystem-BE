@@ -27,9 +27,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -111,19 +112,22 @@ public class LocationServiceImpl implements LocationService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Locations> locationPage = locationRepository.findAll(pageable);
 
+        Set<String> wareHouseIds = locationPage.getContent().stream()
+                .map(Locations::getWarehouseId)
+                .collect(Collectors.toSet());
+
+        List<Warehouses> warehouses = wareHouseRepository.findByIdIn(wareHouseIds);
+        Map<String, Warehouses> warehouseMap = warehouses.stream()
+                .collect(Collectors.toMap(Warehouses::getId, wh -> wh));
+
         List<LocationResponse> responses = locationPage.getContent().stream()
-                .map(locationMapper::toResponse)
+                .map(location -> {
+                    Warehouses warehouse = warehouseMap.get(location.getWarehouseId());
+                    return locationMapper.toResponseWithWarehouse(location, warehouse);
+                })
                 .collect(Collectors.toList());
 
-        return PageResponse.<LocationResponse>builder()
-                .page(page)
-                .size(size)
-                .totalPages(locationPage.getTotalPages())
-                .totalElements(locationPage.getTotalElements())
-                .content(responses)
-                .isFirst(locationPage.isFirst())
-                .isLast(locationPage.isLast())
-                .build();
+        return PageResponse.from(locationPage, responses);
     }
 
     /**
