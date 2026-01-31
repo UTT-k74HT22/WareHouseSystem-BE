@@ -39,4 +39,16 @@ public class PageResponse<T> {
                 .isLast(page.isLast())
                 .build();
     }
+
+    public static <T> PageResponse<T> from(Page<?> page, List<T> content) {
+        return PageResponse.<T>builder()
+                .content(content)
+                .page(page.getNumber())
+                .size(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .isFirst(page.isFirst())
+                .isLast(page.isLast())
+                .build();
+    }
 }
