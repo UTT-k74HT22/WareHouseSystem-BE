@@ -9,7 +9,7 @@
   - `Retry-After` header CHỈ được gửi khi 429
   - `resetTime` luôn có (cho X-RateLimit-Reset header)
 - **Files Changed**: 
-  - [RateLimitDTO.java](../main/java/org/demo/whs/entity/dto/RateLimitDTO.java)
+  - [RateLimitDTO.java](../../main/java/org/demo/whs/entity/dto/RateLimitDTO.java)
   - [RateLimitFilter.java](src/main/java/org/demo/whs/filter/RateLimitFilter.java)
 
 ### 2. ✅ Fix Lua Script: Hardened TTL + Return TTL
@@ -20,7 +20,7 @@
   - Lua script LUÔN check và set TTL sau mỗi operation
   - Return `{remaining, ttl}` array → 1 round-trip duy nhất
   - Hardened: nếu key có TTL < 0, tự động fix bằng cách set lại TTL
-- **Files Changed**: [RateLimitService.java](../main/java/org/demo/whs/service/RateLimitService.java)
+- **Files Changed**: [RateLimitService.java](../../main/java/org/demo/whs/service/RateLimitService.java)
 
 ### 3. ✅ Fix Route Key: METHOD + Best Matching Pattern
 - **Problem**: Sử dụng actual URI `/api/v1/users/12345` → cardinality explosion
@@ -45,13 +45,13 @@
   - `failClosed=false` (default): Allow requests khi Redis down (read endpoints)
   - `failClosed=true`: Block requests khi Redis down (sensitive endpoints như login)
 - **Files Changed**: 
-  - [RateLimit.java](../main/java/org/demo/whs/utils/annotation/RateLimit.java)
-  - [AuthController.java](../main/java/org/demo/whs/controller/AuthController.java)
+  - [RateLimit.java](../../main/java/org/demo/whs/utils/annotation/RateLimit.java)
+  - [AuthController.java](../../main/java/org/demo/whs/controller/AuthController.java)
 
 ### 6. ✅ Review JwtAuthFilter validateToken Logic
 - **Problem**: Logic sai - `if (validateToken())` nghĩa là "if VALID thì reject"
 - **Solution**: Fix thành `if (!validateToken())` để reject invalid tokens
-- **Files Changed**: [JwtAuthFilter.java](../main/java/org/demo/whs/security/JwtAuthFilter.java)
+- **Files Changed**: [JwtAuthFilter.java](../../main/java/org/demo/whs/security/JwtAuthFilter.java)
 
 ### 7. ✅ Refactor to Filter-Based Approach
 - **Problem**: 
@@ -65,8 +65,8 @@
   - Deprecated `RateLimitInterceptor` (giữ lại để backward compatibility)
 - **Files Changed**:
   - [RateLimitFilter.java](src/main/java/org/demo/whs/filter/RateLimitFilter.java) - NEW
-  - [SecurityConfig.java](../main/java/org/demo/whs/configuration/SecurityConfig.java)
-  - [WebMvcConfig.java](../main/java/org/demo/whs/configuration/WebMvcConfig.java)
+  - [SecurityConfig.java](../../main/java/org/demo/whs/configuration/SecurityConfig.java)
+  - [WebMvcConfig.java](../../main/java/org/demo/whs/configuration/WebMvcConfig.java)
 
 ---
 

@@ -115,19 +115,37 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+
+        // Parse allowed origins from config
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        config.setAllowedOrigins(origins);
+        config.setAllowedOrigins(origins.stream().map(String::trim).toList());
+
+        // Parse allowed methods from config
         List<String> methods = Arrays.asList(allowedMethods.split(","));
-        config.setAllowedMethods(methods);
+        config.setAllowedMethods(methods.stream().map(String::trim).toList());
+
+        // Parse allowed headers from config
         if ("*".equals(allowedHeaders.trim())) {
             config.addAllowedHeader("*");
         } else {
             List<String> headers = Arrays.asList(allowedHeaders.split(","));
-            config.setAllowedHeaders(headers);
+            config.setAllowedHeaders(headers.stream().map(String::trim).toList());
         }
-        config.setExposedHeaders(List.of("Authorization", "X-Total-Count"));
+
+        // Expose headers to frontend
+        config.setExposedHeaders(List.of(
+            "Authorization",           // JWT token
+            "X-Total-Count",          // Pagination info
+            "X-RateLimit-Remaining",  // Rate limit info
+            "X-RateLimit-Reset"       // Rate limit reset time
+        ));
+
+        // Allow credentials (cookies, authorization headers)
         config.setAllowCredentials(true);
+
+        // Cache preflight request for 1 hour
         config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
