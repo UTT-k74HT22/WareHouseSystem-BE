@@ -25,6 +25,10 @@ public enum ErrorCode {
     // Location errors
     LOC_001("LOC_001", "Location not found"),
     LOC_002("LOC_002", "Invalid location data"),
+    LOC_003("LOC_003", "Location code already exists in this warehouse"),
+    LOC_004("LOC_004", "Warehouse is not active - cannot create location"),
+    LOC_005("LOC_005", "Invalid location status transition"),
+    LOC_006("LOC_006", "Cannot change status - location has active inventory"),
 
     // Product errors
     PROD_001("PROD_001", "Product not found"),

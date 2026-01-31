@@ -1,0 +1,45 @@
+package org.demo.whs.entity.dto.request.Location;
+
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.*;
+import lombok.Getter;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
+
+import java.math.BigDecimal;
+
+/**
+ * Request DTO for creating a new location.
+ */
+@Getter
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+public class CreateLocationRequest {
+
+    @NotBlank(message = "Warehouse ID is required")
+    private String warehouseId;
+
+    @NotBlank(message = "Location code is required")
+    @Size(max = 50, message = "Location code must not exceed 50 characters")
+    @Pattern(regexp = "^[A-Za-z0-9-_]+$", message = "Location code must contain only alphanumeric characters, hyphens, and underscores")
+    private String code;
+
+    @NotBlank(message = "Location name is required")
+    @Size(max = 100, message = "Location name must not exceed 100 characters")
+    private String name;
+
+    @Size(max = 50, message = "Zone must not exceed 50 characters")
+    private String zone;
+
+    @NotNull(message = "Location type is required")
+    private LocationType type;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "Capacity must be greater than 0")
+    @Digits(integer = 13, fraction = 2, message = "Capacity must have at most 13 integer digits and 2 decimal places")
+    private BigDecimal capacity;
+
+    private LocationStatus status;
+
+    @Size(max = 1000, message = "Notes must not exceed 1000 characters")
+    private String notes;
+}
