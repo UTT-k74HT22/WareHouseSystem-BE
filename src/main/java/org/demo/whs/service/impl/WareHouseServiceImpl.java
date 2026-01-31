@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -13,6 +14,8 @@ import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.WareHouseService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -53,6 +56,38 @@ public class WareHouseServiceImpl implements WareHouseService {
         warehouses.setCreatedAt(LocalDateTime.now());
         warehouses.setUpdatedAt(LocalDateTime.now());
         wareHouseRepository.save(warehouses);
+        return wareHouseMapper.toResponse(warehouses);
+    }
+
+    /**
+     * Retrieves a paginated list of all warehouses.
+     *
+     * @param page the page number to retrieve
+     * @param size the number of items per page
+     * @return a paginated response containing warehouse information
+     */
+    @Override
+    public PageResponse<WareHouseResponse> getAll(Integer page, Integer size) {
+        log.info("Retrieving all warehouses - page: {}, size: {}", page, size);
+        Page<Warehouses> warehousePage = wareHouseRepository.findAll(PageRequest.of(page, size));
+        Page<WareHouseResponse> responsePage = warehousePage.map(wareHouseMapper::toResponse);
+        return PageResponse.from(responsePage);
+    }
+
+    /**
+     * Retrieves a warehouse by its unique identifier.
+     *
+     * @param id the unique identifier of the warehouse
+     * @return the response containing warehouse information
+     */
+    @Override
+    public WareHouseResponse getWareHouseById(String id) {
+        log.info("Retrieving warehouse with id={}", id);
+        Warehouses warehouses = wareHouseRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Warehouse not found with id={}", id);
+                    return new BadRequestException(ErrorCode.WH_001);
+                });
         return wareHouseMapper.toResponse(warehouses);
     }
 }
