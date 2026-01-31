@@ -9,4 +9,12 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface WareHouseRepository extends JpaRepository<Warehouses, String> {
+
+    /**
+     * Checks if a warehouse exists by its code.
+     *
+     * @param code the warehouse code
+     * @return true if a warehouse with the given code exists, false otherwise
+     */
+    boolean existsByCode(String code);
 }
