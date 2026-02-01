@@ -5,6 +5,7 @@ import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.stereotype.Component;
+import java.util.List;
 
 @Component
 public class WareHouseMapper {
@@ -98,5 +99,20 @@ public class WareHouseMapper {
         if (request.getManagerId() != null) {
             warehouse.setManagerId(request.getManagerId());
         }
+    }
+
+    /**
+     * Converts a list of Warehouses entities to a list of WareHouseResponse DTOs.
+     *
+     * @param warehouses the list of Warehouses entities
+     * @return the list of WareHouseResponse DTOs
+     */
+    public List<WareHouseResponse> toResponses(List<Warehouses> warehouses) {
+        if (warehouses == null) {
+            return null;
+        }
+        return warehouses.stream()
+                .map(this::toResponse)
+                .toList();
     }
 }

@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Implementation of the WareHouseService interface.
@@ -93,6 +94,18 @@ public class WareHouseServiceImpl implements WareHouseService {
                     return new BadRequestException(ErrorCode.WH_001);
                 });
         return wareHouseMapper.toResponse(warehouses);
+    }
+
+    /**
+     * Retrieves a list of all warehouses.
+     *
+     * @return list of warehouse responses
+     */
+    @Override
+    public List<WareHouseResponse> getWareHouses() {
+        log.info("Get all warehouses");
+        List<Warehouses> warehouses = wareHouseRepository.findAll();
+        return wareHouseMapper.toResponses(warehouses);
     }
 
     /**

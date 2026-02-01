@@ -5,6 +5,7 @@ import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
+import java.util.List;
 
 /**
  * Service interface for warehouse operations.
@@ -35,6 +36,13 @@ public interface WareHouseService {
      * @return the response containing warehouse information
      */
     WareHouseResponse getWareHouseById(String id);
+
+    /**
+     * Retrieves a list of all warehouses.
+     *
+     * @return list of warehouse responses
+     */
+    List<WareHouseResponse> getWareHouses();
 
     /**
      * Updates an existing warehouse.
