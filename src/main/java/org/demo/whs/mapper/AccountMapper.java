@@ -8,9 +8,10 @@ import org.springframework.stereotype.Component;
 public class AccountMapper {
 
     /**
+     * Maps Account entity to AccountResponse DTO.
      *
-     * @param account
-     * @return
+     * @param account the account entity
+     * @return account response DTO
      */
     public AccountResponse toResponse(Account account){
         if (account == null){

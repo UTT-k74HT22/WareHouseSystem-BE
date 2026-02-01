@@ -8,6 +8,9 @@ import org.demo.whs.entity.enums.AccountStatus;
 
 import java.time.LocalDateTime;
 
+/**
+ * Response DTO for Account entity.
+ */
 @Getter
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)

@@ -10,6 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller for managing accounts.
+ * Provides endpoints for retrieving account information.
+ */
 @RequestMapping("api/v1/accounts")
 @RestController
 @RequiredArgsConstructor
@@ -19,6 +23,13 @@ public class AccountController {
 
     private final AccountService accountService;
 
+    /**
+     * Endpoint to retrieve accounts with pagination.
+     *
+     * @param page the page number to retrieve (default: 0)
+     * @param size the number of items per page (default: 10)
+     * @return a paginated response containing account information
+     */
     @GetMapping
     public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getList(
             @RequestParam(defaultValue = "0") int page,

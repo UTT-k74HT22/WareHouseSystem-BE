@@ -19,6 +19,13 @@ public class AccountServiceImpl implements AccountService{
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
 
+    /**
+     * Retrieves a paginated list of accounts.
+     *
+     * @param page the page number
+     * @param size the page size
+     * @return paginated account response
+     */
     @Override
     public PageResponse<AccountResponse> getList(int page, int size) {
         Page<Account> accountPage = accountRepository.findAll(
