@@ -538,33 +538,32 @@ See: [FEATURE_5_STOCK_TRANSFER.md](./FEATURE_5_STOCK_TRANSFER.md)
 
 | Endpoint | Method | Purpose | Request DTO | Response DTO |
 |----------|--------|---------|-------------|--------------|
-| `/api/goods-receipts` | GET | List all receipts with filters | - | `Page<GoodsReceiptSummaryResponse>` |
-| `/api/goods-receipts/{id}` | GET | Get receipt details | - | `GoodsReceiptDetailResponse` |
-| `/api/goods-receipts` | POST | Create new receipt | `CreateGoodsReceiptRequest` | `GoodsReceiptDetailResponse` |
-| `/api/goods-receipts/{id}` | PUT | Update draft receipt | `UpdateGoodsReceiptRequest` | `GoodsReceiptDetailResponse` |
-| `/api/goods-receipts/{id}` | DELETE | Delete draft receipt | - | `void` |
-| `/api/goods-receipts/{id}/confirm` | POST | Confirm receipt | `ConfirmGoodsReceiptRequest` | `GoodsReceiptDetailResponse` |
-| `/api/goods-receipts/{id}/complete` | POST | Complete receipt (putaway done) | `CompleteGoodsReceiptRequest` | `GoodsReceiptDetailResponse` |
-| `/api/goods-receipts/{id}/lines` | GET | Get receipt lines | - | `List<GoodsReceiptLineResponse>` |
-| `/api/goods-receipts/{id}/lines` | POST | Add line to draft receipt | `AddGoodsReceiptLineRequest` | `GoodsReceiptLineResponse` |
-| `/api/goods-receipts/{id}/lines/{lineId}` | PUT | Update line in draft receipt | `UpdateGoodsReceiptLineRequest` | `GoodsReceiptLineResponse` |
-| `/api/goods-receipts/{id}/lines/{lineId}` | DELETE | Remove line from draft receipt | - | `void` |
+| `/api/inbound-receipts` | GET | List all receipts with filters | - | `Page<InboundReceiptSummaryResponse>` |
+| `/api/inbound-receipts/{id}` | GET | Get receipt details | - | `InboundReceiptDetailResponse` |
+| `/api/inbound-receipts` | POST | Create new receipt | `CreateInboundReceiptRequest` | `InboundReceiptDetailResponse` |
+| `/api/inbound-receipts/{id}` | PUT | Update draft receipt | `UpdateInboundReceiptRequest` | `InboundReceiptDetailResponse` |
+| `/api/inbound-receipts/{id}` | DELETE | Delete draft receipt | - | `void` |
+| `/api/inbound-receipts/{id}/confirm` | POST | Confirm receipt | - | `InboundReceiptDetailResponse` |
+| `/api/inbound-receipts/{id}/complete` | POST | Complete receipt (putaway done) | - | `InboundReceiptDetailResponse` |
+| `/api/inbound-receipts/{id}/lines` | GET | Get receipt lines | - | `List<InboundReceiptLineResponse>` |
+| `/api/inbound-receipts/{id}/lines` | POST | Add line to draft receipt | `AddInboundReceiptLineRequest` | `InboundReceiptLineResponse` |
+| `/api/inbound-receipts/{id}/lines/{lineId}` | PUT | Update line in draft receipt | `UpdateInboundReceiptLineRequest` | `InboundReceiptLineResponse` |
+| `/api/inbound-receipts/{id}/lines/{lineId}` | DELETE | Remove line from draft receipt | - | `void` |
 
 ### Outbound Operations APIs
 
 | Endpoint | Method | Purpose | Request DTO | Response DTO |
 |----------|--------|---------|-------------|--------------|
-| `/api/shipments` | GET | List all shipments with filters | - | `Page<ShipmentSummaryResponse>` |
-| `/api/shipments/{id}` | GET | Get shipment details | - | `ShipmentDetailResponse` |
-| `/api/shipments` | POST | Create new shipment | `CreateShipmentRequest` | `ShipmentDetailResponse` |
-| `/api/shipments/{id}` | PUT | Update draft shipment | `UpdateShipmentRequest` | `ShipmentDetailResponse` |
-| `/api/shipments/{id}` | DELETE | Delete draft shipment | - | `void` |
-| `/api/shipments/{id}/confirm` | POST | Confirm and reserve stock | `ConfirmShipmentRequest` | `ShipmentDetailResponse` |
-| `/api/shipments/{id}/pick` | POST | Start picking process | - | `ShipmentDetailResponse` |
-| `/api/shipments/{id}/complete-picking` | POST | Complete picking | `CompletePickingRequest` | `ShipmentDetailResponse` |
-| `/api/shipments/{id}/ship` | POST | Mark as shipped (decrease stock) | `ShipShipmentRequest` | `ShipmentDetailResponse` |
-| `/api/shipments/{id}/lines` | GET | Get shipment lines | - | `List<ShipmentLineResponse>` |
-| `/api/shipments/{id}/allocations` | GET | Get stock allocations | - | `List<StockAllocationResponse>` |
+| `/api/outbound-shipments` | GET | List all shipments with filters | - | `Page<OutboundShipmentSummaryResponse>` |
+| `/api/outbound-shipments/{id}` | GET | Get shipment details | - | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments` | POST | Create new shipment | `CreateOutboundShipmentRequest` | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}` | PUT | Update draft shipment | `UpdateOutboundShipmentRequest` | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}` | DELETE | Delete draft shipment | - | `void` |
+| `/api/outbound-shipments/{id}/confirm` | POST | Confirm and reserve stock | - | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}/pick` | POST | Start picking process | - | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}/complete-picking` | POST | Complete picking | - | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}/ship` | POST | Mark as shipped (decrease stock) | - | `OutboundShipmentDetailResponse` |
+| `/api/outbound-shipments/{id}/lines` | GET | Get shipment lines | - | `List<OutboundShipmentLineResponse>` |
 
 ### Stock Movement & Audit APIs
 
@@ -580,15 +579,14 @@ See: [FEATURE_5_STOCK_TRANSFER.md](./FEATURE_5_STOCK_TRANSFER.md)
 
 | Endpoint | Method | Purpose | Request DTO | Response DTO |
 |----------|--------|---------|-------------|--------------|
-| `/api/adjustments` | GET | List all adjustments with filters | - | `Page<AdjustmentSummaryResponse>` |
-| `/api/adjustments/{id}` | GET | Get adjustment details | - | `AdjustmentDetailResponse` |
-| `/api/adjustments` | POST | Create new adjustment | `CreateAdjustmentRequest` | `AdjustmentDetailResponse` |
-| `/api/adjustments/{id}` | PUT | Update draft adjustment | `UpdateAdjustmentRequest` | `AdjustmentDetailResponse` |
-| `/api/adjustments/{id}` | DELETE | Delete draft adjustment | - | `void` |
-| `/api/adjustments/{id}/submit` | POST | Submit for approval | - | `AdjustmentDetailResponse` |
-| `/api/adjustments/{id}/approve` | POST | Approve adjustment | `ApproveAdjustmentRequest` | `AdjustmentDetailResponse` |
-| `/api/adjustments/{id}/reject` | POST | Reject adjustment | `RejectAdjustmentRequest` | `AdjustmentDetailResponse` |
-| `/api/adjustments/{id}/complete` | POST | Complete adjustment | - | `AdjustmentDetailResponse` |
+| `/api/inventory-adjustments` | GET | List all adjustments with filters | - | `Page<InventoryAdjustmentSummaryResponse>` |
+| `/api/inventory-adjustments/{id}` | GET | Get adjustment details | - | `InventoryAdjustmentDetailResponse` |
+| `/api/inventory-adjustments` | POST | Create new adjustment | `CreateInventoryAdjustmentRequest` | `InventoryAdjustmentDetailResponse` |
+| `/api/inventory-adjustments/{id}` | PUT | Update pending adjustment | `UpdateInventoryAdjustmentRequest` | `InventoryAdjustmentDetailResponse` |
+| `/api/inventory-adjustments/{id}` | DELETE | Delete pending adjustment | - | `void` |
+| `/api/inventory-adjustments/{id}/approve` | POST | Approve adjustment | `ApproveAdjustmentRequest` | `InventoryAdjustmentDetailResponse` |
+| `/api/inventory-adjustments/{id}/reject` | POST | Reject adjustment | `RejectAdjustmentRequest` | `InventoryAdjustmentDetailResponse` |
+| `/api/inventory-adjustments/{id}/complete` | POST | Complete approved adjustment | - | `InventoryAdjustmentDetailResponse` |
 
 ### Stock Transfer APIs
 
@@ -608,117 +606,103 @@ See: [FEATURE_5_STOCK_TRANSFER.md](./FEATURE_5_STOCK_TRANSFER.md)
 
 ### New Tables
 
-#### 1. goods_receipts
+#### 1. inbound_receipts
 **Purpose**: Store inbound document headers  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `receipt_number` (VARCHAR(50), UNIQUE, NOT NULL) - Auto-generated: GR-YYYYMMDD-XXX
+- `receipt_number` (VARCHAR(50), UNIQUE, NOT NULL) - Auto-generated format
+- `purchase_order_id` (BIGINT, FK to purchase_orders, NOT NULL)
 - `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
-- `supplier_id` (BIGINT, FK to business_partners, NULL)
-- `purchase_order_reference` (VARCHAR(100), NULL)
 - `receipt_date` (DATE, NOT NULL)
-- `status` (ENUM: DRAFT, CONFIRMED, COMPLETED, CANCELLED)
+- `status` (ENUM: DRAFT, CONFIRMED, COMPLETED, CANCELLED) - Default: DRAFT
 - `notes` (TEXT, NULL)
-- `received_by` (BIGINT, FK to accounts, NOT NULL)
+- `confirmed_at` (TIMESTAMP, NULL)
 - `confirmed_by` (BIGINT, FK to accounts, NULL)
-- `confirmed_at` (DATETIME, NULL)
-- `completed_by` (BIGINT, FK to accounts, NULL)
-- `completed_at` (DATETIME, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
 - `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `updated_by` (BIGINT, FK to accounts, NOT NULL)
 
 **Indexes**:
 - `idx_receipt_number` (receipt_number)
+- `idx_purchase_order_id` (purchase_order_id)
 - `idx_warehouse_id` (warehouse_id)
-- `idx_supplier_id` (supplier_id)
 - `idx_status` (status)
 - `idx_receipt_date` (receipt_date)
 
 ---
 
-#### 2. goods_receipt_lines
+#### 2. inbound_receipt_lines
 **Purpose**: Store individual items in each receipt  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `goods_receipt_id` (BIGINT, FK to goods_receipts, NOT NULL)
+- `inbound_receipt_id` (BIGINT, FK to inbound_receipts, NOT NULL)
+- `purchase_order_line_id` (BIGINT, FK to purchase_order_lines, NOT NULL)
 - `line_number` (INT, NOT NULL) - Sequential within receipt
 - `product_id` (BIGINT, FK to products, NOT NULL)
-- `expected_quantity` (DECIMAL(15,3), NOT NULL) - From PO
-- `received_quantity` (DECIMAL(15,3), NOT NULL) - Actual received
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `manufacturing_date` (DATE, NULL)
-- `expiry_date` (DATE, NULL)
-- `location_id` (BIGINT, FK to locations, NULL) - Assigned during putaway
-- `quality_status` (ENUM: PENDING, PASSED, FAILED, QUARANTINE) - Default: PASSED
+- `location_id` (BIGINT, FK to locations, NOT NULL)
+- `batch_id` (BIGINT, FK to batches, NULL)
+- `received_quantity` (DECIMAL(15,2), NOT NULL)
 - `notes` (TEXT, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 
 **Indexes**:
-- `idx_goods_receipt_id` (goods_receipt_id)
+- `idx_inbound_receipt_id` (inbound_receipt_id)
+- `idx_purchase_order_line_id` (purchase_order_line_id)
 - `idx_product_id` (product_id)
-- `idx_batch_number` (batch_number)
-- `idx_location_id` (location_id)
+- `idx_batch_id` (batch_id)
+- `uk_receipt_line` UNIQUE (inbound_receipt_id, line_number)
 
 ---
 
-#### 3. shipments
+#### 3. outbound_shipments
 **Purpose**: Store outbound document headers  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `shipment_number` (VARCHAR(50), UNIQUE, NOT NULL) - Auto-generated: SH-YYYYMMDD-XXX
+- `shipment_number` (VARCHAR(50), UNIQUE, NOT NULL)
+- `sales_order_id` (BIGINT, FK to sales_orders, NOT NULL)
 - `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
-- `customer_id` (BIGINT, FK to business_partners, NOT NULL)
-- `sales_order_reference` (VARCHAR(100), NULL)
 - `shipment_date` (DATE, NOT NULL)
-- `status` (ENUM: DRAFT, CONFIRMED, PICKING, READY_TO_SHIP, SHIPPED, DELIVERED, CANCELLED)
-- `shipping_address` (TEXT, NULL)
+- `status` (ENUM: DRAFT, PICKING, PICKED, SHIPPED, CANCELLED) - Default: DRAFT
 - `carrier` (VARCHAR(100), NULL)
 - `tracking_number` (VARCHAR(100), NULL)
 - `notes` (TEXT, NULL)
-- `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `confirmed_by` (BIGINT, FK to accounts, NULL)
-- `confirmed_at` (DATETIME, NULL)
+- `picked_at` (TIMESTAMP, NULL)
 - `picked_by` (BIGINT, FK to accounts, NULL)
-- `picked_at` (DATETIME, NULL)
+- `shipped_at` (TIMESTAMP, NULL)
 - `shipped_by` (BIGINT, FK to accounts, NULL)
-- `shipped_at` (DATETIME, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
-- `updated_by` (BIGINT, FK to accounts, NOT NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
+- `created_by` (BIGINT, FK to accounts, NOT NULL)
 
 **Indexes**:
 - `idx_shipment_number` (shipment_number)
+- `idx_sales_order_id` (sales_order_id)
 - `idx_warehouse_id` (warehouse_id)
-- `idx_customer_id` (customer_id)
 - `idx_status` (status)
 - `idx_shipment_date` (shipment_date)
 
 ---
 
-#### 4. shipment_lines
+#### 4. outbound_shipment_lines
 **Purpose**: Store individual items in each shipment  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `shipment_id` (BIGINT, FK to shipments, NOT NULL)
+- `outbound_shipment_id` (BIGINT, FK to outbound_shipments, NOT NULL)
+- `sales_order_line_id` (BIGINT, FK to sales_order_lines, NOT NULL)
 - `line_number` (INT, NOT NULL)
 - `product_id` (BIGINT, FK to products, NOT NULL)
-- `ordered_quantity` (DECIMAL(15,3), NOT NULL) - From SO
-- `shipped_quantity` (DECIMAL(15,3), NOT NULL) - Actual shipped
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `location_id` (BIGINT, FK to locations, NULL) - Picked from
+- `location_id` (BIGINT, FK to locations, NOT NULL)
+- `batch_id` (BIGINT, FK to batches, NULL)
+- `shipped_quantity` (DECIMAL(15,2), NOT NULL)
 - `notes` (TEXT, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 
 **Indexes**:
-- `idx_shipment_id` (shipment_id)
+- `idx_outbound_shipment_id` (outbound_shipment_id)
+- `idx_sales_order_line_id` (sales_order_line_id)
 - `idx_product_id` (product_id)
-- `idx_batch_number` (batch_number)
+- `idx_batch_id` (batch_id)
+- `uk_shipment_line` UNIQUE (outbound_shipment_id, line_number)
 
 ---
 
@@ -726,155 +710,101 @@ See: [FEATURE_5_STOCK_TRANSFER.md](./FEATURE_5_STOCK_TRANSFER.md)
 **Purpose**: Immutable audit log of all inventory changes  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `movement_type` (ENUM: INBOUND, OUTBOUND, ADJUSTMENT, TRANSFER_OUT, TRANSFER_IN, INITIAL_STOCK, NOT NULL)
+- `movement_type` (ENUM: INBOUND, OUTBOUND, ADJUSTMENT, TRANSFER, RETURN) NOT NULL
 - `product_id` (BIGINT, FK to products, NOT NULL)
 - `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
-- `location_id` (BIGINT, FK to locations, NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `quantity` (DECIMAL(15,3), NOT NULL) - Positive for increase, negative for decrease
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `quantity_before` (DECIMAL(15,3), NOT NULL)
-- `quantity_after` (DECIMAL(15,3), NOT NULL)
-- `reference_type` (VARCHAR(50), NOT NULL) - e.g., GOODS_RECEIPT, SHIPMENT, ADJUSTMENT
-- `reference_id` (BIGINT, NOT NULL) - ID of source document
+- `location_id` (BIGINT, FK to locations, NOT NULL)
+- `batch_id` (BIGINT, FK to batches, NULL)
+- `quantity_change` (DECIMAL(15,2), NOT NULL) - Positive for increase, negative for decrease
+- `quantity_before` (DECIMAL(15,2), NOT NULL)
+- `quantity_after` (DECIMAL(15,2), NOT NULL)
+- `reference_type` (VARCHAR(50)) - e.g., 'inbound_receipt', 'outbound_shipment', 'adjustment'
+- `reference_id` (BIGINT) - ID of source document
 - `reference_number` (VARCHAR(50), NULL) - Document number for display
 - `notes` (TEXT, NULL)
-- `movement_date` (DATETIME, NOT NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 - `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `created_at` (DATETIME, NOT NULL) - Immutable
 
 **Indexes**:
-- `idx_product_id` (product_id)
-- `idx_warehouse_location` (warehouse_id, location_id)
-- `idx_batch_number` (batch_number)
 - `idx_movement_type` (movement_type)
-- `idx_movement_date` (movement_date)
+- `idx_product_id` (product_id)
+- `idx_warehouse_id` (warehouse_id)
+- `idx_batch_id` (batch_id)
+- `idx_created_at` (created_at)
 - `idx_reference` (reference_type, reference_id)
+- `idx_composite` (product_id, warehouse_id, created_at)
 
 ---
 
 #### 6. inventory_adjustments
-**Purpose**: Store inventory adjustment documents  
+**Purpose**: Store inventory adjustment documents (already exists in core schema)  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `adjustment_number` (VARCHAR(50), UNIQUE, NOT NULL) - Auto-generated: ADJ-YYYYMMDD-XXX
+- `adjustment_number` (VARCHAR(50), UNIQUE, NOT NULL)
+- `product_id` (BIGINT, FK to products, NOT NULL)
 - `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
-- `adjustment_type` (ENUM: CYCLE_COUNT, DAMAGE, LOSS, FOUND, DATA_CORRECTION, NOT NULL)
-- `adjustment_date` (DATE, NOT NULL)
-- `status` (ENUM: DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, COMPLETED, NOT NULL)
-- `reason` (TEXT, NOT NULL)
-- `requires_approval` (BOOLEAN, NOT NULL, DEFAULT FALSE)
-- `attachment_url` (VARCHAR(500), NULL) - For photos/documents
-- `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `submitted_by` (BIGINT, FK to accounts, NULL)
-- `submitted_at` (DATETIME, NULL)
+- `location_id` (BIGINT, FK to locations, NOT NULL)
+- `batch_id` (BIGINT, FK to batches, NULL)
+- `adjustment_type` (ENUM: MANUAL, DAMAGE, LOSS, FOUND, CYCLE_COUNT, RETURN) NOT NULL
+- `quantity_before` (DECIMAL(15,2), NOT NULL)
+- `quantity_change` (DECIMAL(15,2), NOT NULL)
+- `quantity_after` (DECIMAL(15,2), NOT NULL)
+- `reason` (VARCHAR(255), NOT NULL)
+- `notes` (TEXT, NULL)
+- `status` (ENUM: PENDING_APPROVAL, APPROVED, REJECTED, COMPLETED) DEFAULT PENDING_APPROVAL
 - `approved_by` (BIGINT, FK to accounts, NULL)
-- `approved_at` (DATETIME, NULL)
-- `completed_by` (BIGINT, FK to accounts, NULL)
-- `completed_at` (DATETIME, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
-- `updated_by` (BIGINT, FK to accounts, NOT NULL)
+- `approved_at` (TIMESTAMP, NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+- `created_by` (BIGINT, FK to accounts, NOT NULL)
 
 **Indexes**:
 - `idx_adjustment_number` (adjustment_number)
+- `idx_product_id` (product_id)
 - `idx_warehouse_id` (warehouse_id)
 - `idx_status` (status)
-- `idx_adjustment_date` (adjustment_date)
-- `idx_adjustment_type` (adjustment_type)
+- `idx_created_at` (created_at)
+
+**Note**: This table already exists in the core schema. No changes needed - just use existing table.
 
 ---
 
-#### 7. inventory_adjustment_lines
-**Purpose**: Store individual adjustments for each product  
+#### 7. stock_transfers
+**Purpose**: Move inventory between locations within same warehouse  
 **Key Columns**:
 - `id` (BIGINT, PK, AUTO_INCREMENT)
-- `adjustment_id` (BIGINT, FK to inventory_adjustments, NOT NULL)
-- `line_number` (INT, NOT NULL)
+- `transfer_number` (VARCHAR(50), UNIQUE, NOT NULL)
 - `product_id` (BIGINT, FK to products, NOT NULL)
-- `location_id` (BIGINT, FK to locations, NOT NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `system_quantity` (DECIMAL(15,3), NOT NULL) - Current in system
-- `physical_quantity` (DECIMAL(15,3), NOT NULL) - Actual counted
-- `adjustment_quantity` (DECIMAL(15,3), NOT NULL) - Difference (physical - system)
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `notes` (TEXT, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
-
-**Indexes**:
-- `idx_adjustment_id` (adjustment_id)
-- `idx_product_id` (product_id)
-- `idx_location_id` (location_id)
-
----
-
-#### 8. stock_transfers
-**Purpose**: Store stock transfers between locations  
-**Key Columns**:
-- `id` (BIGINT, PK, AUTO_INCREMENT)
-- `transfer_number` (VARCHAR(50), UNIQUE, NOT NULL) - Auto-generated: TRF-YYYYMMDD-XXX
 - `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
 - `from_location_id` (BIGINT, FK to locations, NOT NULL)
 - `to_location_id` (BIGINT, FK to locations, NOT NULL)
-- `product_id` (BIGINT, FK to products, NOT NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `quantity` (DECIMAL(15,3), NOT NULL)
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `status` (ENUM: DRAFT, CONFIRMED, IN_TRANSIT, COMPLETED, CANCELLED, NOT NULL)
-- `transfer_date` (DATE, NOT NULL)
+- `batch_id` (BIGINT, FK to batches, NULL)
+- `quantity` (DECIMAL(15,2), NOT NULL)
+- `status` (ENUM: DRAFT, IN_PROGRESS, COMPLETED, CANCELLED) NOT NULL
 - `reason` (TEXT, NULL)
+- `transfer_date` (DATE, NOT NULL)
+- `completed_at` (TIMESTAMP, NULL)
+- `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
 - `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `confirmed_by` (BIGINT, FK to accounts, NULL)
-- `confirmed_at` (DATETIME, NULL)
-- `completed_by` (BIGINT, FK to accounts, NULL)
-- `completed_at` (DATETIME, NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `updated_at` (DATETIME, NOT NULL)
-- `updated_by` (BIGINT, FK to accounts, NOT NULL)
 
 **Indexes**:
 - `idx_transfer_number` (transfer_number)
 - `idx_warehouse_id` (warehouse_id)
-- `idx_from_location` (from_location_id)
-- `idx_to_location` (to_location_id)
+- `idx_from_location_id` (from_location_id)
+- `idx_to_location_id` (to_location_id)
 - `idx_product_id` (product_id)
 - `idx_status` (status)
 
----
-
-#### 9. stock_reservations
-**Purpose**: Track reserved stock for confirmed sales orders  
-**Key Columns**:
-- `id` (BIGINT, PK, AUTO_INCREMENT)
-- `shipment_id` (BIGINT, FK to shipments, NULL)
-- `product_id` (BIGINT, FK to products, NOT NULL)
-- `warehouse_id` (BIGINT, FK to warehouses, NOT NULL)
-- `location_id` (BIGINT, FK to locations, NULL)
-- `batch_number` (VARCHAR(50), NULL)
-- `reserved_quantity` (DECIMAL(15,3), NOT NULL)
-- `uom_id` (BIGINT, FK to uoms, NOT NULL)
-- `reservation_date` (DATETIME, NOT NULL)
-- `expiry_date` (DATETIME, NULL) - Auto-release if expired
-- `status` (ENUM: ACTIVE, RELEASED, EXPIRED, NOT NULL)
-- `created_by` (BIGINT, FK to accounts, NOT NULL)
-- `created_at` (DATETIME, NOT NULL)
-- `released_at` (DATETIME, NULL)
-
-**Indexes**:
-- `idx_shipment_id` (shipment_id)
-- `idx_product_warehouse` (product_id, warehouse_id)
-- `idx_status` (status)
-- `idx_expiry_date` (expiry_date)
+**Note**: This is a NEW table that needs to be created via Flyway migration.
 
 ---
 
 ### Modified Tables
 
-#### inventory_stock (existing table from Module 2)
-**Add Columns**:
-- `reserved_quantity` (DECIMAL(15,3), NOT NULL, DEFAULT 0) - Stock reserved for orders
-- `available_quantity` (DECIMAL(15,3), GENERATED ALWAYS AS (quantity_on_hand - reserved_quantity) STORED)
+#### inventory (existing table from Module 2)
+**Add/Modify Columns**:
+- `reserved_quantity` (DECIMAL(15,2), NOT NULL, DEFAULT 0) - Stock reserved for orders
+- `available_quantity` (DECIMAL(15,2), GENERATED ALWAYS AS (on_hand_quantity - reserved_quantity) STORED)
 
 **Add Indexes**:
 - `idx_available_quantity` (available_quantity)

@@ -47,14 +47,14 @@ This document provides the foundation for implementing Module 3: Inventory Opera
 ```
 src/main/java/org/demo/whs/inventory/
 ├── controller/
-│   ├── GoodsReceiptController.java
-│   ├── ShipmentController.java
+│   ├── InboundReceiptController.java
+│   ├── OutboundShipmentController.java
 │   ├── StockMovementController.java
 │   ├── InventoryAdjustmentController.java
 │   └── StockTransferController.java
 ├── service/
-│   ├── GoodsReceiptService.java + Impl
-│   ├── ShipmentService.java + Impl
+│   ├── InboundReceiptService.java + Impl
+│   ├── OutboundShipmentService.java + Impl
 │   ├── StockMovementService.java + Impl
 │   ├── InventoryAdjustmentService.java + Impl
 │   ├── StockTransferService.java + Impl
@@ -62,12 +62,11 @@ src/main/java/org/demo/whs/inventory/
 │   ├── StockAllocationService.java + Impl (FIFO logic)
 │   └── DocumentNumberService.java + Impl (number generation)
 ├── entity/
-│   ├── GoodsReceipt.java + GoodsReceiptLine.java
-│   ├── Shipment.java + ShipmentLine.java
+│   ├── InboundReceipt.java + InboundReceiptLine.java
+│   ├── OutboundShipment.java + OutboundShipmentLine.java
 │   ├── StockMovement.java
-│   ├── InventoryAdjustment.java + InventoryAdjustmentLine.java
+│   ├── InventoryAdjustment.java
 │   ├── StockTransfer.java
-│   ├── StockReservation.java
 │   └── enums/ (all status enums)
 ├── repository/
 │   └── (JpaRepository for each entity)
@@ -137,36 +136,36 @@ src/main/java/org/demo/whs/inventory/
 
 ```mermaid
 erDiagram
-    GOODS_RECEIPTS ||--o{ GOODS_RECEIPT_LINES : contains
-    GOODS_RECEIPT_LINES }o--|| PRODUCTS : references
-    GOODS_RECEIPT_LINES }o--|| LOCATIONS : "putaway to"
+    INBOUND_RECEIPTS ||--o{ INBOUND_RECEIPT_LINES : contains
+    INBOUND_RECEIPT_LINES }o--|| PRODUCTS : references
+    INBOUND_RECEIPT_LINES }o--|| LOCATIONS : "putaway to"
+    INBOUND_RECEIPT_LINES }o--|| BATCHES : "tracks"
     
-    SHIPMENTS ||--o{ SHIPMENT_LINES : contains
-    SHIPMENT_LINES }o--|| PRODUCTS : references
-    SHIPMENT_LINES }o--|| LOCATIONS : "picked from"
+    OUTBOUND_SHIPMENTS ||--o{ OUTBOUND_SHIPMENT_LINES : contains
+    OUTBOUND_SHIPMENT_LINES }o--|| PRODUCTS : references
+    OUTBOUND_SHIPMENT_LINES }o--|| LOCATIONS : "picked from"
+    OUTBOUND_SHIPMENT_LINES }o--|| BATCHES : "tracks"
     
-    SHIPMENTS ||--o{ STOCK_RESERVATIONS : "reserves"
-    STOCK_RESERVATIONS }o--|| PRODUCTS : references
-    STOCK_RESERVATIONS }o--|| LOCATIONS : "at"
-    
-    INVENTORY_ADJUSTMENTS ||--o{ INVENTORY_ADJUSTMENT_LINES : contains
-    INVENTORY_ADJUSTMENT_LINES }o--|| PRODUCTS : references
-    INVENTORY_ADJUSTMENT_LINES }o--|| LOCATIONS : "at"
+    INVENTORY_ADJUSTMENTS }o--|| PRODUCTS : references
+    INVENTORY_ADJUSTMENTS }o--|| LOCATIONS : "at"
+    INVENTORY_ADJUSTMENTS }o--|| BATCHES : "tracks"
     
     STOCK_TRANSFERS }o--|| PRODUCTS : references
     STOCK_TRANSFERS }o--|| LOCATIONS : "from"
     STOCK_TRANSFERS }o--|| LOCATIONS : "to"
+    STOCK_TRANSFERS }o--|| BATCHES : "tracks"
     
     STOCK_MOVEMENTS }o--|| PRODUCTS : references
     STOCK_MOVEMENTS }o--|| LOCATIONS : "at"
     STOCK_MOVEMENTS }o--|| WAREHOUSES : "in"
+    STOCK_MOVEMENTS }o--|| BATCHES : "tracks"
 ```
 
 ---
 
 ## ⚙️ Status Workflows
 
-### Goods Receipt Workflow
+### Inbound Receipt Workflow
 ```
 DRAFT → CONFIRMED → COMPLETED
          ↓
@@ -177,41 +176,39 @@ DRAFT → CONFIRMED → COMPLETED
 - **COMPLETED**: Stock increased, locations assigned
 - **CANCELLED**: Rejected/cancelled
 
-### Shipment Workflow
+### Outbound Shipment Workflow
 ```
-DRAFT → CONFIRMED → PICKING → READY_TO_SHIP → SHIPPED → DELIVERED
-         ↓              ↓           ↓
-      CANCELLED    CANCELLED    CANCELLED
+DRAFT → PICKING → PICKED → SHIPPED
+         ↓          ↓         
+     CANCELLED  CANCELLED    
 ```
 - **DRAFT**: Editable, no stock impact
-- **CONFIRMED**: Stock reserved (FIFO allocation)
 - **PICKING**: Staff picking items
-- **READY_TO_SHIP**: Picked and packed
+- **PICKED**: Picked and packed, ready to ship
 - **SHIPPED**: Stock decreased, delivered to carrier
-- **DELIVERED**: Customer received (optional tracking)
+- **CANCELLED**: Cancelled at any stage
 
 ### Inventory Adjustment Workflow
 ```
-DRAFT → PENDING_APPROVAL → APPROVED → COMPLETED
-                ↓              ↓
-            REJECTED       REJECTED
+PENDING_APPROVAL → APPROVED → COMPLETED
+         ↓
+     REJECTED
 ```
-- **DRAFT**: Editable
-- **PENDING_APPROVAL**: Waiting for manager approval (if threshold exceeded)
-- **APPROVED**: Approved by manager
+- **PENDING_APPROVAL**: Waiting for manager approval
+- **APPROVED**: Approved by manager, ready to execute
 - **REJECTED**: Rejected by manager
 - **COMPLETED**: Stock adjusted
 
 ### Stock Transfer Workflow
 ```
-DRAFT → CONFIRMED → IN_TRANSIT → COMPLETED
-         ↓              ↓
-     CANCELLED      CANCELLED
+DRAFT → IN_PROGRESS → COMPLETED
+         ↓
+     CANCELLED
 ```
-- **DRAFT**: Editable
-- **CONFIRMED**: Validated, ready to execute
-- **IN_TRANSIT**: Physical movement in progress (optional)
+- **DRAFT**: Editable, planned transfer
+- **IN_PROGRESS**: Physical movement in progress
 - **COMPLETED**: Stock moved between locations
+- **CANCELLED**: Transfer cancelled
 
 ---
 
@@ -221,8 +218,8 @@ DRAFT → CONFIRMED → IN_TRANSIT → COMPLETED
 
 | Feature | View | Create | Update | Delete | Confirm/Complete | Approve |
 |---------|------|--------|--------|--------|------------------|---------|
-| Goods Receipt | `INVENTORY:GOODS_RECEIPT:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CONFIRM` | - |
-| Shipment | `INVENTORY:SHIPMENT:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CONFIRM` + `SHIP` | - |
+| Inbound Receipt | `INVENTORY:INBOUND:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CONFIRM` | - |
+| Outbound Shipment | `INVENTORY:OUTBOUND:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CONFIRM` + `SHIP` | - |
 | Stock Movement | `INVENTORY:AUDIT:VIEW` | - | - | - | - | `EXPORT` |
 | Adjustment | `INVENTORY:ADJUSTMENT:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CREATE` | `APPROVE` |
 | Transfer | `INVENTORY:TRANSFER:VIEW` | `CREATE` | `UPDATE` | `DELETE` | `CONFIRM` | - |
@@ -269,18 +266,16 @@ UserInfoResponse
 
 | Table | Purpose | Key Columns | Relationships |
 |-------|---------|-------------|---------------|
-| `goods_receipts` | Inbound document header | receipt_number, warehouse_id, status | → goods_receipt_lines |
-| `goods_receipt_lines` | Inbound line items | product_id, quantity, batch, location_id | → products, locations |
-| `shipments` | Outbound document header | shipment_number, warehouse_id, customer_id, status | → shipment_lines |
-| `shipment_lines` | Outbound line items | product_id, quantity, batch, location_id | → products, locations |
-| `stock_movements` | Immutable audit log | movement_type, product_id, quantity, reference | → products, warehouses, locations |
-| `inventory_adjustments` | Adjustment header | adjustment_number, warehouse_id, status | → inventory_adjustment_lines |
-| `inventory_adjustment_lines` | Adjustment line items | product_id, system_qty, physical_qty | → products, locations |
-| `stock_transfers` | Transfer document | transfer_number, from/to location_id, product_id | → locations, products |
-| `stock_reservations` | Stock reserved for orders | shipment_id, product_id, quantity | → shipments, products |
+| `inbound_receipts` | Inbound document header | receipt_number, purchase_order_id, warehouse_id, status | → inbound_receipt_lines |
+| `inbound_receipt_lines` | Inbound line items | product_id, received_quantity, batch_id, location_id | → products, locations, batches |
+| `outbound_shipments` | Outbound document header | shipment_number, sales_order_id, warehouse_id, status | → outbound_shipment_lines |
+| `outbound_shipment_lines` | Outbound line items | product_id, shipped_quantity, batch_id, location_id | → products, locations, batches |
+| `stock_movements` | Immutable audit log | movement_type, product_id, quantity_change, reference_type | → products, warehouses, locations, batches |
+| `inventory_adjustments` | Adjustment records | adjustment_number, product_id, warehouse_id, location_id, status | → products, locations, batches |
+| `stock_transfers` | Transfer document | transfer_number, product_id, from/to location_id | → locations, products, batches |
 
 ### Modified Tables
-- `inventory_stock`: Added `reserved_quantity` and `available_quantity` (computed)
+- `inventory`: Added `reserved_quantity` and `available_quantity` (computed)
 
 ---
 
