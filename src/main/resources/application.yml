@@ -29,7 +29,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-
   # Redis Configuration
   data:
     redis:
@@ -48,9 +47,13 @@ spring:
   session:
     store-type: redis
     timeout: 1800s
-    redis:
-      flush-mode: on_save
-      namespace: spring:session
+
+# OTP Configuration
+otp:
+  ttl-minutes: ${OTP_TTL_MINUTES:10}
+  resend-limit-seconds: ${OTP_RESEND_LIMIT_SECONDS:60}
+  count-ttl-hours: ${OTP_COUNT_TTL_HOURS:24}
+  max-send-per-day: ${OTP_MAX_SEND_PER_DAY:10}
 
   # RabbitMQ Configuration
   rabbitmq:

@@ -15,6 +15,12 @@ public enum ErrorCode {
     AUTH_006("AUTH_006", "Refresh token is invalid or expired"),
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
+    // OTP errors
+    OTP_001("OTP_001", "OTP type is required"),
+    OTP_002("OTP_002", "Account not found"),
+    OTP_003("OTP_003", "Email already verified - cannot resend REGISTER OTP"),
+    OTP_004("OTP_004", "You have exceeded the number of OTP sent per day"),
+    OTP_005("OTP_005", "Please wait before resending OTP"),
 
     // Ware House errors
     WH_001("WHS_001", "Warehouse not found"),

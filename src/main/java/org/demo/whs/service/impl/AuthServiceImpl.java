@@ -3,16 +3,24 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
+import org.demo.whs.entity.AccountHasRole;
+import org.demo.whs.entity.Role;
+import org.demo.whs.entity.UserProfile;
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.AccountStatus;
+import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.AuthenticationFailedException;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.mapper.AuthMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.repository.UserRepository;
 import org.demo.whs.security.JwtProvider;
 import org.demo.whs.service.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +37,7 @@ import static org.demo.whs.exception.ErrorCode.*;
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
+    private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -99,6 +108,58 @@ public class AuthServiceImpl implements AuthService {
         return authMapper.toRefreshResponse(newAccessToken, expireAccessToken);
     }
 
+   /**
+    * @param request the registration request containing user details
+    */
+    @Override
+    public void register(RegisterRequest request) {
+        log.info("Registering new user: {}", request.getUsername());
+
+        validateField(request);
+
+        // 1. Build Account
+        Account account = Account.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .status(AccountStatus.INACTIVE)
+                .build();
+
+        // 2. Get USER role
+        Role userRole = roleRepository.findByName(RoleType.USER)
+                .orElseThrow(() -> new RuntimeException("Role USER not found"));
+
+        // 3. Build AccountHasRole
+        AccountHasRole accountRole = buildAccountRole(account, userRole);
+        account.getAccountRoles().add(accountRole);
+
+        // 4. Save account
+        Account savedAccount = accountRepository.save(account);
+        log.info("Account created successfully with ID: {}", savedAccount.getId());
+
+        // 5. Build & save user profile
+        UserProfile userProfile = buildProfileUser(request, savedAccount);
+        userRepository.save(userProfile);
+
+        log.info("User profile created successfully for account: {}", savedAccount.getUsername());
+    }
+
+    private AccountHasRole buildAccountRole(Account account, Role userRole) {
+        return AccountHasRole.builder()
+                .account(account)
+                .role(userRole)
+                .build();
+    }
+    private UserProfile buildProfileUser(RegisterRequest request, Account savedAccount) {
+        return UserProfile.builder()
+                .accountId(savedAccount.getId().toString())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .phoneNumber(request.getPhoneNumber())
+                .email(savedAccount.getEmail())
+                .build();
+    }
+
     private void validRefreshToken(String refreshToken) {
         if (jwtProvider.validateToken(refreshToken)) {
             log.warn("Invalid refresh token provided");
@@ -110,4 +171,16 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException(AUTH_006);
         }
     }
+    // ================= PRIVATE HELPERS ================= //
+    private void validateField(RegisterRequest request) {
+
+        if (accountRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new BadRequestException(ErrorCode.COM_005);
+        }
+
+        if (accountRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BadRequestException(ErrorCode.COM_005);
+        }
+    }
+
 }
