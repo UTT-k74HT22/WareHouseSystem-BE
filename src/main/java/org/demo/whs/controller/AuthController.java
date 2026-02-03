@@ -76,6 +76,12 @@ public class AuthController {
         RefreshTokenResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
+
+    /**
+     *
+     * @param request
+     * @return
+     */
     @PostMapping("/register")
     public ResponseEntity<BaseResponse<String>> register(@RequestBody @Valid RegisterRequest request) {
         log.debug("Register attempt for username: {}", request.getUsername());

@@ -15,6 +15,10 @@ public enum ErrorCode {
     AUTH_006("AUTH_006", "Refresh token is invalid or expired"),
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
+
+    // Role
+    ROLE_001("ROLE_001", "Role not found"),
+
     // OTP errors
     OTP_001("OTP_001", "OTP type is required"),
     OTP_002("OTP_002", "Account not found"),

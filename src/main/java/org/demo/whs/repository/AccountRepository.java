@@ -16,10 +16,4 @@ public interface AccountRepository extends JpaRepository<Account, String> {
      */
     Optional<Account> findByUsername(String username);
 
-    /** Find an account by its email.
-     *
-     * @param email the email of the account
-     * @return an Optional containing the found account or empty if not found
-     */
-    Optional<Account> findByEmail(String email);
 }

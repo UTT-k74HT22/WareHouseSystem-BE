@@ -3,11 +3,13 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
+import org.demo.whs.entity.UserProfile;
 import org.demo.whs.entity.enums.EmailType;
 import org.demo.whs.entity.enums.OtpType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.repository.AccountRepository;
+import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.service.EmailService;
 import org.demo.whs.service.OtpService;
 import org.demo.whs.service.RedisService;
@@ -26,19 +28,20 @@ public class OtpServiceImpl implements OtpService {
     private final RedisService redisService;
     private final AccountRepository accountRepository;
     private final EmailService mailService;
+    private final UserProfileRepository userRepository;
 
     private final SecureRandom random = new SecureRandom();
 
-    @Value("${otp.ttl-minutes}")
+    @Value("${app.otp.ttl-minutes}")
     private long ttlMinutes;
 
-    @Value("${otp.resend-limit-seconds}")
+    @Value("${app.otp.resend-limit-seconds}")
     private long resendLimitSeconds;
 
-    @Value("${otp.count-ttl-hours}")
+    @Value("${app.otp.count-ttl-hours}")
     private long countTtlHours;
 
-    @Value("${otp.max-send-per-day}")
+    @Value("${app.otp.max-send-per-day}")
     private int maxSendPerDay;
 
     @Override
@@ -58,16 +61,20 @@ public class OtpServiceImpl implements OtpService {
         log.info("Sending OTP | email={} | type={}", email, type);
 
         if (type == OtpType.REGISTER) {
-            Account account = accountRepository.findByEmail(email)
+            UserProfile userProfile = userRepository.findByEmail(email)
                     .orElseThrow(() ->
                             new BadRequestException(
                                     "Account not found for email: " + email,
-                                    ErrorCode.OTP_002 )
+                                    ErrorCode.OTP_002)
                     );
 
-            if (account.isEmailVerified()) {
-                throw new BadRequestException(ErrorCode.OTP_003);
-            }
+            Account account = Optional.ofNullable(userProfile.getAccount())
+                    .orElseThrow(() -> new BadRequestException(
+                            "Account not found for profile: " + userProfile.getId(),
+                            ErrorCode.OTP_002
+                    ));
+
+
         }
 
         String countKey = buildCountKey(email);
@@ -87,18 +94,18 @@ public class OtpServiceImpl implements OtpService {
         }
 
         String otp = generateOtpCode(email, type);
-        
+
         // Send OTP via email
         String subject = switch (type) {
             case REGISTER -> "Verify Your Email - Warehouse Management System";
             case FORGOT_PASSWORD -> "Reset Your Password - Warehouse Management System";
         };
-        
+
         String emailContent = String.format(
-            "Your OTP code is: %s\n\nThis code will expire in %d minutes.\n\nIf you didn't request this, please ignore this email.",
-            otp, ttlMinutes
+                "Your OTP code is: %s\n\nThis code will expire in %d minutes.\n\nIf you didn't request this, please ignore this email.",
+                otp, ttlMinutes
         );
-        
+
         mailService.sendSimpleEmail(email, subject, emailContent, EmailType.OTP_VERIFICATION);
 
         redisService.set(countKey, count + 1, countTtlHours, TimeUnit.HOURS);

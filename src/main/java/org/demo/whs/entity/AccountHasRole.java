@@ -1,6 +1,8 @@
 package org.demo.whs.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.*;
 
 @Entity
@@ -9,17 +11,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AccountHasRole {
 
     @EmbeddedId
     private AccountRoleId id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("accountId")
-    private Account account;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("roleId")
-    private Role role;
 }

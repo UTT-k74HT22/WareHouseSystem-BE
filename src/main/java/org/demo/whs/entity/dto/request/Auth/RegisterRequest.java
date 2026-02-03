@@ -1,5 +1,7 @@
 package org.demo.whs.entity.dto.request.Auth;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -13,6 +15,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class RegisterRequest {
     @NotBlank(message = "Username not blank")
     @Size(min = 3, max = 50)
@@ -33,6 +36,7 @@ public class RegisterRequest {
     )
     private String confirmPassword;
     @NotBlank
+
     @Size(min = 3, max = 50)
     private String fullName;
     @NotBlank

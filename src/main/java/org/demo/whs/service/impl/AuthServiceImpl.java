@@ -2,10 +2,7 @@ package org.demo.whs.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.Account;
-import org.demo.whs.entity.AccountHasRole;
-import org.demo.whs.entity.Role;
-import org.demo.whs.entity.UserProfile;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -18,9 +15,10 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.mapper.AuthMapper;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
-import org.demo.whs.repository.UserRepository;
+import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.security.JwtProvider;
 import org.demo.whs.service.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,8 +35,9 @@ import static org.demo.whs.exception.ErrorCode.*;
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
-    private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final RoleRepository roleRepository;
+    private final AccountHasRoleRepository accountHasRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
@@ -117,48 +116,42 @@ public class AuthServiceImpl implements AuthService {
 
         validateField(request);
 
-        // 1. Build Account
-        Account account = Account.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .status(AccountStatus.INACTIVE)
-                .build();
+        // 1. Build & save Account
+        Account account = authMapper.registerAcc(request);
+        account.setPassword(passwordEncoder.encode(request.getPassword()));
+        Account savedAccount = accountRepository.save(account);
+
+        log.info("Account created successfully with ID: {}", savedAccount.getId());
 
         // 2. Get USER role
         Role userRole = roleRepository.findByName(RoleType.USER)
-                .orElseThrow(() -> new RuntimeException("Role USER not found"));
+                .orElseThrow(() -> new BadRequestException(ROLE_001));
 
-        // 3. Build AccountHasRole
-        AccountHasRole accountRole = buildAccountRole(account, userRole);
-        account.getAccountRoles().add(accountRole);
+        // 3. Save account-role mapping
+        AccountRoleId accountRoleId = AccountRoleId.builder()
+                .accountId(savedAccount.getId())
+                .roleId(userRole.getId())
+                .build();
 
-        // 4. Save account
-        Account savedAccount = accountRepository.save(account);
-        log.info("Account created successfully with ID: {}", savedAccount.getId());
+        accountHasRoleRepository.save(new AccountHasRole(accountRoleId));
 
-        // 5. Build & save user profile
+        // 4. Build & save profile
         UserProfile userProfile = buildProfileUser(request, savedAccount);
-        userRepository.save(userProfile);
+        userProfileRepository.save(userProfile);
 
         log.info("User profile created successfully for account: {}", savedAccount.getUsername());
     }
 
-    private AccountHasRole buildAccountRole(Account account, Role userRole) {
-        return AccountHasRole.builder()
-                .account(account)
-                .role(userRole)
-                .build();
-    }
     private UserProfile buildProfileUser(RegisterRequest request, Account savedAccount) {
         return UserProfile.builder()
-                .accountId(savedAccount.getId().toString())
+                .account(savedAccount)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
-                .email(savedAccount.getEmail())
+                .email(request.getEmail())
                 .build();
     }
+
 
     private void validRefreshToken(String refreshToken) {
         if (jwtProvider.validateToken(refreshToken)) {
@@ -177,10 +170,5 @@ public class AuthServiceImpl implements AuthService {
         if (accountRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new BadRequestException(ErrorCode.COM_005);
         }
-
-        if (accountRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new BadRequestException(ErrorCode.COM_005);
-        }
     }
-
 }
