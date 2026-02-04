@@ -8,13 +8,13 @@
 | Module | BA Document | DB Document | Status |
 |--------|-------------|-------------|--------|
 | **Module 1: Auth & RBAC** | ✅ Existing | ✅ Existing | ✅ Complete |
-| **Module 2: Master Data** | ✅ Existing | ✅ Existing | ✅ Complete |
-| **Module 3: Batch Management** | ✅ Created | ✅ Created | ✅ Ready for Review |
-| **Module 4: Inventory Management** | ✅ Created | ✅ Created | ✅ Ready for Review |
-| **Module 5: Inbound Operations** | ✅ Created | ✅ Created | ✅ Ready for Review |
-| **Module 6: Outbound Operations** | ✅ Created | ✅ Created | ✅ Ready for Review |
-| **Module 7: Stock Movement & Audit** | ✅ Created | ✅ Created | ✅ Ready for Review |
-| **Module 8: Reporting & Export** | ✅ Created | ✅ Created | ✅ Ready for Review |
+| **Module 2: Master Data** | ✅ Existing | ✅ Existing | ⚠️ In progress (services/controllers partially stubbed) |
+| **Module 3: Batch Management** | ✅ Created | ✅ Created | ⚠️ Schema present (V20260301_01), service/API pending |
+| **Module 4: Inventory Management** | ✅ Created | ✅ Created | ⚠️ Schema present (V20260301_02), optimistic lock wiring pending |
+| **Module 5: Inbound Operations** | ✅ Created | ✅ Created | ⚠️ Schema present (V20260301_03), business logic pending |
+| **Module 6: Outbound Operations** | ✅ Created | ✅ Created | ⚠️ Schema present (V20260401_01), business logic pending |
+| **Module 7: Stock Movement & Audit** | ✅ Created | ✅ Created | ⚠️ Schema present (V20260401_02), entity misaligned, immutability pending |
+| **Module 8: Reporting & Export** | ✅ Created | ⚠️ Not present | ⏳ Not implemented (no migration/code yet) |
 
 ---
 
@@ -280,111 +280,37 @@ Module 2: Master Data (Warehouses, Products, etc.)
 
 ## 🚀 Implementation Sequence
 
-### Phase 1: Foundation (Weeks 1-2) ✅ Complete
-- Module 1: Auth & RBAC ✅
-- Module 2: Master Data ✅
+### Immediate Actions
+1. ✅ **Review Documentation** - BA and DB teams review all module docs
+2. ⏭️ **Approve Schema** - DBA approves all database schemas
+3. ⏭️ **Execute Migrations** - Run Flyway migrations in sequence:
+   - V20260107_01__Create_table_rbac.sql
+   - V20260107_02__Insert_db.sql
+   - V20260125_01__Create_email_logs_table.sql
+   - V20260129_01__Create_module_2.sql
+   - V20260301_01__Create_batch_management.sql
+   - V20260301_02__Create_inventory_management.sql
+   - V20260301_03__Create_inbound_operations.sql
+   - V20260401_01__Create_outbound_operations.sql
+   - V20260401_02__Create_stock_movements.sql
 
-### Phase 2: Core Inventory (Weeks 3-5) ✅ Documented
-- Module 3: Batch Management ✅
-- Module 4: Inventory Management ✅
-
-### Phase 3: Operations (Weeks 6-9) ✅ Documented
-- Module 5: Inbound Operations ✅
-- Module 6: Outbound Operations ✅
-- Module 7: Stock Movements ✅
-
-### Phase 4: Reporting (Week 10) ✅ Documented
-- Module 8: Reporting & Export ✅
-
-### Phase 5: Testing & Go-Live (Weeks 11-12) ⏭️ Next
-- Integration testing
-- Performance testing
-- User acceptance testing
-- Production deployment
+4. ⏭️ **Pending**
+   - Add Reporting & Export migrations (Module 8)
+   - Align code with schema for Inventory (optimistic lock), Stock Movement (warehouse_id/location_id mapping, immutability)
 
 ---
 
-## 📚 Documentation Delivery Summary
+## 📌 As-built Snapshot (Feb 2026)
 
-### What Has Been Created
-
-#### Batch Management Module (Module 3)
-- ✅ `BA_MODULE_03_BATCH_MANAGEMENT.md` - 41 pages
-- ✅ `DB_MODULE_03_BATCH.md` - 18 pages
-- Features: Batch tracking, FIFO, expiry management, quarantine, traceability
-
-#### Inventory Management Module (Module 4)
-- ✅ `BA_MODULE_04_INVENTORY_MANAGEMENT.md` - 43 pages
-- ✅ `DB_MODULE_04_INVENTORY.md` - 22 pages
-- Features: Real-time tracking, reservations, adjustments, transfers, low stock alerts
-
-#### Inbound Operations Module (Module 5)
-- ✅ `BA_MODULE_05_INBOUND_OPERATIONS.md` - 38 pages
-- ✅ `DB_MODULE_05_INBOUND.md` - 15 pages
-- Features: PO management, goods receipt, quality inspection, partial/over-receipt
-
-#### Outbound Operations Module (Module 6)
-- ✅ `BA_MODULE_06_OUTBOUND_OPERATIONS.md` - 25 pages
-- ✅ `DB_MODULE_06_OUTBOUND.md` - 12 pages
-- Features: SO management, stock reservation, shipment, picking, FIFO recommendations
-
-#### Stock Movement & Audit Module (Module 7)
-- ✅ `BA_MODULE_07_STOCK_MOVEMENT.md` - 20 pages
-- ✅ `DB_MODULE_07_STOCK_MOVEMENT.md` - 16 pages
-- Features: Immutable audit log, traceability, movement analytics
-
-#### Reporting & Export Module (Module 8)
-- ✅ `BA_MODULE_08_REPORTING.md` - 22 pages
-- ✅ `DB_MODULE_08_REPORTING.md` - 14 pages
-- Features: On-demand reports, async generation, scheduled reports, exports
-
-### Total Documentation Metrics
-- 📊 **12 Documents** created (6 BA + 6 DB)
-- 📄 **~286 pages** of detailed documentation
-- 🗂️ **15 database tables** fully specified
-- 🔗 **60+ API endpoints** documented
-- 📋 **120+ business rules** defined
-- ✅ **80+ use cases** detailed
-
----
-
-## 📖 How to Use This Documentation
-
-### For Business Analysts
-1. Start with BA documents to understand business requirements
-2. Review user stories and use cases
-3. Validate business rules with stakeholders
-4. Use acceptance criteria for UAT planning
-
-### For Developers
-1. Review BA document for business context
-2. Study DB document for database schema
-3. Implement according to API specifications
-4. Follow business rules in code
-5. Use query examples as reference
-
-### For QA Engineers
-1. Extract test scenarios from use cases
-2. Verify business rules in testing
-3. Use acceptance criteria as test checklist
-4. Test integration points between modules
-
-### For Database Administrators
-1. Review DB documents for schema design
-2. Execute Flyway migrations in sequence
-3. Verify constraints and indexes
-4. Load sample data for testing
-5. Monitor query performance
-
----
-
-## 📞 Documentation Feedback
-
-If you find any issues or have suggestions:
-1. Create a ticket in project management tool
-2. Tag with `documentation` label
-3. Reference specific module and section
-4. Suggest improvements
+| Module | Migration Present | Code Status | Notes |
+|--------|-------------------|-------------|-------|
+| Master Data | ✅ V20260129_01 | Controllers/services partially stubbed | Product endpoint placeholder; UoM and Location present |
+| Batch | ✅ V20260301_01 | Service/mapper not wired | |
+| Inventory | ✅ V20260301_02 | Entity missing @Version; service concurrency TBD | |
+| Inbound | ✅ V20260301_03 | Services exist, business rules not verified | |
+| Outbound | ✅ V20260401_01 | Services exist, reservation/picking logic TBD | |
+| Stock Movement | ✅ V20260401_02 | Entity missing warehouseId/audit mapping; should be insert-only | |
+| Reporting | ❌ | Not started | Add report_requests/report_schedules tables and async flow |
 
 ---
 
@@ -394,17 +320,23 @@ If you find any issues or have suggestions:
 1. ✅ **Review Documentation** - BA and DB teams review all module docs
 2. ⏭️ **Approve Schema** - DBA approves all database schemas
 3. ⏭️ **Execute Migrations** - Run Flyway migrations in sequence:
-   - V20260201_01__Create_batch_management.sql
-   - V20260201_02__Create_inventory_management.sql
-   - V20260201_03__Create_inbound_operations.sql
-   - V20260201_04__Create_outbound_operations.sql
-   - V20260201_05__Create_stock_movements.sql
-   - V20260201_06__Create_reporting.sql
-4. ⏭️ **Generate Entities** - Create JPA entities from schema
-5. ⏭️ **Implement Repositories** - Create Spring Data repositories
-6. ⏭️ **Build Services** - Implement business logic per BA specs
-7. ⏭️ **Develop Controllers** - Create REST endpoints per API specs
-8. ⏭️ **Write Tests** - Unit and integration tests for all modules
+   - V20260107_01__Create_table_rbac.sql
+   - V20260107_02__Insert_db.sql
+   - V20260125_01__Create_email_logs_table.sql
+   - V20260129_01__Create_module_2.sql
+   - V20260301_01__Create_batch_management.sql
+   - V20260301_02__Create_inventory_management.sql
+   - V20260301_03__Create_inbound_operations.sql
+   - V20260401_01__Create_outbound_operations.sql
+   - V20260401_02__Create_stock_movements.sql
+4. ⏭️ **Pending**
+   - Add Reporting & Export migrations (Module 8)
+   - Align code with schema for Inventory (optimistic lock), Stock Movement (warehouse_id/location_id mapping, immutability)
+5. ⏭️ **Generate Entities** - Create JPA entities from schema
+6. ⏭️ **Implement Repositories** - Create Spring Data repositories
+7. ⏭️ **Build Services** - Implement business logic per BA specs
+8. ⏭️ **Develop Controllers** - Create REST endpoints per API specs
+9. ⏭️ **Write Tests** - Unit and integration tests for all modules
 
 ### Development Priority
 1. **Module 3 & 4 First** (Batch + Inventory) - Foundation for operations

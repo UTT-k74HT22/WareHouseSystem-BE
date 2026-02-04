@@ -8,9 +8,9 @@
 | Property | Value |
 |----------|-------|
 | **Module** | Stock Movement & Audit Trail |
-| **Version** | 1.0 |
-| **Date** | February 1, 2026 |
-| **Status** | Draft |
+| **Version** | 1.1 |
+| **Date** | February 4, 2026 |
+| **Status** | Draft (schema V20260401_02 applied) |
 
 ---
 
@@ -191,15 +191,14 @@ CREATE INDEX idx_movement_product_warehouse
 
 ## 🔄 Flyway Migration
 
-### File: `V20260201_05__Create_stock_movements.sql`
+### File: `V20260401_02__Create_stock_movements.sql`
 
 ```sql
 -- ============================================================================
 -- Flyway Migration: Create Stock Movement & Audit Trail Module
--- Version: V20260201_05
+-- Version: V20260401_02
 -- Description: Create stock_movements table for complete audit trail
--- Author: Database Team
--- Date: 2026-02-01
+-- Notes: warehouse_id required, location_id optional; created_at/created_by are insert-only
 -- ============================================================================
 
 CREATE TABLE stock_movements (
@@ -283,6 +282,13 @@ CREATE INDEX idx_movement_date
 -- End of Migration
 -- ============================================================================
 ```
+
+---
+
+## 🛠 Implementation Notes
+- Entity alignment required: map `warehouse_id` (non-null) and nullable `location_id`; include `created_by`/`created_at` from base audit fields.
+- Service layer must enforce insert-only semantics (no updates/deletes) to keep the audit log immutable; consider repository write guards or database triggers if needed.
+- Maintain `quantity_after = quantity_before + quantity_change` invariant; validate before persist to avoid constraint violations.
 
 ---
 
@@ -507,6 +513,6 @@ WHERE sm.reference_type = 'INBOUND_RECEIPT'
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 1, 2026  
+**Document Version:** 1.1  
+**Last Updated:** February 4, 2026  
 **Status:** 🚧 Draft - Pending Review
