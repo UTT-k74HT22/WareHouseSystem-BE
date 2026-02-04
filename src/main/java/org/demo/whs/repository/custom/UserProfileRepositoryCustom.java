@@ -15,4 +15,20 @@ public interface UserProfileRepositoryCustom {
      * @return the list of AccountResponse DTOs
      */
     List<AccountResponse> getAccountsByRole(String roleName);
+
+    /**
+     * Custom query to fetch accounts by a list of IDs.
+     *
+     * @param ids the list of account IDs
+     * @return the list of AccountResponse DTOs
+     */
+    List<AccountResponse> getAccountsByIds(List<String> ids);
+
+    /**
+     * Custom query to fetch account by ID.
+     *
+     * @param id the account ID
+     * @return the AccountResponse DTO
+     */
+    AccountResponse getAccountById(String id);
 }

@@ -3,9 +3,22 @@ package org.demo.whs.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
-
 import java.time.LocalDate;
 
+@SqlResultSetMapping(
+        name = "AccountResponseMapping",
+        classes = @ConstructorResult(
+                targetClass = AccountResponse.class,
+                columns = {
+                        @ColumnResult(name = "accountId", type = String.class),
+                        @ColumnResult(name = "username", type = String.class),
+                        @ColumnResult(name = "status", type = String.class),
+                        @ColumnResult(name = "email", type = String.class),
+                        @ColumnResult(name = "firstName", type = String.class),
+                        @ColumnResult(name = "lastName", type = String.class)
+                }
+        )
+)
 @Entity
 @Table(name = "user_profiles")
 @Getter

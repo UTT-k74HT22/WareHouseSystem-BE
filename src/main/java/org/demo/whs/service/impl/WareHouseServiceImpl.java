@@ -8,11 +8,13 @@ import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.WareHouseMapper;
 import org.demo.whs.repository.AccountRepository;
+import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.WareHouseService;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the WareHouseService interface.
@@ -33,6 +37,7 @@ public class WareHouseServiceImpl implements WareHouseService {
 
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
+    private final UserProfileRepository userProfileRepository;
     private final WareHouseMapper wareHouseMapper;
 
     /**
@@ -54,7 +59,9 @@ public class WareHouseServiceImpl implements WareHouseService {
         Account account = getCurrentUser();
         setAuditField(warehouses, account);
         wareHouseRepository.save(warehouses);
-        return wareHouseMapper.toResponse(warehouses);
+
+        AccountResponse manager = fetchSingleManager(warehouses.getManagerId());
+        return wareHouseMapper.toResponse(warehouses, manager);
     }
 
     private static void setAuditField(Warehouses warehouses, Account account) {
@@ -75,8 +82,10 @@ public class WareHouseServiceImpl implements WareHouseService {
     public PageResponse<WareHouseResponse> getAll(Integer page, Integer size) {
         log.info("Retrieving all warehouses - page: {}, size: {}", page, size);
         Page<Warehouses> warehousePage = wareHouseRepository.findAll(PageRequest.of(page, size));
-        Page<WareHouseResponse> responsePage = warehousePage.map(wareHouseMapper::toResponse);
-        return PageResponse.from(responsePage);
+        List<Warehouses> content = warehousePage.getContent();
+        Map<String, AccountResponse> managerMap = fetchManagerMap(content);
+        List<WareHouseResponse> responses = wareHouseMapper.toResponses(content, managerMap);
+        return PageResponse.from(warehousePage, responses);
     }
 
     /**
@@ -88,12 +97,11 @@ public class WareHouseServiceImpl implements WareHouseService {
     @Override
     public WareHouseResponse getWareHouseById(String id) {
         log.info("Retrieving warehouse with id={}", id);
-        Warehouses warehouses = wareHouseRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Warehouse not found with id={}", id);
-                    return new BadRequestException(ErrorCode.WH_001);
-                });
-        return wareHouseMapper.toResponse(warehouses);
+        Warehouses warehouse = wareHouseRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+
+        AccountResponse manager = fetchSingleManager(warehouse.getManagerId());
+        return wareHouseMapper.toResponse(warehouse, manager);
     }
 
     /**
@@ -103,9 +111,10 @@ public class WareHouseServiceImpl implements WareHouseService {
      */
     @Override
     public List<WareHouseResponse> getWareHouses() {
-        log.info("Get all warehouses");
+        log.info("Retrieving all warehouses");
         List<Warehouses> warehouses = wareHouseRepository.findAll();
-        return wareHouseMapper.toResponses(warehouses);
+        Map<String, AccountResponse> managerMap = fetchManagerMap(warehouses);
+        return wareHouseMapper.toResponses(warehouses, managerMap);
     }
 
     /**
@@ -118,28 +127,18 @@ public class WareHouseServiceImpl implements WareHouseService {
     @Override
     @Transactional
     public WareHouseResponse updateWareHouse(String id, UpdateWarehouseRequest request) {
-        log.info("Updating warehouse with id={}", id);
-
-        // Find the warehouse
+        log.info("Updating warehouse with id={}, name={}", id, request.getName());
         Warehouses warehouse = wareHouseRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Warehouse not found with id={}", id);
-                    return new BadRequestException(ErrorCode.WH_001);
-                });
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
 
-        // Update the warehouse fields
         wareHouseMapper.updateEntity(warehouse, request);
 
-        // Update metadata
-        Account account = getCurrentUser();
-        warehouse.setUpdatedBy(account.getId());
+        Account currentUser = getCurrentUser();
+        warehouse.setUpdatedBy(currentUser.getId());
         warehouse.setUpdatedAt(LocalDateTime.now());
-
-        // Save and return
         wareHouseRepository.save(warehouse);
-        log.info("Warehouse updated successfully with id={}", id);
-
-        return wareHouseMapper.toResponse(warehouse);
+        AccountResponse manager = fetchSingleManager(warehouse.getManagerId());
+        return wareHouseMapper.toResponse(warehouse, manager);
     }
 
     /**
@@ -152,33 +151,42 @@ public class WareHouseServiceImpl implements WareHouseService {
     @Override
     @Transactional
     public WareHouseResponse changeStatus(String id, ChangeStatusRequest request) {
-        log.info("Changing status for warehouse with id={} to status={}", id, request.getStatus());
-
-        // Find the warehouse
+        log.info("Changing status of warehouse with code={}, name={}", id, request.getStatus());
         Warehouses warehouse = wareHouseRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Warehouse not found with id={}", id);
-                    return new BadRequestException(ErrorCode.WH_001);
-                });
-        if (warehouse.getStatus() == request.getStatus()) {
-            log.info("Warehouse status is already {}, no update needed", request.getStatus());
-            return wareHouseMapper.toResponse(warehouse);
-        }
-        // Update status
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+
         warehouse.setStatus(request.getStatus());
-        // Update metadata
-        Account account = getCurrentUser();
-        warehouse.setUpdatedBy(account.getId());
+        warehouse.setUpdatedBy(getCurrentUser().getId());
         warehouse.setUpdatedAt(LocalDateTime.now());
-        // Save and return
+
         wareHouseRepository.save(warehouse);
-        log.info("Warehouse status changed successfully for id={}", id);
-        return wareHouseMapper.toResponse(warehouse);
+
+        AccountResponse manager = fetchSingleManager(warehouse.getManagerId());
+        return wareHouseMapper.toResponse(warehouse, manager);
     }
 
     private Account getCurrentUser() {
         String username = SecurityUtils.getCurrentUsername();
         return accountRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException(ErrorCode.AUTH_002));
+    }
+
+    private AccountResponse fetchSingleManager(String managerId) {
+        if (managerId == null || managerId.isBlank()) return null;
+        List<AccountResponse> managers = userProfileRepository.getAccountsByIds(List.of(managerId));
+        return managers.isEmpty() ? null : managers.get(0);
+    }
+
+    private Map<String, AccountResponse> fetchManagerMap(List<Warehouses> warehouses) {
+        List<String> managerIds = warehouses.stream()
+                .map(Warehouses::getManagerId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        if (managerIds.isEmpty()) return Map.of();
+
+        return userProfileRepository.getAccountsByIds(managerIds).stream()
+                .collect(Collectors.toMap(AccountResponse::getAccountId, m -> m));
     }
 }

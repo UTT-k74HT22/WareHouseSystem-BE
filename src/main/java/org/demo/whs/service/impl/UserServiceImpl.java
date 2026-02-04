@@ -31,4 +31,16 @@ public class UserServiceImpl implements UserService {
         String role = RoleType.MANAGER.toString();
         return userProfileRepository.getAccountsByRole(role);
     }
+
+    /**
+     * Get user by account ID.
+     *
+     * @param accountId the account ID
+     * @return the AccountResponse DTO
+     */
+    @Override
+    public AccountResponse getUserById(String accountId) {
+        log.info("Fetching user with account ID: {}", accountId);
+        return userProfileRepository.getAccountById(accountId);
+    }
 }

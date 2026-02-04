@@ -3,9 +3,13 @@ package org.demo.whs.mapper;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.stereotype.Component;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class WareHouseMapper {
@@ -26,7 +30,7 @@ public class WareHouseMapper {
                 .build();
     }
 
-    public WareHouseResponse toResponse(Warehouses warehouses) {
+    public WareHouseResponse toResponse(Warehouses warehouses, AccountResponse accountResponse) {
         if (warehouses == null) {
             return null;
         }
@@ -40,7 +44,7 @@ public class WareHouseMapper {
                 .email(warehouses.getEmail())
                 .status(warehouses.getStatus().name())
                 .wareHouseType(warehouses.getType().name())
-                .managerId(warehouses.getManagerId())
+                .manager(accountResponse)
                 .build();
     }
 
@@ -104,15 +108,15 @@ public class WareHouseMapper {
     /**
      * Converts a list of Warehouses entities to a list of WareHouseResponse DTOs.
      *
-     * @param warehouses the list of Warehouses entities
+     * @param warehouses  the list of Warehouses entities
+     * @param managerMap  a map of AccountResponse DTOs keyed by manager ID
      * @return the list of WareHouseResponse DTOs
      */
-    public List<WareHouseResponse> toResponses(List<Warehouses> warehouses) {
-        if (warehouses == null) {
-            return null;
-        }
+    public List<WareHouseResponse> toResponses(List<Warehouses> warehouses, Map<String, AccountResponse> managerMap) {
+        if (warehouses == null) return Collections.emptyList();
+
         return warehouses.stream()
-                .map(this::toResponse)
+                .map(w -> toResponse(w, managerMap.get(w.getManagerId())))
                 .toList();
     }
 }

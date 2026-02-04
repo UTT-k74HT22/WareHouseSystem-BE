@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 
 @Getter
 @Builder
@@ -17,5 +18,5 @@ public class WareHouseResponse {
     private String email;
     private String status;
     private String wareHouseType;
-    private String managerId;
+    AccountResponse manager;
 }

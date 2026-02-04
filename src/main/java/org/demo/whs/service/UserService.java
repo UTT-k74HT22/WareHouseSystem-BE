@@ -15,4 +15,12 @@ public interface UserService {
      * @return the list of AccountResponse DTOs
      */
     List<AccountResponse> getAllUserWithRoleManager();
+
+    /**
+     * Get user by account ID.
+     *
+     * @param accountId the account ID
+     * @return the AccountResponse DTO
+     */
+    AccountResponse getUserById(String accountId);
 }
