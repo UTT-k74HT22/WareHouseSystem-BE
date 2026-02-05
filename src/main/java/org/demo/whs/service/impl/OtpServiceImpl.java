@@ -68,7 +68,9 @@ public class OtpServiceImpl implements OtpService {
                                     ErrorCode.OTP_002)
                     );
 
-            Account account = Optional.ofNullable(userProfile.getAccount())
+            String accountId = userProfile.getAccountId();
+
+            Account account = accountRepository.findById(accountId)
                     .orElseThrow(() -> new BadRequestException(
                             "Account not found for profile: " + userProfile.getId(),
                             ErrorCode.OTP_002

@@ -78,9 +78,11 @@ public class AuthController {
     }
 
     /**
+     * Endpoint for user registration.
+     * Creates a new user account with the provided registration details.
      *
-     * @param request
-     * @return
+     * @param request the registration request containing user details
+     * @return a response entity containing the registration success message
      */
     @PostMapping("/register")
     public ResponseEntity<BaseResponse<String>> register(@RequestBody @Valid RegisterRequest request) {

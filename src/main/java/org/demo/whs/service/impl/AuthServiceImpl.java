@@ -144,9 +144,7 @@ public class AuthServiceImpl implements AuthService {
 
     private UserProfile buildProfileUser(RegisterRequest request, Account savedAccount) {
         return UserProfile.builder()
-                .account(savedAccount)
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
+                .accountId(savedAccount.getId())
                 .phoneNumber(request.getPhoneNumber())
                 .email(request.getEmail())
                 .build();
