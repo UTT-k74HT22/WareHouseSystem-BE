@@ -1,5 +1,6 @@
 package org.demo.whs.service.impl;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.UnitsOfMeasure;
@@ -10,7 +11,10 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.service.UnitsOfMeasureService;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Implementation of the UnitsOfMeasureService interface.
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
 
     private final UnitsOfMeasureRepository unitsOfMeasureRepository;
@@ -43,6 +48,20 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
 
     }
+
+    /**
+     * Retrieves all units of measure.
+     *
+     * @return a list of response DTOs for all units of measure
+     */
+    @Override
+    @Cacheable(cacheNames = "uom_list", key = "'all'", unless = "#result == null || #result.isEmpty()")
+    public List<UnitsOfMeasureResponse> findAll() {
+        log.info("Retrieving all units of measure");
+        List<UnitsOfMeasure> list = unitsOfMeasureRepository.findAll();
+        return unitsOfMeasureMapper.toResponse(list);
+    }
+
 
     private void validateRequest(UnitsOfMeasureRequest request) {
         if (request.getCode() != null && unitsOfMeasureRepository.existsUnitsOfMeasureByCode(request.getCode())) {

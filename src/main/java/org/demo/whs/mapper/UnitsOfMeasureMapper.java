@@ -5,6 +5,8 @@ import org.demo.whs.entity.dto.request.UnitsOfMeasure.UnitsOfMeasureRequest;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Mapper class for converting between Units of Measure entities and DTOs.
  */
@@ -44,5 +46,21 @@ public class UnitsOfMeasureMapper {
                 .description(UnitsOfMeasure.getDescription())
                 .type(UnitsOfMeasure.getType())
                 .build();
+    }
+
+    /**
+     * Converts a list of UnitsOfMeasure entities to a list of UnitsOfMeasureResponse DTOs.
+     *
+     * @param UnitsOfMeasures the list of UnitsOfMeasure entities
+     * @return the corresponding list of UnitsOfMeasureResponse DTOs
+     */
+    public List<UnitsOfMeasureResponse> toResponse(List<UnitsOfMeasure> UnitsOfMeasures) {
+        if (UnitsOfMeasures == null) {
+            return null;
+        }
+
+        return UnitsOfMeasures.stream()
+                .map(this::toResponse)
+                .toList();
     }
 }

@@ -9,10 +9,9 @@ import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.service.UnitsOfMeasureService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequestMapping("/api/v1/units-of-measure")
 @RestController
@@ -36,4 +35,16 @@ public class UnitsOfMeasureController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Endpoint to retrieve all units of measure.
+     *
+     * @return ResponseEntity containing a list of all units of measure response DTOs
+     */
+    @GetMapping
+    public ResponseEntity<BaseResponse<List<UnitsOfMeasureResponse>>> findAll() {
+        log.info("Received request to retrieve all units of measure");
+        List<UnitsOfMeasureResponse> data = unitsOfMeasureService.findAll();
+        BaseResponse<java.util.List<UnitsOfMeasureResponse>> response = BaseResponse.success(data);
+        return ResponseEntity.ok(response);
+    }
 }

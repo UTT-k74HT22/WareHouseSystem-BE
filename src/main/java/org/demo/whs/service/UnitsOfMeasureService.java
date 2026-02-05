@@ -2,6 +2,7 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.UnitsOfMeasure.UnitsOfMeasureRequest;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
+import java.util.List;
 
 /**
  * Service interface for units of measure-related operations.
@@ -16,4 +17,10 @@ public interface UnitsOfMeasureService {
      */
     UnitsOfMeasureResponse create(UnitsOfMeasureRequest request);
 
+    /**
+     * Retrieves all units of measure.
+     *
+     * @return a list of response DTOs for all units of measure
+     */
+    List<UnitsOfMeasureResponse> findAll();
 }
