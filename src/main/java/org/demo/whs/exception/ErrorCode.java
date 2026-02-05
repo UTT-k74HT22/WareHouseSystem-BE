@@ -35,6 +35,11 @@ public enum ErrorCode {
     PROD_002("PROD_002", "Product already exists"),
     PROD_003("PROD_003", "Invalid product data"),
 
+    // UnitsOfMeasure errors
+    UOM_001("UOM_001", "Unit of Measure not found"),
+    UOM_002("UOM_002", "Unit of Measure code already exists"),
+    UOM_003("UOM_003", "Data is not null"),
+
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
