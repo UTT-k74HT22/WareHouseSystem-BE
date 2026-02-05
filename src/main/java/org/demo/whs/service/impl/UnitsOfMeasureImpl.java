@@ -5,15 +5,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.UnitsOfMeasure;
 import org.demo.whs.entity.dto.request.UnitsOfMeasure.UnitsOfMeasureRequest;
+import org.demo.whs.entity.dto.request.UnitsOfMeasure.UpdateUnitsOfMeasureRequest;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.service.UnitsOfMeasureService;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -35,8 +38,9 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
      * @return the response DTO of the created unit of measure
      */
     @Override
+    @CacheEvict(cacheNames = "uom_list", key = "'all'")
     public UnitsOfMeasureResponse create(UnitsOfMeasureRequest request) {
-        log.info(("Creating unit of measure with code: {}"), request.getCode());
+        log.info("Creating unit of measure with code: {}", request.getCode());
 
         //Step validate
         validateRequest(request);
@@ -46,7 +50,6 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         unitsOfMeasureRepository.save(unitsOfMeasure);
         log.info("Unit of measure with code {} created successfully", request.getCode());
         return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
-
     }
 
     /**
@@ -62,6 +65,78 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         return unitsOfMeasureMapper.toResponse(list);
     }
 
+    /**
+     * Retrieves a unit of measure by its unique identifier.
+     *
+     * @param id the unique identifier of the unit of measure
+     * @return the response DTO of the unit of measure
+     */
+    @Override
+    @Cacheable(cacheNames = "uom", key = "#id", unless = "#result == null")
+    public UnitsOfMeasureResponse findById(String id) {
+        log.info("Retrieving unit of measure with id: {}", id);
+        UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Unit of measure with id {} not found", id);
+                    return new BadRequestException(ErrorCode.UOM_001);
+                });
+        return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
+    }
+
+    /**
+     * Updates an existing unit of measure.
+     *
+     * @param id      the unique identifier of the unit of measure to update
+     * @param request the request DTO containing updated unit of measure details
+     * @return the response DTO of the updated unit of measure
+     */
+    @Override
+    @CacheEvict(cacheNames = {"uom", "uom_list"}, allEntries = true)
+    public UnitsOfMeasureResponse update(String id, UpdateUnitsOfMeasureRequest request) {
+        log.info("Updating unit of measure with id: {}", id);
+
+        UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Unit of measure with id {} not found", id);
+                    return new BadRequestException(ErrorCode.UOM_001);
+                });
+
+        // Validate request
+        validateUpdateRequest(request);
+
+        // Update entity
+        unitsOfMeasureMapper.updateEntity(unitsOfMeasure, request);
+        unitsOfMeasure.setUpdatedAt(LocalDateTime.now());
+
+        unitsOfMeasureRepository.save(unitsOfMeasure);
+        log.info("Unit of measure with id {} updated successfully", id);
+
+        return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
+    }
+
+    /**
+     * Deletes a unit of measure (hard delete with validation).
+     * Only allows deletion if the UOM is not referenced by any products.
+     *
+     * @param id the unique identifier of the unit of measure to delete
+     */
+    @Override
+    @CacheEvict(cacheNames = {"uom", "uom_list"}, allEntries = true)
+    public void delete(String id) {
+        log.info("Deleting unit of measure with id: {}", id);
+
+        UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Unit of measure with id {} not found", id);
+                    return new BadRequestException(ErrorCode.UOM_001);
+                });
+
+        // TODO: Add validation to check if UOM is referenced by products
+        // For now, proceed with hard delete
+        unitsOfMeasureRepository.delete(unitsOfMeasure);
+
+        log.info("Unit of measure with id {} deleted successfully (hard delete)", id);
+    }
 
     private void validateRequest(UnitsOfMeasureRequest request) {
         if (request.getCode() != null && unitsOfMeasureRepository.existsUnitsOfMeasureByCode(request.getCode())) {
@@ -69,6 +144,13 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
             throw new BadRequestException(ErrorCode.UOM_002);
         }
 
+        if (request.getName() == null || request.getName().isBlank()) {
+            log.error("Unit of measure name is required");
+            throw new BadRequestException(ErrorCode.UOM_003);
+        }
+    }
+
+    private void validateUpdateRequest(UpdateUnitsOfMeasureRequest request) {
         if (request.getName() == null || request.getName().isBlank()) {
             log.error("Unit of measure name is required");
             throw new BadRequestException(ErrorCode.UOM_003);

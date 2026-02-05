@@ -2,13 +2,14 @@ package org.demo.whs.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.demo.whs.entity.enums.UnitsOfMeasureType;
 
 @Entity
 @Table(name = "units_of_measure")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
 public class UnitsOfMeasure extends BaseEntity {
