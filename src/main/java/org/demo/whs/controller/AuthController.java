@@ -40,14 +40,14 @@ public class AuthController {
      * @return a response entity containing the authentication response
      */
     @PostMapping("/login")
-    @RateLimit(
-        key = "login",
-        limit = 5,
-        duration = 300, // 5 phút
-        type = RateLimitType.IP,
-        message = "Too many login attempts. Please try again after 5 minutes.",
-        failClosed = true  // CRITICAL: Block requests nếu Redis down
-    )
+//    @RateLimit(
+//        key = "login",
+//        limit = 5,
+//        duration = 300, // 5 phút
+//        type = RateLimitType.IP,
+//        message = "Too many login attempts. Please try again after 5 minutes.",
+//        failClosed = true  // CRITICAL: Block requests nếu Redis down
+//    )
     public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request) {
         log.debug("Login attempt for username: {}", request.getUsername());
         AuthResponse authResponse = authService.authenticate(request);
