@@ -162,4 +162,5 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
 
         return mapper.toResponse(entity);
     }
+
 }
