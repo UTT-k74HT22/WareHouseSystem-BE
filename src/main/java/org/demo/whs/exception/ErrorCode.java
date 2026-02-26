@@ -45,6 +45,11 @@ public enum ErrorCode {
     UOM_002("UOM_002", "Unit of Measure code already exists"),
     UOM_003("UOM_003", "Data is not null"),
 
+    // Business Partner errors
+    BP_001("BP_001", "Business partner not found"),
+    BP_002("BP_002", "Business partner code already exists"),
+    BP_003("BP_003", "Invalid business partner status"),
+    BP_004("BP_004", "Business partner is inactive"),
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
