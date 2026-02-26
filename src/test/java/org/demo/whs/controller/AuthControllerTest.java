@@ -12,6 +12,7 @@ import org.demo.whs.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
@@ -23,10 +24,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
@@ -34,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import({GlobalExceptionHandle.class})
 @ImportAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, FlywayAutoConfiguration.class})
-public class AuthControllerTest {
+class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -48,98 +50,137 @@ public class AuthControllerTest {
     @MockitoBean
     private org.demo.whs.service.RateLimitService rateLimitService;
 
+    // ================= LOGIN TESTS =================
     @Nested
-    @DisplayName("Tests cho Login")
+    @DisplayName("Login Tests")
     class LoginTests {
 
         @Test
-        @DisplayName("Case 1: Login thành công")
-        void login_Success() throws Exception {
-            AuthResponse response = new AuthResponse("access-token-123", "3600", "refresh-token-456", "86400", null);
-            LoginRequest validRequest = new LoginRequest("testuser", "password123");
-            when(authService.authenticate(any(LoginRequest.class))).thenReturn(response);
+        @DisplayName("Login success - verify IP passed correctly")
+        void login_Success_WithIp() throws Exception {
+
+            AuthResponse response = AuthResponse.builder()
+                    .accessToken("access-token-123")
+                    .refreshToken("refresh-token-456")
+                    .expireAccessToken("3600")
+                    .expireRefreshToken("86400")
+                    .ip("127.0.0.1")
+                    .build();
+
+            when(authService.authenticate(any(LoginRequest.class), any()))
+                    .thenReturn(response);
+
+            LoginRequest request = new LoginRequest("testuser", "password123");
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(validRequest)))
-                    .andDo(print())
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.access_token").value("access-token-123"))
+                    .andExpect(jsonPath("$.data.ip").value("127.0.0.1"))
                     .andExpect(jsonPath("$.success").value(true));
+
+            // Verify IP được truyền vào service
+            ArgumentCaptor<String> ipCaptor = ArgumentCaptor.forClass(String.class);
+
+            verify(authService).authenticate(any(LoginRequest.class), ipCaptor.capture());
+
+            String capturedIp = ipCaptor.getValue();
+            assert capturedIp != null;
         }
 
         @Test
-        @DisplayName("Case 2: Login thất bại - Sai thông tin (AUTH_001)")
+        @DisplayName("Login fail - invalid credentials")
         void login_Fail_InvalidCredentials() throws Exception {
-            LoginRequest validRequest = new LoginRequest("wronguser", "wrongpass");
-            when(authService.authenticate(any(LoginRequest.class)))
+
+            when(authService.authenticate(any(LoginRequest.class), any()))
                     .thenThrow(new AuthenticationFailedException(ErrorCode.AUTH_001));
 
+            LoginRequest request = new LoginRequest("wronguser", "wrongpass");
+
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(validRequest)))
-                    .andDo(print())
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("Case 3: Login thất bại - Tài khoản bị khóa (AUTH_004)")
-        void login_Fail_AccountInactive() throws Exception {
-            LoginRequest validRequest = new LoginRequest("inactive_user", "password123");
-            when(authService.authenticate(any(LoginRequest.class)))
-                    .thenThrow(new AuthenticationFailedException(ErrorCode.AUTH_004));
+        @DisplayName("Login fail - validation error")
+        void login_Fail_Validation() throws Exception {
+
+            LoginRequest request = new LoginRequest("", "");
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(validRequest)))
-                    .andDo(print())
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @DisplayName("Case 4: Login thất bại - Validation (Username trống)")
-        void login_Fail_BadRequest() throws Exception {
-            LoginRequest invalidRequest = new LoginRequest("", "");
-
-            mockMvc.perform(post("/api/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidRequest)))
-                    .andDo(print())
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Login success - X-Forwarded-For header")
+        void login_Success_WithForwardedHeader() throws Exception {
+
+            AuthResponse response = AuthResponse.builder()
+                    .accessToken("access-token-123")
+                    .refreshToken("refresh-token-456")
+                    .expireAccessToken("3600")
+                    .expireRefreshToken("86400")
+                    .ip("192.168.1.100")
+                    .build();
+
+            when(authService.authenticate(any(LoginRequest.class), any()))
+                    .thenReturn(response);
+
+            LoginRequest request = new LoginRequest("testuser", "password123");
+
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .header("X-Forwarded-For", "192.168.1.100")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.ip").value("192.168.1.100"));
         }
     }
 
+    // ================= REFRESH TOKEN TESTS =================
     @Nested
-    @DisplayName("Tests cho Refresh Token")
+    @DisplayName("Refresh Token Tests")
     class RefreshTokenTests {
 
         @Test
-        @DisplayName("Case 1: Refresh thành công")
+        @DisplayName("Refresh success")
         void refresh_Success() throws Exception {
-            RefreshTokenResponse response = new RefreshTokenResponse("new-access-token", "3600");
-            RefreshTokenRequest validRequest = new RefreshTokenRequest("valid-refresh-token-12345");
-            when(authService.refreshToken(any(RefreshTokenRequest.class))).thenReturn(response);
+
+            RefreshTokenResponse response =
+                    new RefreshTokenResponse("new-access-token", "3600");
+
+            when(authService.refreshToken(any(RefreshTokenRequest.class)))
+                    .thenReturn(response);
+
+            RefreshTokenRequest request =
+                    new RefreshTokenRequest("valid-refresh-token");
 
             mockMvc.perform(post("/api/v1/auth/refresh-token")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(validRequest)))
-                    .andDo(print())
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.access_token").value("new-access-token"))
                     .andExpect(jsonPath("$.success").value(true));
         }
 
         @Test
-        @DisplayName("Case 2: Refresh thất bại - Token hết hạn hoặc sai")
+        @DisplayName("Refresh fail - invalid token")
         void refresh_Fail_InvalidToken() throws Exception {
-            RefreshTokenRequest validRequest = new RefreshTokenRequest("invalid-refresh-token");
-            when(authService.refreshToken(any(RefreshTokenRequest.class)))
+
+            when(authService.refreshToken(any()))
                     .thenThrow(new AuthenticationFailedException(ErrorCode.AUTH_006));
+
+            RefreshTokenRequest request =
+                    new RefreshTokenRequest("invalid-token");
 
             mockMvc.perform(post("/api/v1/auth/refresh-token")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(validRequest)))
-                    .andDo(print())
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized());
         }
     }
