@@ -32,8 +32,13 @@ public enum ErrorCode {
 
     // Product errors
     PROD_001("PROD_001", "Product not found"),
-    PROD_002("PROD_002", "Product already exists"),
+    PROD_002("PROD_002", "Product SKU already exists"),
     PROD_003("PROD_003", "Invalid product data"),
+    PROD_004("PROD_004", "Category not found or inactive"),
+    PROD_005("PROD_005", "Unit of Measure not found"),
+    PROD_006("PROD_006", "Cannot disable batch tracking - batch inventory exists"),
+    PROD_007("PROD_007", "Max stock level must be greater than or equal to min stock level"),
+    PROD_008("PROD_008", "Reorder point must be between min and max stock levels"),
 
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Unit of Measure not found"),
