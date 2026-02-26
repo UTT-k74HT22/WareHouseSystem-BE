@@ -65,10 +65,12 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("Should authenticate successfully with valid credentials")
         void authenticate_Success() {
-            // Given
+
             String username = "testuser";
             String password = "password123";
             String encodedPassword = "$2a$10$encoded";
+            String clientIp = "127.0.0.1";
+
             LoginRequest request = new LoginRequest(username, password);
 
             Account account = new Account();
@@ -77,16 +79,21 @@ class AuthServiceImplTest {
             account.setStatus(AccountStatus.ACTIVE);
 
             List<String> roles = Arrays.asList("ROLE_USER", "ROLE_ADMIN");
+
             String accessToken = "access-token-123";
             String refreshToken = "refresh-token-456";
             String accessExpiration = "3600";
             String refreshExpiration = "86400";
 
             AuthResponse expectedResponse = new AuthResponse(
-                    accessToken, refreshToken, accessExpiration, refreshExpiration, null
+                    accessToken,
+                    refreshToken,
+                    accessExpiration,
+                    refreshExpiration,
+                    clientIp
             );
 
-            // When
+            // Mock dependencies
             when(accountRepository.findByUsername(username)).thenReturn(Optional.of(account));
             when(passwordEncoder.matches(password, encodedPassword)).thenReturn(true);
             when(roleRepository.findRoleNamesByUsername(username)).thenReturn(roles);
@@ -94,23 +101,37 @@ class AuthServiceImplTest {
             when(jwtProvider.buildRefreshToken(account)).thenReturn(refreshToken);
             when(jwtProvider.getExpirationAccessToken(accessToken)).thenReturn(accessExpiration);
             when(jwtProvider.getExpirationRefreshToken(refreshToken)).thenReturn(refreshExpiration);
-            when(authMapper.toResponse(accessToken, accessExpiration, refreshToken, refreshExpiration, null))
-                    .thenReturn(expectedResponse);
 
-            AuthResponse result = authService.authenticate(request);
+            // 🔥 FIX: stub đúng thứ tự tham số + đúng IP
+            when(authMapper.toResponse(
+                    eq(accessToken),
+                    eq(refreshToken),
+                    eq(accessExpiration),
+                    eq(refreshExpiration),
+                    eq(clientIp)
+            )).thenReturn(expectedResponse);
 
-            // Then
+            AuthResponse result = authService.authenticate(request, clientIp);
+
             assertThat(result).isNotNull();
             assertThat(result.getAccessToken()).isEqualTo(accessToken);
             assertThat(result.getRefreshToken()).isEqualTo(refreshToken);
+            assertThat(result.getIp()).isEqualTo(clientIp);
 
             verify(accountRepository).findByUsername(username);
             verify(passwordEncoder).matches(password, encodedPassword);
             verify(roleRepository).findRoleNamesByUsername(username);
             verify(jwtProvider).buildAccessToken(account, roles);
             verify(jwtProvider).buildRefreshToken(account);
-        }
 
+            verify(authMapper).toResponse(
+                    accessToken,
+                    refreshToken,
+                    accessExpiration,
+                    refreshExpiration,
+                    clientIp
+            );
+        }
         @Test
         @DisplayName("Should throw AuthenticationFailedException when user not found")
         void authenticate_UserNotFound() {
@@ -122,7 +143,7 @@ class AuthServiceImplTest {
             when(accountRepository.findByUsername(username)).thenReturn(Optional.empty());
 
             // Then
-            assertThatThrownBy(() -> authService.authenticate(request))
+            assertThatThrownBy(() -> authService.authenticate(request, "127.0.0.1"))
                     .isInstanceOf(AuthenticationFailedException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "AUTH_001");
 
@@ -149,7 +170,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches(password, encodedPassword)).thenReturn(false);
 
             // Then
-            assertThatThrownBy(() -> authService.authenticate(request))
+            assertThatThrownBy(() -> authService.authenticate(request, "127.0.0.1"))
                     .isInstanceOf(AuthenticationFailedException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "AUTH_001");
 
@@ -177,7 +198,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches(password, encodedPassword)).thenReturn(true);
 
             // Then
-            assertThatThrownBy(() -> authService.authenticate(request))
+            assertThatThrownBy(() -> authService.authenticate(request, "127.0.0.1"))
                     .isInstanceOf(AuthenticationFailedException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "AUTH_004");
 

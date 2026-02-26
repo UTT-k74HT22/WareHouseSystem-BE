@@ -1,5 +1,6 @@
 package org.demo.whs.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,18 +41,23 @@ public class AuthController {
      * @return a response entity containing the authentication response
      */
     @PostMapping("/login")
-//    @RateLimit(
-//        key = "login",
-//        limit = 5,
-//        duration = 300, // 5 phút
-//        type = RateLimitType.IP,
-//        message = "Too many login attempts. Please try again after 5 minutes.",
-//        failClosed = true  // CRITICAL: Block requests nếu Redis down
-//    )
-    public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request) {
+    @RateLimit(
+        key = "login",
+        limit = 5,
+        duration = 300, // 5 phút
+        type = RateLimitType.IP,
+        message = "Too many login attempts. Please try again.",
+        failClosed = true  // CRITICAL: Block requests nếu Redis down
+    )
+    public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request, HttpServletRequest httpRequest) {
         log.debug("Login attempt for username: {}", request.getUsername());
-        AuthResponse authResponse = authService.authenticate(request);
-        log.info("User logged in successfully: {}", request.getUsername());
+        
+        // Extract client IP
+        String clientIp = getClientIp(httpRequest);
+        log.debug("Client IP: {}", clientIp);
+        
+        AuthResponse authResponse = authService.authenticate(request, clientIp);
+        log.info("User logged in successfully: {} from IP: {}", request.getUsername(), clientIp);
         return ResponseEntity.ok(BaseResponse.success(authResponse));
     }
 
@@ -74,5 +80,33 @@ public class AuthController {
         log.debug("Refresh token request received");
         RefreshTokenResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Extract client IP address from HTTP request.
+     * Supports both direct connections and proxied requests.
+     *
+     * @param request HTTP request
+     * @return Client IP address
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+        
+        // Check for X-Forwarded-For header (proxy/load balancer)
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(forwardedFor)) {
+            // X-Forwarded-For format: client, proxy1, proxy2
+            // Take the first IP (original client)
+            return forwardedFor.split(",")[0].trim();
+        }
+        
+        // Check for X-Real-IP header (nginx)
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isEmpty() && !"unknown".equalsIgnoreCase(realIp)) {
+            return realIp;
+        }
+        
+        // Default to remote address
+        return remoteAddr;
     }
 }

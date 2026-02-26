@@ -35,8 +35,8 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
 
     @Override
-    public AuthResponse authenticate(LoginRequest request) {
-        log.debug("Authentication attempt for username: {}", request.getUsername());
+    public AuthResponse authenticate(LoginRequest request, String clientIp) {
+        log.debug("Authentication attempt for username: {} from IP: {}", request.getUsername(), clientIp);
 
         // Find account
         Account account = getAccount(request.getUsername());
@@ -49,8 +49,8 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtProvider.buildRefreshToken(account);
         String expireAccessToken = jwtProvider.getExpirationAccessToken(accessToken);
         String expireRefreshToken = jwtProvider.getExpirationRefreshToken(refreshToken);
-        log.info("User authenticated successfully: {}", request.getUsername());
-        return authMapper.toResponse(accessToken, refreshToken, expireAccessToken, expireRefreshToken, null);
+        log.info("User authenticated successfully: {} from IP: {}", request.getUsername(), clientIp);
+        return authMapper.toResponse(accessToken, refreshToken, expireAccessToken, expireRefreshToken, clientIp);
     }
 
     private void validAccount(LoginRequest request, Account account) {

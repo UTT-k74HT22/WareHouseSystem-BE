@@ -14,9 +14,10 @@ public interface AuthService {
      * Authenticates a user based on the provided login request.
      *
      * @param request the login request containing user credentials
+     * @param clientIp the client IP address
      * @return an authentication response containing tokens and related information
      */
-    AuthResponse authenticate(LoginRequest request);
+    AuthResponse authenticate(LoginRequest request, String clientIp);
 
     /**
      * Refreshes the access token using a valid refresh token.
