@@ -38,9 +38,10 @@ public class AuthMapper {
     }
 
     /**
+     * Convert a RegisterRequest to an Account.
      *
-     * @param request
-     * @return
+     * @param request the RegisterRequest to convert
+     * @return the Account containing the username and status
      */
     public Account registerAcc(RegisterRequest request) {
         return Account.builder()

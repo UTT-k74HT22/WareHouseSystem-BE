@@ -15,6 +15,7 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.mapper.AuthMapper;
+import org.demo.whs.mapper.UserProfileMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
@@ -23,6 +24,8 @@ import org.demo.whs.security.JwtProvider;
 import org.demo.whs.service.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import static org.demo.whs.exception.ErrorCode.*;
 
@@ -38,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserProfileRepository userProfileRepository;
     private final RoleRepository roleRepository;
     private final AccountHasRoleRepository accountHasRoleRepository;
+    private final UserProfileMapper userProfileMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
@@ -107,49 +111,36 @@ public class AuthServiceImpl implements AuthService {
         return authMapper.toRefreshResponse(newAccessToken, expireAccessToken);
     }
 
-   /**
-    * @param request the registration request containing user details
-    */
+    @Transactional
     @Override
     public void register(RegisterRequest request) {
         log.info("Registering new user: {}", request.getUsername());
 
         validateField(request);
 
-        // 1. Build & save Account
+        // . Build & save Account
         Account account = authMapper.registerAcc(request);
         account.setPassword(passwordEncoder.encode(request.getPassword()));
         Account savedAccount = accountRepository.save(account);
 
         log.info("Account created successfully with ID: {}", savedAccount.getId());
 
-        // 2. Get USER role
+        // . Get USER role
         Role userRole = roleRepository.findByName(RoleType.USER)
                 .orElseThrow(() -> new BadRequestException(ROLE_001));
-
-        // 3. Save account-role mapping
+        // . Save account-role mapping
         AccountRoleId accountRoleId = AccountRoleId.builder()
                 .accountId(savedAccount.getId())
                 .roleId(userRole.getId())
                 .build();
 
         accountHasRoleRepository.save(new AccountHasRole(accountRoleId));
-
-        // 4. Build & save profile
-        UserProfile userProfile = buildProfileUser(request, savedAccount);
+        // Build & save profile
+        UserProfile userProfile = userProfileMapper.toUserProfile(request, savedAccount);
         userProfileRepository.save(userProfile);
 
         log.info("User profile created successfully for account: {}", savedAccount.getUsername());
     }
-
-    private UserProfile buildProfileUser(RegisterRequest request, Account savedAccount) {
-        return UserProfile.builder()
-                .accountId(savedAccount.getId())
-                .phoneNumber(request.getPhoneNumber())
-                .email(request.getEmail())
-                .build();
-    }
-
 
     private void validRefreshToken(String refreshToken) {
         if (jwtProvider.validateToken(refreshToken)) {
