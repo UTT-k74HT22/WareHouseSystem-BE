@@ -20,6 +20,12 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
     """)
     Optional<UserProfile> findByEmail(String email);
 
-
+    /**
+     * Kiểm tra email đã tồn tại hay chưa.
+     *
+     * @param email email người dùng
+     * @return true nếu đã tồn tại
+     */
+    boolean existsByEmail(String email);
 
 }
