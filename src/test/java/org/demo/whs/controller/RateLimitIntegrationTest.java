@@ -83,7 +83,7 @@ class RateLimitIntegrationTest {
 
         RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
-        when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
+        when(authService.authenticate(any(LoginRequest.class), any(String.class))).thenReturn(authResponse);
         when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // When & Then
@@ -141,7 +141,7 @@ class RateLimitIntegrationTest {
 
         RateLimitDTO loginRateLimit = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
-        when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
+        when(authService.authenticate(any(LoginRequest.class), any(String.class))).thenReturn(authResponse);
         when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(loginRateLimit);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -167,7 +167,7 @@ class RateLimitIntegrationTest {
 
         RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
-        when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
+        when(authService.authenticate(any(LoginRequest.class), any(String.class))).thenReturn(authResponse);
         when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // Request from different IP
@@ -198,7 +198,7 @@ class RateLimitIntegrationTest {
 
         RateLimitDTO allowedInfo = new RateLimitDTO(true, 4, 5, System.currentTimeMillis() / 1000 + 300, null);
 
-        when(authService.authenticate(any(LoginRequest.class))).thenReturn(authResponse);
+        when(authService.authenticate(any(LoginRequest.class), any(String.class))).thenReturn(authResponse);
         when(rateLimitService.checkRateLimit(any(), anyString(), anyString())).thenReturn(allowedInfo);
 
         // Request with X-Forwarded-For header

@@ -45,19 +45,18 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
-    /**
-     * Sau khi hợp lệ sẽ tạo access token và refresh token.
-     *
-     * @param request thông tin đăng nhập
-     * @return thông tin token và thời hạn
-     * @throws AuthenticationFailedException nếu thông tin không hợp lệ
-     */
+
+    // ================= LOGIN =================
+
     @Override
-    public AuthResponse authenticate(LoginRequest request) {
-        log.debug("Authentication attempt: {}", request.getUsername());
+    public AuthResponse authenticate(LoginRequest request, String clientIp) {
+
+        log.debug("Authentication attempt for username: {} from IP: {}",
+                request.getUsername(), clientIp);
 
         Account account = getAccountByUsername(request.getUsername());
-        validatePassword(request.getPassword(), account.getPassword());
+
+        verifyPassword(request.getPassword(), account.getPassword());
         validateAccountStatus(account);
 
         List<String> roles = roleRepository.findRoleNamesByUsername(account.getUsername());
@@ -65,45 +64,48 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtProvider.buildAccessToken(account, roles);
         String refreshToken = jwtProvider.buildRefreshToken(account);
 
-        log.info("User authenticated: {}", account.getUsername());
+        log.info("User authenticated successfully: {} from IP: {}",
+                account.getUsername(), clientIp);
 
         return authMapper.toResponse(
                 accessToken,
                 refreshToken,
                 jwtProvider.getExpirationAccessToken(accessToken),
                 jwtProvider.getExpirationRefreshToken(refreshToken),
-                null
+                clientIp
         );
     }
-    /**
-     *  @param request chứa refresh token
-     *      * @return access token mới
-     *      * @throws UnauthorizedException nếu token không hợp lệ
-     */
+
+    // ================= REFRESH TOKEN =================
+
     @Override
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
 
         String refreshToken = request.getRefreshToken();
+
+        log.debug("Attempting to refresh token");
+
         validateRefreshToken(refreshToken);
 
         String username = jwtProvider.getUsernameFromToken(refreshToken);
+
         Account account = getAccountByUsername(username);
         validateAccountStatus(account);
 
         List<String> roles = roleRepository.findRoleNamesByUsername(username);
+
         String newAccessToken = jwtProvider.buildAccessToken(account, roles);
 
-        log.info("Access token refreshed for user: {}", username);
+        log.info("Access token refreshed successfully for user: {}", username);
 
         return authMapper.toRefreshResponse(
                 newAccessToken,
                 jwtProvider.getExpirationAccessToken(newAccessToken)
         );
     }
-    /**
-     * @param request chứa thông tin đăng ký
-     * @throws BadRequestException nếu thông tin không hợp lệ
-     */
+
+    // ================= REGISTER =================
+
     @Override
     @Transactional
     public void register(RegisterRequest request) {
@@ -121,17 +123,13 @@ public class AuthServiceImpl implements AuthService {
         assignUserRole(savedAccount);
         createUserProfile(request, savedAccount);
 
-        // Sau khi commit thành công mới gửi OTP
         otpService.sendOtp(request.getEmail(), OtpType.REGISTER);
 
         log.info("User registered successfully: {}", savedAccount.getUsername());
     }
-    /**
-     * Kiểm tra username và email đã tồn tại hay chưa.
-     *
-     * @param request thông tin đăng ký
-     * @throws BadRequestException nếu thông tin không hợp lệ
-     */
+
+    // ================= PRIVATE METHODS =================
+
     private void validateDuplicateUser(RegisterRequest request) {
 
         if (accountRepository.existsByUsername(request.getUsername())) {
@@ -142,11 +140,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException(AUTH_003);
         }
     }
-    /**
-     * Gán vai trò cho tài khoản.
-     *
-     * @param account tài khoản
-     */
+
     private void assignUserRole(Account account) {
 
         Role userRole = roleRepository.findByName(RoleType.USER)
@@ -159,64 +153,42 @@ public class AuthServiceImpl implements AuthService {
 
         accountHasRoleRepository.save(new AccountHasRole(accountRoleId));
     }
-    /**
-     * Tạo thông tin người dùng.
-     *
-     * @param request thông tin đăng ký
-     * @param account tài khoản
-     */
+
     private void createUserProfile(RegisterRequest request, Account account) {
         UserProfile profile = userProfileMapper.toUserProfile(request, account);
         userProfileRepository.save(profile);
     }
 
-    private void validatePassword(String rawPassword, String encodedPassword) {
+    private void verifyPassword(String rawPassword, String encodedPassword) {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
-            log.warn("Invalid password attempt");
+            log.warn("Authentication failed - invalid password");
             throw new AuthenticationFailedException(AUTH_001);
         }
     }
-    /**
-     * Kiểm tra trạng thái tài khoản.
-     *
-     * @param account tài khoản
-     * @throws AuthenticationFailedException nếu tài khoản không hợp lệ
-     */
-    private void validateAccountStatus(Account account) {
 
+    private void validateAccountStatus(Account account) {
         switch (account.getStatus()) {
             case INACTIVE -> throw new AuthenticationFailedException(AUTH_004);
             case SUSPENDED -> throw new AuthenticationFailedException(AUTH_007);
-
             case ACTIVE -> {
                 // OK
             }
             default -> throw new AuthenticationFailedException(AUTH_001);
         }
     }
-    /**
-     Lấy tài khoản theo username.
-     * @param username tên đăng nhập
-     * @return Account tương ứng
-     * @throws AuthenticationFailedException nếu không tồn tại
-     * */
+
     private Account getAccountByUsername(String username) {
         return accountRepository.findByUsername(username)
-                .orElseThrow(() -> new AuthenticationFailedException(AUTH_001));
+                .orElseThrow(() -> {
+                    log.warn("Authentication failed - username not found: {}", username);
+                    return new AuthenticationFailedException(AUTH_001);
+                });
     }
-    /**
-     * Kiểm tra refresh token hợp lệ và đúng loại.
-     *
-     * @param token refresh token
-     * @throws UnauthorizedException nếu token không hợp lệ
-     */
+
     private void validateRefreshToken(String token) {
 
-        if (!jwtProvider.validateToken(token)) {
-            throw new UnauthorizedException(AUTH_006);
-        }
-
-        if (!jwtProvider.isRefreshToken(token)) {
+        if (!jwtProvider.validateToken(token) || !jwtProvider.isRefreshToken(token)) {
+            log.warn("Invalid refresh token");
             throw new UnauthorizedException(AUTH_006);
         }
     }
