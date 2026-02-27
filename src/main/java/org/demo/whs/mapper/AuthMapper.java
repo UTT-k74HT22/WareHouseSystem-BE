@@ -1,7 +1,10 @@
 package org.demo.whs.mapper;
 
+import org.demo.whs.entity.Account;
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.enums.AccountStatus;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +34,19 @@ public class AuthMapper {
         return RefreshTokenResponse.builder()
                 .accessToken(accessToken)
                 .expireAccessToken(expireAccessToken)
+                .build();
+    }
+
+    /**
+     * Convert a RegisterRequest to an Account.
+     *
+     * @param request the RegisterRequest to convert
+     * @return the Account containing the username and status
+     */
+    public Account registerAcc(RegisterRequest request) {
+        return Account.builder()
+                .username(request.getUsername())
+                .status(AccountStatus.INACTIVE)
                 .build();
     }
 }

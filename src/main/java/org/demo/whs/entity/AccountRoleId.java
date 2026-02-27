@@ -10,6 +10,7 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class AccountRoleId implements Serializable {
 
     @Column(name = "account_id", length = 36, columnDefinition = "CHAR(36)")

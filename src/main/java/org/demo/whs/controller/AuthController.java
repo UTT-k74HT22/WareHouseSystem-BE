@@ -3,6 +3,7 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -74,5 +75,19 @@ public class AuthController {
         log.debug("Refresh token request received");
         RefreshTokenResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Endpoint for user registration.
+     * Creates a new user account with the provided registration details.
+     *
+     * @param request the registration request containing user details
+     * @return a response entity containing the registration success message
+     */
+    @PostMapping("/register")
+    public ResponseEntity<BaseResponse<String>> register(@RequestBody @Valid RegisterRequest request) {
+        log.debug("Register attempt for username: {}", request.getUsername());
+        authService.register(request);
+        return ResponseEntity.ok(BaseResponse.success("User registered successfully"));
     }
 }
