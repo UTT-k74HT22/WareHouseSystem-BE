@@ -15,7 +15,7 @@ public class BatchMapper {
     /**
      * Convert CreateBatchRequest → Batch entity
      */
-    public Batch toEntity(CreateBatchRequest request) {
+    public static Batch toEntity(CreateBatchRequest request) {
         if (request == null) {
             return null;
         }
