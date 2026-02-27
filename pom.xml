@@ -191,6 +191,18 @@
                     </excludes>
                 </configuration>
             </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.flywaydb</groupId>-->
+<!--                <artifactId>flyway-maven-plugin</artifactId>-->
+<!--                <configuration>-->
+<!--                    <url>jdbc:mysql://localhost:3306/warehouse_system</url>-->
+<!--                    <user>whs_user</user>-->
+<!--                    <password>root</password>-->
+<!--                    <locations>-->
+<!--                        <location>classpath:db/migration</location>-->
+<!--                    </locations>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
         </plugins>
     </build>
 

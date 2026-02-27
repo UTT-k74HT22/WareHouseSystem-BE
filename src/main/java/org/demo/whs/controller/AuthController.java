@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -51,11 +52,11 @@ public class AuthController {
     )
     public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request, HttpServletRequest httpRequest) {
         log.debug("Login attempt for username: {}", request.getUsername());
-        
+
         // Extract client IP
         String clientIp = getClientIp(httpRequest);
         log.debug("Client IP: {}", clientIp);
-        
+
         AuthResponse authResponse = authService.authenticate(request, clientIp);
         log.info("User logged in successfully: {} from IP: {}", request.getUsername(), clientIp);
         return ResponseEntity.ok(BaseResponse.success(authResponse));
@@ -91,7 +92,7 @@ public class AuthController {
      */
     private String getClientIp(HttpServletRequest request) {
         String remoteAddr = request.getRemoteAddr();
-        
+
         // Check for X-Forwarded-For header (proxy/load balancer)
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (forwardedFor != null && !forwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(forwardedFor)) {
@@ -99,14 +100,28 @@ public class AuthController {
             // Take the first IP (original client)
             return forwardedFor.split(",")[0].trim();
         }
-        
+
         // Check for X-Real-IP header (nginx)
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isEmpty() && !"unknown".equalsIgnoreCase(realIp)) {
             return realIp;
         }
-        
+
         // Default to remote address
         return remoteAddr;
+    }
+
+    /**
+     * Endpoint for user registration.
+     * Creates a new user account with the provided registration details.
+     *
+     * @param request the registration request containing user details
+     * @return a response entity containing the registration success message
+     */
+    @PostMapping("/register")
+    public ResponseEntity<BaseResponse<String>> register(@RequestBody @Valid RegisterRequest request) {
+        log.debug("Register attempt for username: {}", request.getUsername());
+        authService.register(request);
+        return ResponseEntity.ok(BaseResponse.success("User registered successfully"));
     }
 }

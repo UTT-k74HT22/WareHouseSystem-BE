@@ -7,6 +7,7 @@ import lombok.Getter;
 import org.demo.whs.entity.enums.BatchStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Builder
@@ -21,4 +22,8 @@ public class BatchResponse {
     private String supplierBatchNumber;
     private String notes;
     private BatchStatus status;
+    private String createdBy;
+    private LocalDateTime createdAt;
+    private String updatedBy;
+    private LocalDateTime updatedAt;
 }

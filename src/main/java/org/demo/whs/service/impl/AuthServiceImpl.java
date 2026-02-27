@@ -2,111 +2,193 @@ package org.demo.whs.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.Account;
+import org.demo.whs.entity.*;
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.AccountStatus;
+import org.demo.whs.entity.enums.OtpType;
+import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.AuthenticationFailedException;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.mapper.AuthMapper;
+import org.demo.whs.mapper.UserProfileMapper;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.security.JwtProvider;
 import org.demo.whs.service.AuthService;
+import org.demo.whs.service.OtpService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
+
 import static org.demo.whs.exception.ErrorCode.*;
 
-/**
- * Service Implementation for managing authentication and authorization.
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
+    private final UserProfileRepository userProfileRepository;
     private final RoleRepository roleRepository;
+    private final AccountHasRoleRepository accountHasRoleRepository;
+    private final UserProfileMapper userProfileMapper;
+    private final OtpService otpService;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
 
+    // ================= LOGIN =================
+
     @Override
     public AuthResponse authenticate(LoginRequest request, String clientIp) {
-        log.debug("Authentication attempt for username: {} from IP: {}", request.getUsername(), clientIp);
 
-        // Find account
-        Account account = getAccount(request.getUsername());
-        // Verify password
-        validAccount(request, account);
-        // Load user roles
+        log.debug("Authentication attempt for username: {} from IP: {}",
+                request.getUsername(), clientIp);
+
+        Account account = getAccountByUsername(request.getUsername());
+
+        verifyPassword(request.getPassword(), account.getPassword());
+        validateAccountStatus(account);
+
         List<String> roles = roleRepository.findRoleNamesByUsername(account.getUsername());
-        // Generate tokens
+
         String accessToken = jwtProvider.buildAccessToken(account, roles);
         String refreshToken = jwtProvider.buildRefreshToken(account);
-        String expireAccessToken = jwtProvider.getExpirationAccessToken(accessToken);
-        String expireRefreshToken = jwtProvider.getExpirationRefreshToken(refreshToken);
-        log.info("User authenticated successfully: {} from IP: {}", request.getUsername(), clientIp);
-        return authMapper.toResponse(accessToken, refreshToken, expireAccessToken, expireRefreshToken, clientIp);
+
+        log.info("User authenticated successfully: {} from IP: {}",
+                account.getUsername(), clientIp);
+
+        return authMapper.toResponse(
+                accessToken,
+                refreshToken,
+                jwtProvider.getExpirationAccessToken(accessToken),
+                jwtProvider.getExpirationRefreshToken(refreshToken),
+                clientIp
+        );
     }
 
-    private void validAccount(LoginRequest request, Account account) {
-        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-            log.warn("Authentication failed - invalid password for username: {}", request.getUsername());
+    // ================= REFRESH TOKEN =================
+
+    @Override
+    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
+
+        String refreshToken = request.getRefreshToken();
+
+        log.debug("Attempting to refresh token");
+
+        validateRefreshToken(refreshToken);
+
+        String username = jwtProvider.getUsernameFromToken(refreshToken);
+
+        Account account = getAccountByUsername(username);
+        validateAccountStatus(account);
+
+        List<String> roles = roleRepository.findRoleNamesByUsername(username);
+
+        String newAccessToken = jwtProvider.buildAccessToken(account, roles);
+
+        log.info("Access token refreshed successfully for user: {}", username);
+
+        return authMapper.toRefreshResponse(
+                newAccessToken,
+                jwtProvider.getExpirationAccessToken(newAccessToken)
+        );
+    }
+
+    // ================= REGISTER =================
+
+    @Override
+    @Transactional
+    public void register(RegisterRequest request) {
+
+        log.info("Registering new user: {}", request.getUsername());
+
+        validateDuplicateUser(request);
+
+        Account account = authMapper.registerAcc(request);
+        account.setPassword(passwordEncoder.encode(request.getPassword()));
+        account.setStatus(AccountStatus.INACTIVE);
+
+        Account savedAccount = accountRepository.save(account);
+
+        assignUserRole(savedAccount);
+        createUserProfile(request, savedAccount);
+
+        otpService.sendOtp(request.getEmail(), OtpType.REGISTER);
+
+        log.info("User registered successfully: {}", savedAccount.getUsername());
+    }
+
+    // ================= PRIVATE METHODS =================
+
+    private void validateDuplicateUser(RegisterRequest request) {
+
+        if (accountRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException(AUTH_002);
+        }
+
+        if (userProfileRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException(AUTH_003);
+        }
+    }
+
+    private void assignUserRole(Account account) {
+
+        Role userRole = roleRepository.findByName(RoleType.USER)
+                .orElseThrow(() -> new BadRequestException(ROLE_001));
+
+        AccountRoleId accountRoleId = AccountRoleId.builder()
+                .accountId(account.getId())
+                .roleId(userRole.getId())
+                .build();
+
+        accountHasRoleRepository.save(new AccountHasRole(accountRoleId));
+    }
+
+    private void createUserProfile(RegisterRequest request, Account account) {
+        UserProfile profile = userProfileMapper.toUserProfile(request, account);
+        userProfileRepository.save(profile);
+    }
+
+    private void verifyPassword(String rawPassword, String encodedPassword) {
+        if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
+            log.warn("Authentication failed - invalid password");
             throw new AuthenticationFailedException(AUTH_001);
         }
-
-        checkStatus(account);
     }
 
-    private static void checkStatus(Account account) {
-        if (account.getStatus() == AccountStatus.INACTIVE) {
-            log.warn("Authentication failed - account inactive: {}", account.getUsername());
-            throw new AuthenticationFailedException(AUTH_004);
+    private void validateAccountStatus(Account account) {
+        switch (account.getStatus()) {
+            case INACTIVE -> throw new AuthenticationFailedException(AUTH_004);
+            case SUSPENDED -> throw new AuthenticationFailedException(AUTH_007);
+            case ACTIVE -> {
+                // OK
+            }
+            default -> throw new AuthenticationFailedException(AUTH_001);
         }
     }
 
-    private Account getAccount(String userName) {
-        return accountRepository.findByUsername(userName)
+    private Account getAccountByUsername(String username) {
+        return accountRepository.findByUsername(username)
                 .orElseThrow(() -> {
-                    log.warn("Authentication failed - username not found: {}", userName);
+                    log.warn("Authentication failed - username not found: {}", username);
                     return new AuthenticationFailedException(AUTH_001);
                 });
     }
 
-    @Override
-    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
-        String refreshToken = request.getRefreshToken();
+    private void validateRefreshToken(String token) {
 
-        log.debug("Attempting to refresh token");
-        // Validate refresh token
-        validRefreshToken(refreshToken);
-        String username = jwtProvider.getUsernameFromToken(refreshToken);
-        // Get account and generate new access token
-        Account account = getAccount(username);
-        // Check account status
-        checkStatus(account);
-        // Load roles
-        List<String> roles = roleRepository.findRoleNamesByUsername(username);
-        // Generate new access token
-        String newAccessToken = jwtProvider.buildAccessToken(account, roles);
-        String expireAccessToken = jwtProvider.getExpirationAccessToken(newAccessToken);
-
-        log.info("Access token refreshed successfully for user: {}", username);
-        return authMapper.toRefreshResponse(newAccessToken, expireAccessToken);
-    }
-
-    private void validRefreshToken(String refreshToken) {
-        if (jwtProvider.validateToken(refreshToken)) {
-            log.warn("Invalid refresh token provided");
-            throw new UnauthorizedException(AUTH_006);
-        }
-
-        if (!jwtProvider.isRefreshToken(refreshToken)) {
-            log.warn("Provided token is not a refresh token");
+        if (!jwtProvider.validateToken(token) || !jwtProvider.isRefreshToken(token)) {
+            log.warn("Invalid refresh token");
             throw new UnauthorizedException(AUTH_006);
         }
     }

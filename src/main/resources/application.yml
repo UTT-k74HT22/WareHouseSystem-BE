@@ -173,3 +173,9 @@ app:
     exchange-name: wms.email.exchange
     routing-key: wms.email.send
 
+  # OTP Configuration
+  otp:
+    ttl-minutes: ${OTP_TTL_MINUTES:10}
+    resend-limit-seconds: ${OTP_RESEND_LIMIT_SECONDS:60}
+    count-ttl-hours: ${OTP_COUNT_TTL_HOURS:24}
+    max-send-per-day: ${OTP_MAX_SEND_PER_DAY:10}

@@ -1,9 +1,12 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
+import org.demo.whs.entity.dto.request.Otp.VerifyOtpRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service Interface for managing authentication and authorization.
@@ -26,4 +29,11 @@ public interface AuthService {
      * @return a new access token and its expiration
      */
     RefreshTokenResponse refreshToken(RefreshTokenRequest request);
+    /**
+     * Registers a new user based on the provided registration request.
+     *
+     * @param request the registration request containing user details
+     */
+    void register(RegisterRequest request);
+
 }

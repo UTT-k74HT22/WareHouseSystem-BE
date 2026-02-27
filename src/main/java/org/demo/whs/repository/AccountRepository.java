@@ -15,4 +15,12 @@ public interface AccountRepository extends JpaRepository<Account, String> {
      * @return an Optional containing the found account or empty if not found
      */
     Optional<Account> findByUsername(String username);
+
+    /**
+     * Kiểm tra username đã tồn tại hay chưa.
+     *
+     * @param username tên đăng nhập
+     * @return true nếu đã tồn tại
+     */
+    boolean existsByUsername(String username);
 }
