@@ -31,3 +31,6 @@ Thumbs.db
 # Application
 application-local.yml
 
+
+.gemini/
+gha-creds-*.json
