@@ -58,6 +58,11 @@ public enum ErrorCode {
     COM_004("COM_004", "Resource not found"),
     COM_005("COM_005", "Duplicate entry - resource already exists"),
 
+    BATCH_001("BATCH_001", "Batch not found"),
+    BATCH_002("BATCH_002", "Batch number already exists"),
+    BATCH_003("BATCH_003", "Invalid batch status"),
+    BATCH_004("BATCH_004", "Batch already expired"),
+    BATCH_005("BATCH_005", "Manufacturing date is invalid"),
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
 

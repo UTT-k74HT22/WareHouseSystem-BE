@@ -26,8 +26,8 @@ public class CreateBatchRequest {
     @NotBlank(message = "Product ID is required")
     private String productId;
 
-    @NotBlank(message = "Manufacturing date is required")
-    private LocalDate manufactureDate;
+    @NotNull(message = "Manufacturing date is required")
+    private LocalDate manufacturingDate;
 
     private LocalDate expiryDate;
 

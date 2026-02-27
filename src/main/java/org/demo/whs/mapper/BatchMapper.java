@@ -23,7 +23,7 @@ public class BatchMapper {
         return Batch.builder()
                 .batchNumber(request.getBatchNumber())
                 .productId(request.getProductId())
-                .manufacturingDate(request.getManufactureDate())
+                .manufacturingDate(request.getManufacturingDate())
                 .expiryDate(request.getExpiryDate())
                 .supplierBatchNumber(request.getSupplierBatchNumber())
                 .notes(request.getNotes())
