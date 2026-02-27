@@ -25,6 +25,7 @@ public enum ErrorCode {
     OTP_003("OTP_003", "Email already verified - cannot resend REGISTER OTP"),
     OTP_004("OTP_004", "You have exceeded the number of OTP sent per day"),
     OTP_005("OTP_005", "Please wait before resending OTP"),
+    OTP_006("OTP_006", "Invalid or expired OTP"),
 
     // Ware House errors
     WH_001("WHS_001", "Warehouse not found"),
