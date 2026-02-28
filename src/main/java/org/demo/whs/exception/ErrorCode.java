@@ -62,7 +62,15 @@ public enum ErrorCode {
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
 
     // Email errors
-    EMAIL_NOT_FOUND("EMAIL_001", "Email log not found");
+    EMAIL_NOT_FOUND("EMAIL_001", "Email log not found"),
+
+    // Storage (MinIO) errors
+    STORAGE_001("STORAGE_001", "File upload failed"),
+    STORAGE_002("STORAGE_002", "File not found in storage"),
+    STORAGE_003("STORAGE_003", "File deletion failed"),
+    STORAGE_004("STORAGE_004", "Failed to generate presigned URL"),
+    STORAGE_005("STORAGE_005", "File type not allowed"),
+    STORAGE_006("STORAGE_006", "File size exceeds maximum allowed limit");
 
     private final String code;
     private final String message;

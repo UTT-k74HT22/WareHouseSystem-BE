@@ -67,7 +67,7 @@ public class CreateProductRequest {
     private String barcode;
 
     @Size(max = 255, message = "Image URL must not exceed 255 characters")
-    @Pattern(regexp = "^(https?://.*|)$", message = "Image URL must be a valid HTTP/HTTPS URL or empty")
+    @Pattern(regexp = "^[a-zA-Z0-9/_\\-.]*$", message = "Invalid image path format")
     private String imageUrl;
 
     private Boolean requiresBatchTracking;
