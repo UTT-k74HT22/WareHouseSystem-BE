@@ -57,7 +57,17 @@ public class OtpServiceImpl implements OtpService {
     public void sendOtp(String email, OtpType type) {
 
         validateOtpType(type);
-        validateBusiness(email, type);
+        
+        try {
+            validateBusiness(email, type);
+        } catch (BadRequestException e) {
+            if (type == OtpType.FORGOT_PASSWORD) {
+                log.warn("[SECURITY] Forgot password OTP requested for non-existent email: {}", email);
+                return;
+            }
+            throw e;
+        }
+        
         validateRateLimit(email, type);
 
         // Luôn tạo mã OTP mới để đảm bảo Reset TTL (thời gian hết hạn)

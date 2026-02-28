@@ -136,6 +136,7 @@ app:
     secret: ${JWT_SECRET:default_jwt_secret_key}
     access-token-expiration: 3600s # 1 hour
     refresh-token-expiration: 86400s # 24 hours
+    reset-token-expiration: PT5M
   cors:
     # CORS Configuration for Frontend
     # Development: localhost với các port phổ biến

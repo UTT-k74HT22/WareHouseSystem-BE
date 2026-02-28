@@ -4,7 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
+import org.demo.whs.entity.dto.request.Auth.*;
+import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -15,10 +16,8 @@ import org.demo.whs.entity.enums.RateLimitType;
 import org.demo.whs.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.demo.whs.entity.dto.request.Auth.ChangePassWordRequest;
 
 /**
  * Controller for handling authentication-related endpoints.
@@ -124,4 +123,69 @@ public class AuthController {
         authService.register(request);
         return ResponseEntity.ok(BaseResponse.success("User registered successfully"));
     }
+
+    /**
+     * Endpoint for initiating forgot password process.
+     * Rate limited: 3 requests per 15 minutes per IP
+     */
+    @PostMapping("/forgot-password")
+    @RateLimit(
+            key = "forgot-password",
+            limit = 3,
+            duration = 900,
+            type = RateLimitType.IP,
+            message = "Too many forgot password requests. Please try again after 15 minutes."
+    )
+    public ResponseEntity<BaseResponse<String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        log.debug("Forgot password request for email: {}", request.getEmail());
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(BaseResponse.success("OTP sent to your email"));
+    }
+
+    /**
+     * Endpoint for verifying forgot password OTP.
+     * Rate limited: 5 attempts per 15 minutes per IP
+     */
+    @PostMapping("/verify-forgot-password-otp")
+    @RateLimit(
+            key = "verify-forgot-password-otp",
+            limit = 5,
+            duration = 900,
+            type = RateLimitType.IP,
+            message = "Too many verification attempts. Please try again after 15 minutes."
+    )
+    public ResponseEntity<BaseResponse<ForgotPasswordResponse>> verifyForgotPasswordOtp(@RequestBody @Valid VerifyForgotPasswordRequest request) {
+        log.debug("Verifying forgot password OTP for email: {}", request.getEmail());
+        ForgotPasswordResponse response = authService.verifyForgotPasswordOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Endpoint for resetting password using the current authenticated session.
+     * Rate limited: 3 attempts per 15 minutes per IP
+     */
+    @PostMapping("/reset-password")
+    @RateLimit(
+            key = "reset-password",
+            limit = 3,
+            duration = 900,
+            type = RateLimitType.IP,
+            message = "Too many password reset attempts. Please try again after 15 minutes."
+    )
+    public ResponseEntity<BaseResponse<String>> resetPassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid ResetPasswordRequest request) {
+        log.debug("Resetting password using token session");
+        authService.resetPassword(authHeader, request.getNewPassword());
+        return ResponseEntity.ok(BaseResponse.success("Password reset successfully"));
+    }
+    @PostMapping("/change-password")
+    public ResponseEntity<BaseResponse<String>> changePassWord(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid ChangePassWordRequest request){
+        authService.changePassword(request);
+        return ResponseEntity.ok(BaseResponse.success("Password changed successfully"));
+    }
+
+
 }
