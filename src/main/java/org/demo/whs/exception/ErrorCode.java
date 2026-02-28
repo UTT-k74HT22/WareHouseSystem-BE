@@ -16,6 +16,17 @@ public enum ErrorCode {
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
 
+    // Role
+    ROLE_001("ROLE_001", "Role not found"),
+
+    // OTP errors
+    OTP_001("OTP_001", "OTP type is required"),
+    OTP_002("OTP_002", "Account not found"),
+    OTP_003("OTP_003", "Email already verified - cannot resend REGISTER OTP"),
+    OTP_004("OTP_004", "You have exceeded the number of OTP sent per day"),
+    OTP_005("OTP_005", "Please wait before resending OTP"),
+    OTP_006("OTP_006", "Invalid or expired OTP"),
+
     // Ware House errors
     WH_001("WHS_001", "Warehouse not found"),
     WH_002("WHS_002", "Insufficient stock in warehouse"),

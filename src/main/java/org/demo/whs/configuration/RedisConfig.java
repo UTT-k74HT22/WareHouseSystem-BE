@@ -3,6 +3,13 @@ package org.demo.whs.configuration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.github.bucket4j.redis.redisson.cas.RedissonBasedProxyManager;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.command.CommandAsyncExecutor;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
@@ -87,6 +94,55 @@ public class RedisConfig {
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
+                .build();
+    }
+    /**
+     * Redisson client
+     * */
+    @Bean(destroyMethod = "shutdown")
+    public RedissonClient redissonClient() {
+
+        Config config = new Config();
+        String address = String.format("redis://%s:%d", redisHost, redisPort);
+
+        var single = config.useSingleServer()
+                .setAddress(address);
+        if (redisPassword != null && !redisPassword.isBlank()) {
+            single.setPassword(redisPassword);
+        }
+
+        return Redisson.create(config);
+    }
+
+    /**
+     * Tạo ProxyManager sử dụng Redis để lưu trữ dữ liệu rate limit.
+     *
+     * ProxyManager này dùng cho Bucket4j để giới hạn số lượng request.
+     * Dữ liệu bucket sẽ được lưu trong Redis, giúp nhiều instance
+     * của ứng dụng có thể dùng chung cơ chế rate limit.
+     *
+     * Từ Bucket4j phiên bản 8.x, builder không còn nhận RedissonClient
+     * trực tiếp nữa mà yêu cầu CommandAsyncExecutor, vì vậy cần lấy
+     * executor từ Redisson.
+     *
+     * expirationStrategy dùng để xác định thời gian bucket tồn tại
+     * trong Redis trước khi bị xóa (TTL).
+     *
+     * @param redissonClient client dùng để kết nối Redis
+     * @return ProxyManager sử dụng Redis backend
+     */
+    @Bean
+    public ProxyManager<String> bucketProxyManager(RedissonClient redissonClient) {
+
+        CommandAsyncExecutor executor =
+                ((Redisson) redissonClient).getCommandExecutor();
+
+        return RedissonBasedProxyManager
+                .builderFor(executor)
+                .withExpirationStrategy(
+                        ExpirationAfterWriteStrategy
+                                .basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(10))
+                )
                 .build();
     }
 }

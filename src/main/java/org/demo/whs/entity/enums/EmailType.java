@@ -11,5 +11,6 @@ public enum EmailType {
     INVENTORY_ALERT,        // Inventory low stock alert
     REPORT_EXPORT,          // Export report email with attachment
     NOTIFICATION,           // General notification email
-    VERIFICATION            // Account verification email
+    VERIFICATION,         // Account verification email
+    OTP_VERIFICATION        // OTP verification email
 }
