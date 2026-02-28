@@ -53,8 +53,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final RedisService redisService;
 
-    // ================= LOGIN =================
-
+    /**
+     * Authenticates a user based on the provided login request.
+     */
     @Override
     public AuthResponse authenticate(LoginRequest request, String clientIp) {
         log.debug("Authentication attempt for username: {} from IP: {}",
@@ -81,9 +82,9 @@ public class AuthServiceImpl implements AuthService {
                 clientIp
         );
     }
-
-    // ================= REFRESH TOKEN =================
-
+    /**
+     * Refreshes the access token using a valid refresh token.
+     */
     @Override
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
@@ -106,8 +107,9 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    // ================= REGISTER =================
-
+    /**
+     * Registers a new user based on the provided registration request.
+     */
     @Override
     @Transactional
     public void register(RegisterRequest request) {
@@ -130,7 +132,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // ================= FORGOT PASSWORD =================
-
+    /**
+     * Sends a forgot password OTP to the provided email address.
+     */
     @Override
     public void forgotPassword(String email) {
         log.info("Processing forgot password request for email: {}", email);
@@ -143,7 +147,9 @@ public class AuthServiceImpl implements AuthService {
 
         otpService.sendOtp(email, OtpType.FORGOT_PASSWORD);
     }
-
+    /**
+     * Verifies the forgot password OTP and returns a password reset response.
+     */
     @Override
     public ForgotPasswordResponse verifyForgotPasswordOtp(String email, String otp) {
         log.info("Verifying forgot password OTP for email: {}", email);
@@ -168,7 +174,9 @@ public class AuthServiceImpl implements AuthService {
                 .resetToken(resetToken)
                 .build();
     }
-
+    /**
+     * Resets the user's password using the current authenticated session and its token.
+     */
     @Override
     @Transactional
     public void resetPassword(String authHeader, String newPassword) {
@@ -207,6 +215,9 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Password reset successful for user: {}", username);
     }
+    /**
+     * Changes the user's password using the current authenticated session and its token.
+     */
     @Override
     @Transactional
     public void changePassword(ChangePassWordRequest request) {

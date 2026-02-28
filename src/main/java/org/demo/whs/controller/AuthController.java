@@ -179,6 +179,9 @@ public class AuthController {
         authService.resetPassword(authHeader, request.getNewPassword());
         return ResponseEntity.ok(BaseResponse.success("Password reset successfully"));
     }
+    /**
+     * Endpoint for changing password using the current authenticated session.
+     */
     @PostMapping("/change-password")
     public ResponseEntity<BaseResponse<String>> changePassWord(
             @RequestHeader("Authorization") String authHeader,
@@ -186,6 +189,4 @@ public class AuthController {
         authService.changePassword(request);
         return ResponseEntity.ok(BaseResponse.success("Password changed successfully"));
     }
-
-
 }
