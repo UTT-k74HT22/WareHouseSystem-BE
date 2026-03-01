@@ -57,11 +57,13 @@ public class OtpServiceImpl implements OtpService {
     public void sendOtp(String email, OtpType type) {
 
         validateOtpType(type);
-        
+
         try {
             validateBusiness(email, type);
         } catch (BadRequestException e) {
-            if (type == OtpType.FORGOT_PASSWORD) {
+            // Only swallow the specific "email not found" case for FORGOT_PASSWORD.
+            // Other business validation errors must be propagated.
+            if (type == OtpType.FORGOT_PASSWORD && e.getErrorCode().equals(ErrorCode.OTP_002.getCode())) {
                 log.warn("[SECURITY] Forgot password OTP requested for non-existent email: {}", email);
                 return;
             }

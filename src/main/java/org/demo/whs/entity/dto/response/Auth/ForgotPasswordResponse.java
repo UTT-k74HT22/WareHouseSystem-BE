@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ForgotPasswordResponse {
     /**
-     * Reset Token (JWT Access Token)
+     * Reset Token (JWT with type: resetPassword)
      */
     private String resetToken;
 }
