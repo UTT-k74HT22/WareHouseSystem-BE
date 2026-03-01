@@ -1,0 +1,60 @@
+package org.demo.whs.entity.dto.request.Employee;
+
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import org.demo.whs.entity.enums.RoleType;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+public class CreateEmployeeRequest {
+
+    @NotBlank(message = "Username is required")
+    @Size(min = 1, max = 50, message = "Username must be between 1 and 50 characters")
+    private String username;
+
+    @NotBlank(message = "Password is required")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+            message = "Password must be at least 8 characters and contain uppercase, lowercase, digit, and special character"
+    )
+    private String password;
+
+    @NotNull(message = "Role is required")
+    private RoleType role;
+
+    @NotBlank(message = "First name is required")
+    @Size(max = 50, message = "First name must not exceed 50 characters")
+    private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    private String lastName;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be a valid email address")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
+    private String email;
+
+    @Pattern(regexp = "^\\d{10,15}$", message = "Phone number must contain 10-15 digits")
+    private String phoneNumber;
+
+    @NotBlank(message = "Employee code is required")
+    @Size(max = 20, message = "Employee code must not exceed 20 characters")
+    private String employeeCode;
+
+    @Size(max = 100, message = "Department must not exceed 100 characters")
+    private String department;
+
+    @Size(max = 100, message = "Position must not exceed 100 characters")
+    private String position;
+
+    private LocalDate hireDate;
+}
