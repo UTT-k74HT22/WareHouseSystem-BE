@@ -22,5 +22,7 @@ public class Account extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private AccountStatus status;
+
+
 }
 

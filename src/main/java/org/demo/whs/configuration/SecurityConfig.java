@@ -85,7 +85,9 @@ public class SecurityConfig {
                 // Authorization rules
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints - no authentication required
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh-token").permitAll()
+                        .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/verify-forgot-password-otp").permitAll()
+                        // Endpoint /api/v1/auth/reset-password và /api/v1/auth/change-password MẶC ĐỊNH sẽ cần authenticated (dòng anyRequest bên dưới)
                         .requestMatchers("/api/v1/otp/**").permitAll()
 
                         // API documentation - public
