@@ -99,6 +99,20 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employeeMapper.toResponse(employee, userProfile);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeResponse getById(String id) {
+        log.info("Fetching employee with id={}", id);
+
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.EMP_001));
+
+        UserProfile userProfile = userProfileRepository.findByAccountId(employee.getAccountId())
+                .orElse(null);
+
+        return employeeMapper.toResponse(employee, userProfile);
+    }
+
     private void validateRequest(CreateEmployeeRequest request) {
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException(ErrorCode.COM_005);

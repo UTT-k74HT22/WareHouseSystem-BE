@@ -16,4 +16,12 @@ public interface EmployeeService {
      * @return created employee response
      */
     EmployeeResponse create(CreateEmployeeRequest request);
+
+    /**
+     * Get employee details by employee identifier.
+     *
+     * @param id employee identifier
+     * @return employee response
+     */
+    EmployeeResponse getById(String id);
 }

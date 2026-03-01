@@ -1,6 +1,7 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
@@ -34,5 +35,14 @@ public class EmployeeController {
         EmployeeResponse response = employeeService.create(createEmployeeRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(BaseResponse.success(response));
+    }
+
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<BaseResponse<EmployeeResponse>> getEmployeeById(
+            @PathVariable @NotBlank(message = "Employee id is required") String id) {
+        log.info("Received request to get employee with id={}", id);
+        EmployeeResponse response = employeeService.getById(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }
