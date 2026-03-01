@@ -1,0 +1,656 @@
+# 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
+
+> **Ngày tạo:** 01/03/2026  
+> **Phiên bản:** 1.0  
+> **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
+
+---
+
+## 📈 TỔNG QUAN THỐNG KÊ
+
+| # | Module | Planned | ✅ Done | ❌ Not Done | Coverage |
+|---|--------|---------|--------|-------------|----------|
+| 1 | **Auth & Users** | 9 | 7 | 2 | 78% |
+| 2 | **Warehouse** | 7 | 6 | 1 | 86% |
+| 3 | **Location** | 9 | 8 | 1 | 89% |
+| 4 | **Product** | 11 | 9 | 2 | 82% |
+| 5 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
+| 6 | **Business Partner** | 8 | 6 | 2 | 75% |
+| 7 | **Category** | 5 | 0 | 5 | 🔴 0% |
+| 8 | **Batch** | 10 | 1 | 9 | 10% |
+| 9 | **Inventory** | 8 | 0 | 8 | 🔴 0% |
+| 10 | **Stock Adjustments** | 4 | 0 | 4 | 🔴 0% |
+| 11 | **Stock Transfers** | 2 | 0 | 2 | 🔴 0% |
+| 12 | **Purchase Orders** | 6 | 0 | 6 | 🔴 0% |
+| 13 | **Purchase Order Lines** | 3 | 0 | 3 | 🔴 0% |
+| 14 | **Inbound Receipts** | 7 | 0 | 7 | 🔴 0% |
+| 15 | **Inbound Receipt Lines** | 3 | 0 | 3 | 🔴 0% |
+| 16 | **Sales Orders** | 6 | 0 | 6 | 🔴 0% |
+| 17 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
+| 18 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
+| 19 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
+| 20 | **Stock Movements** | 8 | 0 | 8 | 🔴 0% |
+| 21 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
+| 22 | **Employee** | 5 | 1 | 4 | 20% |
+| 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
+| 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
+| | **TỔNG CỘNG** | **159** | **58** | **101** | **~36%** |
+
+---
+
+## 🟢 BIỂU ĐỒ TIẾN ĐỘ
+
+```
+Auth & Users       ████████░░ 78%
+Warehouse          █████████░ 86%
+Location           █████████░ 89%
+Product            ████████░░ 82%
+UOM                ██████████ 100% ✅
+Business Partner   ████████░░ 75%
+Category           ░░░░░░░░░░ 0%  🔴
+Batch              █░░░░░░░░░ 10%
+Inventory          ░░░░░░░░░░ 0%  🔴
+Stock Adjustments  ░░░░░░░░░░ 0%  🔴
+Stock Transfers    ░░░░░░░░░░ 0%  🔴
+Purchase Orders    ░░░░░░░░░░ 0%  🔴
+PO Lines           ░░░░░░░░░░ 0%  🔴
+Inbound Receipts   ░░░░░░░░░░ 0%  🔴
+IR Lines           ░░░░░░░░░░ 0%  🔴
+Sales Orders       ░░░░░░░░░░ 0%  🔴
+SO Lines           ░░░░░░░░░░ 0%  🔴
+Outbound Shipments ░░░░░░░░░░ 0%  🔴
+OS Lines           ░░░░░░░░░░ 0%  🔴
+Stock Movements    ░░░░░░░░░░ 0%  🔴
+Reporting          ░░░░░░░░░░ 0%  🔴
+Employee           ██░░░░░░░░ 20%
+Email              ██████████ 100% ✅
+Storage            ██████████ 100% ✅
+```
+
+---
+
+---
+
+# 📋 CHI TIẾT TỪNG MODULE
+
+---
+
+## MODULE 1: AUTH & USERS (`/api/v1/auth`, `/api/v1/otp`, `/api/v1/users`, `/api/v1/home`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/auth/register` | Đăng ký tài khoản mới | ✅ Done |
+| 2 | `GET` | `/api/v1/users/{accountId}` | Lấy thông tin user theo ID | ✅ Done |
+| 3 | `GET` | `/api/v1/users/managers` | Lấy danh sách managers | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 4 | `POST` | `/api/v1/auth/login` | Đăng nhập (rate-limited 5/5min) | ✅ Done |
+| 5 | `POST` | `/api/v1/auth/refresh-token` | Làm mới token (rate-limited 10/min) | ✅ Done |
+| 6 | `POST` | `/api/v1/otp/send` | Gửi/Gửi lại OTP qua email | ✅ Done |
+| 7 | `POST` | `/api/v1/otp/verify` | Xác thực OTP | ✅ Done |
+| 8 | `POST` | `/api/v1/auth/verify-email` | Xác thực email (email verification token) | ❌ Not Done |
+| 9 | `POST` | `/api/v1/auth/resend-verification` | Gửi lại email xác thực | ❌ Not Done |
+
+> **Utility endpoints đã triển khai:** `GET /api/v1/home/test` (health check), `GET /api/v1/home/me` (current user info)
+
+---
+
+## MODULE 2: MASTER DATA - WAREHOUSE (`/api/v1/warehouse`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/warehouse` | Tạo kho mới | ✅ Done |
+| 2 | `GET` | `/api/v1/warehouse` | Danh sách kho (phân trang) | ✅ Done |
+| 3 | `GET` | `/api/v1/warehouse/all` | Danh sách kho (không phân trang) | ✅ Done |
+| 4 | `GET` | `/api/v1/warehouse/{id}` | Chi tiết kho theo ID | ✅ Done |
+| 5 | `PUT` | `/api/v1/warehouse/{id}` | Cập nhật thông tin kho | ✅ Done |
+| 6 | `DELETE` | `/api/v1/warehouse/{id}` | Xóa kho (soft delete) | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 7 | `PATCH` | `/api/v1/warehouse/{id}/status` | Đổi trạng thái kho (ACTIVE/INACTIVE/MAINTENANCE) | ✅ Done |
+
+---
+
+## MODULE 2: MASTER DATA - LOCATION (`/api/v1/locations`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/locations` | Tạo vị trí mới | ✅ Done |
+| 2 | `GET` | `/api/v1/locations` | Danh sách vị trí (phân trang) | ✅ Done |
+| 3 | `GET` | `/api/v1/locations/{id}` | Chi tiết vị trí theo ID | ✅ Done |
+| 4 | `PUT` | `/api/v1/locations/{id}` | Cập nhật vị trí | ✅ Done |
+| 5 | `DELETE` | `/api/v1/locations/{id}` | Xóa vị trí (soft delete) | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 6 | `GET` | `/api/v1/locations/warehouse/{warehouseId}` | Danh sách vị trí theo kho | ✅ Done |
+| 7 | `GET` | `/api/v1/locations/search` | Tìm kiếm (code, name, zone, type, status) | ✅ Done |
+| 8 | `PATCH` | `/api/v1/locations/{id}/status` | Đổi trạng thái vị trí | ✅ Done |
+| 9 | `POST` | `/api/v1/locations/bulk` | Import CSV hàng loạt | ❌ Not Done |
+
+---
+
+## MODULE 2: MASTER DATA - PRODUCT (`/api/v1/products`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/products` | Tạo sản phẩm mới | ✅ Done |
+| 2 | `GET` | `/api/v1/products` | Danh sách sản phẩm (phân trang) | ✅ Done |
+| 3 | `GET` | `/api/v1/products/{id}` | Chi tiết sản phẩm theo ID | ✅ Done |
+| 4 | `PUT` | `/api/v1/products/{id}` | Cập nhật sản phẩm | ✅ Done |
+| 5 | `DELETE` | `/api/v1/products/{id}` | Xóa sản phẩm (soft delete) | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 6 | `GET` | `/api/v1/products/sku/{sku}` | Tìm sản phẩm theo SKU | ✅ Done |
+| 7 | `POST` | `/api/v1/products/search` | Tìm kiếm nâng cao (filters + phân trang) | ✅ Done |
+| 8 | `GET` | `/api/v1/products/category/{categoryId}` | Sản phẩm theo danh mục | ✅ Done |
+| 9 | `GET` | `/api/v1/products/batch-tracking` | Sản phẩm cần theo dõi lô | ✅ Done |
+| 10 | `POST` | `/api/v1/products/import` | Import sản phẩm từ Excel (async) | ❌ Not Done |
+| 11 | `GET` | `/api/v1/products/export` | Export sản phẩm ra Excel (async) | ❌ Not Done |
+
+> **Lưu ý:** API import/export cần tích hợp RabbitMQ cho xử lý async.
+
+---
+
+## MODULE 2: MASTER DATA - UOM (`/api/v1/units-of-measure`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/units-of-measure` | Tạo đơn vị đo mới | ✅ Done |
+| 2 | `GET` | `/api/v1/units-of-measure` | Danh sách tất cả UOM | ✅ Done |
+| 3 | `GET` | `/api/v1/units-of-measure/{id}` | Chi tiết UOM theo ID | ✅ Done |
+| 4 | `PUT` | `/api/v1/units-of-measure/{id}` | Cập nhật UOM | ✅ Done |
+| 5 | `DELETE` | `/api/v1/units-of-measure/{id}` | Xóa UOM (hard delete, kiểm tra product liên kết) | ✅ Done |
+
+> ✅ **Module này đã hoàn thành 100%**
+
+---
+
+## MODULE 2: MASTER DATA - BUSINESS PARTNER (`/api/v1/business-partners`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/business-partners` | Tạo đối tác kinh doanh | ✅ Done |
+| 2 | `GET` | `/api/v1/business-partners` | Danh sách tất cả đối tác | ✅ Done |
+| 3 | `GET` | `/api/v1/business-partners/{id}` | Chi tiết đối tác theo ID | ✅ Done |
+| 4 | `PUT` | `/api/v1/business-partners/{id}` | Cập nhật đối tác | ✅ Done |
+| 5 | `DELETE` | `/api/v1/business-partners/{id}` | Xóa đối tác (soft delete) | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 6 | `PATCH` | `/api/v1/business-partners/{id}/status` | Đổi trạng thái đối tác | ✅ Done |
+| 7 | `GET` | `/api/v1/business-partners/search` | Tìm kiếm (code, name, type, status) | ❌ Not Done |
+| 8 | `GET` | `/api/v1/business-partners/type/{type}` | Lọc theo loại (SUPPLIER/CUSTOMER/BOTH) | ❌ Not Done |
+
+---
+
+## MODULE 2: MASTER DATA - CATEGORY (`/api/v1/categories`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/categories` | Tạo danh mục sản phẩm | ❌ Not Done |
+| 2 | `GET` | `/api/v1/categories` | Danh sách tất cả danh mục | ❌ Not Done |
+| 3 | `GET` | `/api/v1/categories/{id}` | Chi tiết danh mục theo ID | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/categories/{id}` | Cập nhật danh mục | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 5 | `PATCH` | `/api/v1/categories/{id}/status` | Đổi trạng thái danh mục (ACTIVE/INACTIVE) | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn** - Chỉ có class shell, chưa có endpoint nào.
+
+---
+
+## MODULE 3: BATCH MANAGEMENT (`/api/v1/batches`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/batches` | Tạo lô hàng mới | ✅ Done |
+| 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng (filters: product, status, dates) | ❌ Not Done |
+| 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/batches/{id}` | Cập nhật thông tin lô | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 5 | `PUT` | `/api/v1/batches/{id}/quarantine` | Cách ly lô hàng (vấn đề chất lượng) | ❌ Not Done |
+| 6 | `PUT` | `/api/v1/batches/{id}/release` | Giải phóng lô khỏi cách ly | ❌ Not Done |
+| 7 | `GET` | `/api/v1/batches/{id}/traceability` | Truy xuất nguồn gốc lô hàng | ❌ Not Done |
+| 8 | `GET` | `/api/v1/batches/expiring` | Danh sách lô sắp hết hạn | ❌ Not Done |
+| 9 | `GET` | `/api/v1/batches/fifo-recommendations` | Gợi ý FIFO (lô cũ nhất trước) | ❌ Not Done |
+| 10 | `GET` | `/api/v1/batches/by-product/{productId}` | Danh sách lô theo sản phẩm | ❌ Not Done |
+
+---
+
+## MODULE 4: INVENTORY MANAGEMENT (`/api/v1/inventories`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `GET` | `/api/v1/inventories` | Danh sách tồn kho (filters) | ❌ Not Done |
+| 2 | `GET` | `/api/v1/inventories/summary/{productId}` | Tổng hợp tồn kho theo sản phẩm | ❌ Not Done |
+| 3 | `GET` | `/api/v1/inventories/by-location` | Tồn kho nhóm theo vị trí | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 4 | `POST` | `/api/v1/inventories/check-availability` | Kiểm tra khả dụng tồn kho | ❌ Not Done |
+| 5 | `POST` | `/api/v1/inventories/reserve` | Đặt trước tồn kho cho đơn hàng | ❌ Not Done |
+| 6 | `POST` | `/api/v1/inventories/unreserve` | Giải phóng tồn kho đã đặt trước | ❌ Not Done |
+| 7 | `POST` | `/api/v1/inventories/increase` | Tăng tồn kho (từ inbound) | ❌ Not Done |
+| 8 | `POST` | `/api/v1/inventories/decrease` | Giảm tồn kho (từ outbound) | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn** - Entity & migration đã có.
+
+---
+
+## MODULE 4: STOCK ADJUSTMENTS (`/api/v1/stock-adjustments`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/stock-adjustments` | Tạo điều chỉnh tồn kho | ❌ Not Done |
+| 2 | `GET` | `/api/v1/stock-adjustments` | Danh sách điều chỉnh | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 3 | `PUT` | `/api/v1/stock-adjustments/{id}/approve` | Phê duyệt điều chỉnh | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/stock-adjustments/{id}/reject` | Từ chối điều chỉnh | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 4: STOCK TRANSFERS (`/api/v1/stock-transfers`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/stock-transfers` | Tạo chuyển kho nội bộ | ❌ Not Done |
+| 2 | `GET` | `/api/v1/stock-transfers` | Danh sách chuyển kho | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 5: INBOUND - PURCHASE ORDERS (`/api/v1/purchase-orders`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/purchase-orders` | Tạo đơn mua hàng | ❌ Not Done |
+| 2 | `GET` | `/api/v1/purchase-orders` | Danh sách PO (filters) | ❌ Not Done |
+| 3 | `GET` | `/api/v1/purchase-orders/{id}` | Chi tiết PO | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/purchase-orders/{id}` | Cập nhật PO (chỉ DRAFT) | ❌ Not Done |
+| 5 | `DELETE` | `/api/v1/purchase-orders/{id}` | Xóa PO (chỉ DRAFT) | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 6 | `PUT` | `/api/v1/purchase-orders/{id}/confirm` | Xác nhận PO → chính thức | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 5: INBOUND - PURCHASE ORDER LINES (`/api/v1/purchase-order-lines`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/purchase-order-lines` | Thêm dòng vào PO | ❌ Not Done |
+| 2 | `PUT` | `/api/v1/purchase-order-lines/{id}` | Cập nhật dòng PO | ❌ Not Done |
+| 3 | `DELETE` | `/api/v1/purchase-order-lines/{id}` | Xóa dòng PO | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 5: INBOUND - INBOUND RECEIPTS (`/api/v1/inbound-receipts`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/inbound-receipts` | Tạo phiếu nhập kho | ❌ Not Done |
+| 2 | `GET` | `/api/v1/inbound-receipts` | Danh sách phiếu nhập | ❌ Not Done |
+| 3 | `GET` | `/api/v1/inbound-receipts/{id}` | Chi tiết phiếu nhập | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/inbound-receipts/{id}` | Cập nhật phiếu nhập (chỉ DRAFT) | ❌ Not Done |
+| 5 | `DELETE` | `/api/v1/inbound-receipts/{id}` | Xóa phiếu nhập (chỉ DRAFT) | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 6 | `PUT` | `/api/v1/inbound-receipts/{id}/confirm` | Xác nhận nhập kho → cập nhật inventory | ❌ Not Done |
+| 7 | `GET` | `/api/v1/inbound-receipts/by-po/{poId}` | Phiếu nhập theo PO | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 5: INBOUND - INBOUND RECEIPT LINES (`/api/v1/inbound-receipt-lines`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/inbound-receipt-lines` | Thêm dòng vào phiếu nhập | ❌ Not Done |
+| 2 | `PUT` | `/api/v1/inbound-receipt-lines/{id}` | Cập nhật dòng phiếu nhập | ❌ Not Done |
+| 3 | `DELETE` | `/api/v1/inbound-receipt-lines/{id}` | Xóa dòng phiếu nhập | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 6: OUTBOUND - SALES ORDERS (`/api/v1/sales-orders`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/sales-orders` | Tạo đơn bán hàng | ❌ Not Done |
+| 2 | `GET` | `/api/v1/sales-orders` | Danh sách SO | ❌ Not Done |
+| 3 | `GET` | `/api/v1/sales-orders/{id}` | Chi tiết SO | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/sales-orders/{id}` | Cập nhật SO (chỉ DRAFT) | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 5 | `PUT` | `/api/v1/sales-orders/{id}/confirm` | Xác nhận SO → đặt trước tồn kho | ❌ Not Done |
+| 6 | `PUT` | `/api/v1/sales-orders/{id}/cancel` | Hủy SO → giải phóng tồn kho | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 6: OUTBOUND - SALES ORDER LINES (`/api/v1/sales-order-lines`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/sales-order-lines` | Thêm dòng vào SO | ❌ Not Done |
+| 2 | `PUT` | `/api/v1/sales-order-lines/{id}` | Cập nhật dòng SO | ❌ Not Done |
+| 3 | `DELETE` | `/api/v1/sales-order-lines/{id}` | Xóa dòng SO | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 6: OUTBOUND - OUTBOUND SHIPMENTS (`/api/v1/outbound-shipments`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/outbound-shipments` | Tạo lô xuất hàng | ❌ Not Done |
+| 2 | `GET` | `/api/v1/outbound-shipments` | Danh sách lô xuất | ❌ Not Done |
+| 3 | `GET` | `/api/v1/outbound-shipments/{id}` | Chi tiết lô xuất | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 4 | `PUT` | `/api/v1/outbound-shipments/{id}/pick` | Đánh dấu đang picking | ❌ Not Done |
+| 5 | `PUT` | `/api/v1/outbound-shipments/{id}/confirm` | Xác nhận xuất kho → giảm tồn kho | ❌ Not Done |
+| 6 | `GET` | `/api/v1/outbound-shipments/{id}/pick-list` | In danh sách pick (PDF) | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 6: OUTBOUND - OUTBOUND SHIPMENT LINES (`/api/v1/outbound-shipment-lines`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/outbound-shipment-lines` | Thêm dòng vào lô xuất | ❌ Not Done |
+| 2 | `PUT` | `/api/v1/outbound-shipment-lines/{id}` | Cập nhật dòng lô xuất | ❌ Not Done |
+| 3 | `DELETE` | `/api/v1/outbound-shipment-lines/{id}` | Xóa dòng lô xuất | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn**
+
+---
+
+## MODULE 7: STOCK MOVEMENTS (`/api/v1/stock-movements`)
+
+### 🔵 CRUD APIs (Read-only - Immutable records)
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `GET` | `/api/v1/stock-movements` | Danh sách biến động kho (filters) | ❌ Not Done |
+| 2 | `GET` | `/api/v1/stock-movements/{id}` | Chi tiết biến động | ❌ Not Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 3 | `GET` | `/api/v1/stock-movements/by-product/{productId}` | Lịch sử biến động theo sản phẩm | ❌ Not Done |
+| 4 | `GET` | `/api/v1/stock-movements/by-batch/{batchId}` | Lịch sử biến động theo lô | ❌ Not Done |
+| 5 | `GET` | `/api/v1/stock-movements/traceability/forward/{batchId}` | Truy xuất xuôi (lô → khách hàng) | ❌ Not Done |
+| 6 | `GET` | `/api/v1/stock-movements/traceability/backward/{orderId}` | Truy xuất ngược (khách → nhà cung cấp) | ❌ Not Done |
+| 7 | `GET` | `/api/v1/stock-movements/analytics` | Phân tích biến động kho | ❌ Not Done |
+| 8 | `GET` | `/api/v1/stock-movements/export` | Export Excel/PDF | ❌ Not Done |
+
+> 🔴 **Controller rỗng hoàn toàn** - Records are immutable (insert-only by system).
+
+---
+
+## MODULE 8: REPORTING (`/api/v1/reports`)
+
+> ⚠️ **Chưa có controller nào được tạo!** Cần tạo `ReportController.java`
+
+### 🟣 On-Demand Reports
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/reports/current-stock` | Báo cáo tồn kho hiện tại | ❌ Not Done |
+| 2 | `POST` | `/api/v1/reports/stock-valuation` | Báo cáo giá trị tồn kho | ❌ Not Done |
+| 3 | `POST` | `/api/v1/reports/movements` | Báo cáo biến động kho | ❌ Not Done |
+| 4 | `POST` | `/api/v1/reports/batch-traceability` | Báo cáo truy xuất lô hàng | ❌ Not Done |
+| 5 | `POST` | `/api/v1/reports/low-stock` | Báo cáo tồn kho thấp | ❌ Not Done |
+| 6 | `POST` | `/api/v1/reports/expiring-batches` | Báo cáo lô sắp hết hạn | ❌ Not Done |
+
+### 🟣 Async Reports
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 7 | `POST` | `/api/v1/reports/async/request` | Yêu cầu báo cáo async | ❌ Not Done |
+| 8 | `GET` | `/api/v1/reports/async/{requestId}` | Kiểm tra trạng thái báo cáo | ❌ Not Done |
+| 9 | `GET` | `/api/v1/reports/async/{requestId}/download` | Tải báo cáo hoàn thành | ❌ Not Done |
+| 10 | `GET` | `/api/v1/reports/async/my-requests` | Danh sách yêu cầu báo cáo của tôi | ❌ Not Done |
+
+### 🟣 Scheduled Reports
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 11 | `POST` | `/api/v1/reports/schedules` | Tạo lịch báo cáo tự động | ❌ Not Done |
+| 12 | `GET` | `/api/v1/reports/schedules` | Danh sách lịch báo cáo | ❌ Not Done |
+| 13 | `PUT` | `/api/v1/reports/schedules/{id}` | Cập nhật lịch | ❌ Not Done |
+| 14 | `DELETE` | `/api/v1/reports/schedules/{id}` | Xóa lịch | ❌ Not Done |
+| 15 | `PUT` | `/api/v1/reports/schedules/{id}/enable` | Bật lịch | ❌ Not Done |
+| 16 | `PUT` | `/api/v1/reports/schedules/{id}/disable` | Tắt lịch | ❌ Not Done |
+
+> 🔴 **Chưa có ReportController.java** — Cần tạo mới hoàn toàn.
+
+---
+
+## MODULE: EMPLOYEE (`/api/v1/employees`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/employees` | Tạo nhân viên mới | ✅ Done |
+| 2 | `GET` | `/api/v1/employees` | Danh sách nhân viên (phân trang) | ❌ Not Done |
+| 3 | `GET` | `/api/v1/employees/{id}` | Chi tiết nhân viên | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/employees/{id}` | Cập nhật nhân viên | ❌ Not Done |
+| 5 | `DELETE` | `/api/v1/employees/{id}` | Xóa nhân viên (soft delete) | ❌ Not Done |
+
+---
+
+## MODULE: EMAIL (`/api/v1/emails`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/emails/send` | Gửi email (sync hoặc async) | ✅ Done |
+| 2 | `GET` | `/api/v1/emails` | Danh sách email logs (phân trang) | ✅ Done |
+| 3 | `GET` | `/api/v1/emails/{id}` | Chi tiết email log | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 4 | `GET` | `/api/v1/emails/status/{status}` | Email logs theo trạng thái | ✅ Done |
+| 5 | `GET` | `/api/v1/emails/type/{type}` | Email logs theo loại | ✅ Done |
+| 6 | `GET` | `/api/v1/emails/recipient/{email}` | Email logs theo người nhận | ✅ Done |
+| 7 | `POST` | `/api/v1/emails/{id}/retry` | Gửi lại email thất bại | ✅ Done |
+| 8 | `GET` | `/api/v1/emails/statistics` | Thống kê email | ✅ Done |
+| 9 | `POST` | `/api/v1/emails/process-pending` | Xử lý email chờ (manual trigger) | ✅ Done |
+| 10 | `POST` | `/api/v1/emails/retry-failed` | Gửi lại tất cả email thất bại | ✅ Done |
+
+> ✅ **Module này đã hoàn thành 100%**
+
+---
+
+## MODULE: STORAGE / MinIO (`/api/v1/storage`)
+
+### 🔵 CRUD APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/storage/upload` | Upload 1 file | ✅ Done |
+| 2 | `POST` | `/api/v1/storage/upload/batch` | Upload nhiều file (max 10) | ✅ Done |
+| 3 | `DELETE` | `/api/v1/storage/{objectName}` | Xóa file | ✅ Done |
+
+### 🟣 Advanced APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 4 | `GET` | `/api/v1/storage/presigned-url` | Tạo presigned URL | ✅ Done |
+| 5 | `GET` | `/api/v1/storage/exists` | Kiểm tra file tồn tại | ✅ Done |
+
+> ✅ **Module này đã hoàn thành 100%**
+
+---
+
+---
+
+# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI
+
+### Phase 1 — Hoàn thiện Master Data (Ưu tiên cao nhất)
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🔴 P0 | Category CRUD (5 APIs) — Module nền tảng, Product phụ thuộc | 1-2 ngày |
+| 🟡 P1 | Warehouse DELETE (soft delete) | 0.5 ngày |
+| 🟡 P1 | Business Partner search + filter by type | 1 ngày |
+| 🟡 P1 | Employee CRUD còn lại (4 APIs) | 1-2 ngày |
+
+### Phase 2 — Batch Management
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🔴 P0 | Batch CRUD (list, get, update) — 3 APIs | 2 ngày |
+| 🟡 P1 | Batch quarantine/release — 2 APIs | 1-2 ngày |
+| 🟡 P2 | Batch traceability, expiring, FIFO — 4 APIs | 3 ngày |
+
+### Phase 3 — Inventory Core
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🔴 P0 | Inventory list, summary, by-location — 3 APIs | 3 ngày |
+| 🔴 P0 | check-availability, reserve, unreserve — 3 APIs | 3 ngày |
+| 🟡 P1 | increase, decrease — 2 APIs (internal service) | 2 ngày |
+| 🟡 P1 | Stock Adjustments CRUD + approve/reject — 4 APIs | 3 ngày |
+| 🟡 P1 | Stock Transfers CRUD — 2 APIs | 2 ngày |
+
+### Phase 4 — Inbound Operations
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🔴 P0 | Purchase Orders CRUD + confirm — 6 APIs | 4 ngày |
+| 🔴 P0 | PO Lines CRUD — 3 APIs | 2 ngày |
+| 🔴 P0 | Inbound Receipts CRUD + confirm — 7 APIs | 5 ngày |
+| 🟡 P1 | IR Lines CRUD — 3 APIs | 2 ngày |
+
+### Phase 5 — Outbound Operations
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🔴 P0 | Sales Orders CRUD + confirm + cancel — 6 APIs | 4 ngày |
+| 🟡 P1 | SO Lines CRUD — 3 APIs | 2 ngày |
+| 🔴 P0 | Outbound Shipments CRUD + pick + confirm — 6 APIs | 5 ngày |
+| 🟡 P1 | OS Lines CRUD — 3 APIs | 2 ngày |
+
+### Phase 6 — Stock Movements & Reporting
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🟡 P1 | Stock Movements query + traceability — 8 APIs | 5 ngày |
+| 🟡 P2 | Reporting on-demand — 6 APIs | 5 ngày |
+| 🟢 P3 | Reporting async — 4 APIs | 3 ngày |
+| 🟢 P3 | Reporting scheduled — 6 APIs | 4 ngày |
+
+### Phase 7 — Auth nâng cao
+| Ưu tiên | Task | Effort |
+|---------|------|--------|
+| 🟡 P2 | verify-email, resend-verification — 2 APIs | 2 ngày |
+| 🟡 P2 | Product import/export (async RabbitMQ) — 2 APIs | 3 ngày |
+
+---
+
+# 📊 TỔNG KẾT
+
+| Metric | Value |
+|--------|-------|
+| **Tổng API thiết kế** | 159 |
+| **Đã triển khai** | 58 (36%) |
+| **Chưa triển khai** | 101 (64%) |
+| **Module hoàn thành 100%** | UOM, Email, Storage |
+| **Module 0%** | Category, Inventory, Stock Adjustments, Stock Transfers, PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Stock Movements, Reporting |
+| **Entities đã có (DB migration)** | ✅ Tất cả 30 entities đã có migration |
+| **Controllers đã tạo (shell)** | ✅ 26 controllers (nhưng 14 controllers rỗng) |
+
+> 💡 **Điểm mạnh:** Nền tảng tốt — DB schema, entities, auth, rate-limiting, email, storage đã hoàn thiện.  
+> ⚠️ **Điểm yếu:** Toàn bộ business logic core (Inventory, Inbound, Outbound, Reporting) chưa triển khai.
