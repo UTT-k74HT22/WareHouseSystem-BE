@@ -106,7 +106,8 @@ class EmployeeServiceImplTest {
         assertThatThrownBy(() -> employeeService.getById(employeeId))
                 .isInstanceOf(NotFoundException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.NOT_FOUND)
-                .hasMessage("Employee not found");
+                .hasMessage("Employee not found")
+                .satisfies(ex -> assertThat(((NotFoundException) ex).getErrorCode()).isEqualTo("EMP_001"));
 
         verify(employeeRepository).findById(employeeId);
     }
