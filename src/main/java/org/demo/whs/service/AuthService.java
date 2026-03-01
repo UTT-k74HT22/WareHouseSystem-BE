@@ -1,5 +1,6 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.Auth.ChangePassWordRequest;
 import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.Otp.VerifyOtpRequest;
@@ -7,6 +8,8 @@ import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 
 /**
  * Service Interface for managing authentication and authorization.
@@ -36,4 +39,34 @@ public interface AuthService {
      */
     void register(RegisterRequest request);
 
+    /**
+     * Sends a forgot password OTP to the provided email address.
+     *
+     * @param email the email address to send the OTP to
+     */
+    void forgotPassword(String email);
+
+    /**
+     * Verifies the forgot password OTP and returns a password reset response.
+     *
+     * @param email the email address
+     * @param otp the OTP to verify
+     * @return a ForgotPasswordResponse containing JWT if valid
+     */
+    ForgotPasswordResponse verifyForgotPasswordOtp(String email, String otp);
+
+    /**
+     * Resets the user's password using the current authenticated session and its token.
+     *
+     * @param authHeader the Authorization header containing the JWT
+     * @param newPassword the new password
+     */
+    void resetPassword(String authHeader, String newPassword);
+
+    /**
+     * Changes the user's password using the current authenticated session and its token.
+     *
+     * @param request the change password request containing old and new passwords
+     */
+    void changePassword(ChangePassWordRequest request);
 }

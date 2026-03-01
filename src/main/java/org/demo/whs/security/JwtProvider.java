@@ -28,6 +28,9 @@ public class JwtProvider {
     @Value("${app.jwt.issuer:whs-api}")
     private String issuer;
 
+    @Value("${app.jwt.reset-token-expiration}")
+    private Duration resetExpiration;
+
     /**
      * Validate JWT configuration on startup
      */
@@ -80,6 +83,18 @@ public class JwtProvider {
         claims.put("userId", account.getId());
         claims.put("type", "refreshToken");
         return buildToken(claims, account.getUsername(), refreshExpiration);
+    }
+
+    /**
+     * Tạo token dùng riêng cho việc reset password
+     * @param account - thông tin tài khoản
+     * @return reset token
+     */
+    public String buildResetToken(Account account) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", account.getId());
+        claims.put("type", "resetPassword"); // Claim đặc biệt để phân biệt
+        return buildToken(claims, account.getUsername(), resetExpiration);
     }
 
     /**
@@ -171,6 +186,15 @@ public class JwtProvider {
      */
     public String getUserIdFromToken(String token) {
         return getClaimsFromToken(token).get("userId", String.class);
+    }
+
+    /**
+     * Lấy token type (accessToken, refreshToken, resetPassword)
+     * @param token - JWT token
+     * @return type
+     */
+    public String getTypeFromToken(String token) {
+        return getClaimsFromToken(token).get("type", String.class);
     }
 
     /**

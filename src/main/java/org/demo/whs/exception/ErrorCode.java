@@ -15,7 +15,15 @@ public enum ErrorCode {
     AUTH_006("AUTH_006", "Refresh token is invalid or expired"),
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
+    AUTH_009("AUTH_009", "Account is not active"),
+    AUTH_010("AUTH_009", "Account is not found"),
 
+    // Password reset errors
+    RESET_001("RESET_001", "Invalid or expired reset token"),
+    RESET_002("RESET_002", "Reset token already used"),
+    RESET_003("RESET_003", "Password does not meet security requirements"),
+    RESET_004("RESET_004", "New password is the same as the old password"),
+    RESET_005("RESET_005", "Old password is incorrect"),
     // Role
     ROLE_001("ROLE_001", "Role not found"),
 
@@ -93,6 +101,7 @@ public enum ErrorCode {
 
     // Email errors
     EMAIL_NOT_FOUND("EMAIL_001", "Email log not found"),
+    EMAIL_002("EMAIL_002", "Email already verified or invalid"),
 
     // Storage (MinIO) errors
     STORAGE_001("STORAGE_001", "File upload failed"),
