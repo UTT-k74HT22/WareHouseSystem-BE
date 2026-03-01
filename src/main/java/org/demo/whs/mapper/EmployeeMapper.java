@@ -97,20 +97,4 @@ public class EmployeeMapper {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    /**
-     * Parse status string to enum. Defaults to ACTIVE when null/blank.
-     *
-     * @param status raw string value
-     * @return {@link EmployeeStatus}
-     */
-    private EmployeeStatus parseStatus(String status) {
-        if (status == null || status.isBlank()) {
-            return EmployeeStatus.ACTIVE;
-        }
-        try {
-            return EmployeeStatus.valueOf(status.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return EmployeeStatus.ACTIVE;
-        }
-    }
 }
