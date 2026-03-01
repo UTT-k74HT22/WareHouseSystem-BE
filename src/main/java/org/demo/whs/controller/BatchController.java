@@ -31,4 +31,14 @@ public class BatchController {
                 .status(HttpStatus.CREATED)
                 .body(BaseResponse.success(response, "Batch created successfully"));
     }
+
+    @GetMapping("{id}")
+    public ResponseEntity<BaseResponse<BatchResponse>> getBatchesById(
+            @PathVariable String id) {
+        log.info("Get batches with id: {}", id);
+
+        BatchResponse response = batchService.getBatchById(id);
+        BaseResponse<BatchResponse> baseResponse = BaseResponse.success(response, "Batch retrieved successfully");
+        return ResponseEntity.ok(baseResponse);
+    }
 }
