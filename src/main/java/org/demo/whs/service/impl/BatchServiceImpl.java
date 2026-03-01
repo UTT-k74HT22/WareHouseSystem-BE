@@ -55,7 +55,7 @@ public class BatchServiceImpl implements BatchService {
     @Override
     @Transactional
     public PageResponse<BatchResponse> getAllBatches(Integer page, Integer size) {
-        log.info("Fetching all batchs - page={}, size={}", page, size);
+        log.info("Fetching all batches - page={}, size={}", page, size);
 
         validatePaginationParams(page, size);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
