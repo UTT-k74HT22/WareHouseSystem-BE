@@ -84,34 +84,33 @@ public class SecurityConfig {
 
                 // Authorization rules
                 .authorizeHttpRequests(authz -> authz
-                        // Public endpoints - no authentication required
-                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh-token").permitAll()
-                        .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/verify-forgot-password-otp").permitAll()
-                        // Endpoint /api/v1/auth/reset-password và /api/v1/auth/change-password MẶC ĐỊNH sẽ cần authenticated (dòng anyRequest bên dưới)
+                        // ==================== PUBLIC ENDPOINTS ====================
+                        // Auth - no authentication required
+                        .requestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/refresh-token",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/verify-forgot-password-otp"
+                        ).permitAll()
+                        // OTP
                         .requestMatchers("/api/v1/otp/**").permitAll()
 
-                        // API documentation - public
+                        // API Documentation
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
 
-                        // Health check and actuator
+                        // ==================== ACTUATOR ====================
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
 
-                        // Admin endpoints - require ADMIN role
+                        // ==================== ADMIN ONLY ====================
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
-                        // All other requests require authentication
+                        // ==================== DEFAULT ====================
                         .anyRequest().authenticated()
                 )
-
-
-                // JWT filter AFTER rate limiting
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
-                
-                // Rate limiting filter - runs FIRST (before JWT authentication)
-                // This ensures rate limiting happens at entry point
-                .addFilterBefore(rateLimitFilter, JwtAuthFilter.class);
-
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
