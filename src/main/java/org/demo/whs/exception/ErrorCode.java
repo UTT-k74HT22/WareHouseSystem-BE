@@ -56,11 +56,25 @@ public enum ErrorCode {
     UOM_002("UOM_002", "Unit of Measure code already exists"),
     UOM_003("UOM_003", "Data is not null"),
 
+    // Employee errors
+    EMP_001("EMP_001", "Employee not found"),
+    EMP_002("EMP_002", "Employee code already exists"),
+    EMP_003("EMP_003", "Account already linked to an employee"),
+    EMP_004("EMP_004", "Account not found"),
+    EMP_005("EMP_005", "Invalid employee status transition"),
+    EMP_006("EMP_006", "Warehouse not found or inactive"),
+
     // Business Partner errors
     BP_001("BP_001", "Business partner not found"),
     BP_002("BP_002", "Business partner code already exists"),
     BP_003("BP_003", "Invalid business partner status"),
     BP_004("BP_004", "Business partner is inactive"),
+
+    // Customer errors
+    CUST_001("CUST_001", "Customer not found"),
+    CUST_002("CUST_002", "Customer code already exists"),
+    CUST_003("CUST_003", "Invalid customer status"),
+    CUST_004("CUST_004", "Business partner is not a customer type"),
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
