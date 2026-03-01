@@ -109,8 +109,8 @@ public class SecurityConfig {
                         // ==================== DEFAULT ====================
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(rateLimitFilter, JwtAuthFilter.class)
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
