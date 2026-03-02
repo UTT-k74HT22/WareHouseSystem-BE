@@ -167,7 +167,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private Employee findEmployeeById(String id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.EMP_001, "Employee not found"));
+                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.EMP_001));
     }
 
     private void validateWarehouseAssignment(String warehouseId) {
