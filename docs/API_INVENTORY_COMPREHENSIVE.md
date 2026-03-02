@@ -1,7 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Phiên bản:** 1.0  
+> **Cập nhật lần cuối:** 02/03/2026 — Employee module reviewed & marked 100% complete  
+> **Phiên bản:** 1.1  
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -31,10 +32,10 @@
 | 19 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
 | 20 | **Stock Movements** | 8 | 0 | 8 | 🔴 0% |
 | 21 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
-| 22 | **Employee** | 5 | 1 | 4 | 20% |
+| 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **159** | **58** | **101** | **~36%** |
+| | **TỔNG CỘNG** | **159** | **62** | **97** | **~39%** |
 
 ---
 
@@ -62,7 +63,7 @@ Outbound Shipments ░░░░░░░░░░ 0%  🔴
 OS Lines           ░░░░░░░░░░ 0%  🔴
 Stock Movements    ░░░░░░░░░░ 0%  🔴
 Reporting          ░░░░░░░░░░ 0%  🔴
-Employee           ██░░░░░░░░ 20%
+Employee           ██████████ 100% ✅
 Email              ██████████ 100% ✅
 Storage            ██████████ 100% ✅
 ```
@@ -523,13 +524,47 @@ Storage            ██████████ 100% ✅
 
 ### 🔵 CRUD APIs
 
-| # | Method | Endpoint | Mô tả | Status |
-|---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/employees` | Tạo nhân viên mới | ✅ Done |
-| 2 | `GET` | `/api/v1/employees` | Danh sách nhân viên (phân trang) | ❌ Not Done |
-| 3 | `GET` | `/api/v1/employees/{id}` | Chi tiết nhân viên | ❌ Not Done |
-| 4 | `PUT` | `/api/v1/employees/{id}` | Cập nhật nhân viên | ❌ Not Done |
-| 5 | `DELETE` | `/api/v1/employees/{id}` | Xóa nhân viên (soft delete) | ❌ Not Done |
+| # | Method | Endpoint | Mô tả | Auth | Status |
+|---|--------|----------|--------|------|--------|
+| 1 | `POST` | `/api/v1/employees` | Tạo nhân viên mới (tạo Account + UserProfile + Employee trong 1 transaction) | `ADMIN` | ✅ Done |
+| 2 | `GET` | `/api/v1/employees` | Danh sách nhân viên (phân trang, filter theo `keyword`, `status`, `warehouseId`) | `ADMIN`, `MANAGER` | ✅ Done |
+| 3 | `GET` | `/api/v1/employees/{id}` | Chi tiết nhân viên theo ID | `ADMIN` | ✅ Done |
+| 4 | `PUT` | `/api/v1/employees/{id}` | Cập nhật thông tin WMS/HR (partial update) | `ADMIN` | ✅ Done |
+| 5 | `DELETE` | `/api/v1/employees/{id}` | Xóa mềm nhân viên → chuyển trạng thái `TERMINATED` | `ADMIN` | ✅ Done |
+
+> ✅ **Module này đã hoàn thành 100%**
+
+#### 📝 Ghi chú chi tiết
+
+**`POST /api/v1/employees`**
+- Tự động tạo `Account` (username + hashed password), gán `Role`, tạo `UserProfile`, tạo `Employee` trong **1 transaction**
+- Validate: `username` unique, `employee_code` unique, `role` phải tồn tại
+- Nhân viên mới luôn có `status = ACTIVE`; `warehouse_id` không gán lúc tạo
+
+**`GET /api/v1/employees`**
+- Filter: `keyword` (tìm theo `employee_code`, `department`, `position`), `status` (default: `ACTIVE`), `warehouseId`
+- Phân trang: default `size=10`, `sort=createdAt,DESC`, tối đa 100 records/page
+- Dùng **batch loading** UserProfile để tránh N+1 query
+
+**`PUT /api/v1/employees/{id}`**
+- Chỉ cập nhật các trường WMS/HR: `department`, `position`, `hire_date`, `termination_date`, `salary_grade`, `warehouse_id`
+- **Không thể** thay đổi `username`, `email`, `first_name`, `last_name` qua API này
+- Khi `warehouse_id` được gửi: kiểm tra kho tồn tại và có trạng thái `ACTIVE`
+
+**`DELETE /api/v1/employees/{id}`**
+- Soft delete: set `status = TERMINATED`, không xóa dữ liệu vật lý
+- Tự động set `termination_date = today` nếu chưa có
+- Không thể terminate nhân viên đã ở trạng thái `TERMINATED` (`400 EMP_005`)
+
+#### ⚠️ APIs chưa triển khai — Đề xuất bổ sung
+
+| # | Method | Endpoint | Mô tả | Ưu tiên |
+|---|--------|----------|--------|---------|
+| 6 | `PATCH` | `/api/v1/employees/{id}/status` | Đổi trạng thái `ACTIVE` ↔ `ON_LEAVE` | 🟡 Medium |
+| 7 | `GET` | `/api/v1/employees/warehouse/{warehouseId}` | Nhân viên theo kho (không phân trang) | 🟡 Medium |
+| 8 | `GET` | `/api/v1/employees/code/{employeeCode}` | Tìm theo mã nhân viên | 🟢 Low |
+
+> 📄 **Tài liệu chi tiết:** `documents/Auth/EMPLOYEE_API_DOCUMENTATION.md`
 
 ---
 
@@ -590,7 +625,7 @@ Storage            ██████████ 100% ✅
 | 🔴 P0 | Category CRUD (5 APIs) — Module nền tảng, Product phụ thuộc | 1-2 ngày |
 | 🟡 P1 | Warehouse DELETE (soft delete) | 0.5 ngày |
 | 🟡 P1 | Business Partner search + filter by type | 1 ngày |
-| 🟡 P1 | Employee CRUD còn lại (4 APIs) | 1-2 ngày |
+| ✅ Done | ~~Employee CRUD còn lại (4 APIs)~~ — **Đã hoàn thành** | — |
 
 ### Phase 2 — Batch Management
 | Ưu tiên | Task | Effort |
@@ -645,12 +680,13 @@ Storage            ██████████ 100% ✅
 | Metric | Value |
 |--------|-------|
 | **Tổng API thiết kế** | 159 |
-| **Đã triển khai** | 58 (36%) |
-| **Chưa triển khai** | 101 (64%) |
-| **Module hoàn thành 100%** | UOM, Email, Storage |
+| **Đã triển khai** | 62 (~39%) |
+| **Chưa triển khai** | 97 (~61%) |
+| **Module hoàn thành 100%** | UOM, Email, Storage, **Employee** |
 | **Module 0%** | Category, Inventory, Stock Adjustments, Stock Transfers, PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Stock Movements, Reporting |
 | **Entities đã có (DB migration)** | ✅ Tất cả 30 entities đã có migration |
 | **Controllers đã tạo (shell)** | ✅ 26 controllers (nhưng 14 controllers rỗng) |
 
 > 💡 **Điểm mạnh:** Nền tảng tốt — DB schema, entities, auth, rate-limiting, email, storage đã hoàn thiện.  
+> ✅ **Employee module:** Hoàn thành 100% (5/5 APIs) — tạo, danh sách, chi tiết, cập nhật, xóa mềm.  
 > ⚠️ **Điểm yếu:** Toàn bộ business logic core (Inventory, Inbound, Outbound, Reporting) chưa triển khai.
