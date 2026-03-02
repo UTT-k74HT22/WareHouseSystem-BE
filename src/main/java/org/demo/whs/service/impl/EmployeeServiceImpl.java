@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
@@ -14,9 +15,16 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.EmployeeMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.service.EmployeeService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.demo.whs.mapper.AccountHasRoleMapper.getAccountHasRole;
 import static org.demo.whs.mapper.AccountMapper.getAccount;
@@ -155,6 +163,25 @@ public class EmployeeServiceImpl implements EmployeeService {
         log.info("Employee soft deleted successfully: id={}", employee.getId());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> getEmployees(String keyword, String status, String warehouseId, Pageable pageable) {
+        validatePageable(pageable);
+
+        EmployeeStatus statusFilter = parseStatusOrDefault(status);
+        String normalizedKeyword = normalizeKeyword(keyword);
+
+        Page<Employee> employeePage = employeeRepository.findAllWithFilters(
+                warehouseId,
+                statusFilter,
+                normalizedKeyword,
+                pageable
+        );
+
+        List<EmployeeResponse> responses = mapEmployeeResponses(employeePage.getContent());
+        return PageResponse.from(employeePage, responses);
+    }
+
     private void validateRequest(CreateEmployeeRequest request) {
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException(ErrorCode.COM_005);
@@ -177,5 +204,52 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (warehouse.getStatus() != WareHouseStatus.ACTIVE) {
             throw new BadRequestException(ErrorCode.EMP_006);
         }
+    }
+
+    private void validatePageable(Pageable pageable) {
+        if (pageable.getPageNumber() < 0) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+        if (pageable.getPageSize() <= 0 || pageable.getPageSize() > 100) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+    }
+
+    private EmployeeStatus parseStatusOrDefault(String status) {
+        if (status == null || status.isBlank()) {
+            return EmployeeStatus.ACTIVE;
+        }
+        try {
+            return EmployeeStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private List<EmployeeResponse> mapEmployeeResponses(List<Employee> employees) {
+        if (employees == null || employees.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> accountIds = employees.stream()
+                .map(Employee::getAccountId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<String, UserProfile> profileMap = userProfileRepository.findByAccountIdIn(accountIds).stream()
+                .collect(Collectors.toMap(UserProfile::getAccountId, profile -> profile));
+
+        return employees.stream()
+                .map(employee -> employeeMapper.toResponse(employee, profileMap.get(employee.getAccountId())))
+                .toList();
     }
 }

@@ -5,9 +5,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import io.swagger.v3.oas.annotations.Operation;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.EmployeeService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +40,23 @@ public class EmployeeController {
         EmployeeResponse response = employeeService.create(createEmployeeRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(BaseResponse.success(response));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @GetMapping
+    @Operation(summary = "List employees", description = "List employees with pagination and filters")
+    public ResponseEntity<BaseResponse<PageResponse<EmployeeResponse>>> getEmployees(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String warehouseId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        log.info("Received request to list employees: keyword={}, status={}, warehouseId={}, page={}, size={}",
+                keyword, status, warehouseId, pageable.getPageNumber(), pageable.getPageSize());
+
+        PageResponse<EmployeeResponse> response =
+                employeeService.getEmployees(keyword, status, warehouseId, pageable);
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

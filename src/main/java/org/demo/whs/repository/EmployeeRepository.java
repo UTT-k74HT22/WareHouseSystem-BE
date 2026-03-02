@@ -59,12 +59,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
     List<Employee> findAllByWarehouseId(String warehouseId);
 
     /**
-     * Paginated list with optional filters for warehouse, status, and position.
+     * Paginated list with optional filters for warehouse, status, and keyword.
      * Null parameters are ignored (treated as "no filter").
      *
      * @param warehouseId optional warehouse filter
      * @param status      optional status filter
-     * @param position    optional position filter
+     * @param keyword     optional keyword filter (employeeCode/department/position)
      * @param pageable    pagination config
      * @return page of employees
      */
@@ -72,12 +72,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
             SELECT e FROM Employee e
             WHERE (:warehouseId IS NULL OR e.warehouseId = :warehouseId)
               AND (:status IS NULL       OR e.status = :status)
-              AND (:position IS NULL     OR LOWER(e.position) LIKE LOWER(CONCAT('%', :position, '%')))
+              AND (:keyword IS NULL      OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(e.department) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(e.position) LIKE LOWER(CONCAT('%', :keyword, '%')))
             """)
     Page<Employee> findAllWithFilters(
             @Param("warehouseId") String warehouseId,
             @Param("status") EmployeeStatus status,
-            @Param("position") String position,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 }
