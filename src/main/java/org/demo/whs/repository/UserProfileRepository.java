@@ -28,4 +28,12 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
      */
     boolean existsByEmail(String email);
 
+    /**
+     * Find a user profile by its linked account ID.
+     *
+     * @param accountId account identifier
+     * @return optional user profile
+     */
+    Optional<UserProfile> findByAccountId(String accountId);
+
 }

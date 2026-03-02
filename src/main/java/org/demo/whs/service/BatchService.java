@@ -1,5 +1,6 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
@@ -13,4 +14,6 @@ public interface BatchService {
     BatchResponse createBatch (CreateBatchRequest request);
 
     BatchResponse getBatchById(String id);
+
+    PageResponse<BatchResponse> getAllBatches(Integer page, Integer size);
 }

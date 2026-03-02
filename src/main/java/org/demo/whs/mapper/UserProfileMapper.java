@@ -17,4 +17,25 @@ public class UserProfileMapper {
                 .email(request.getEmail())
                 .build();
     }
+
+    /**
+     * Create a UserProfile entity with the given details and associated Account.
+     *
+     * @param firstName   the first name of the user
+     * @param lastName    the last name of the user
+     * @param email       the email address of the user
+     * @param phoneNumber the phone number of the user
+     * @param account     the associated Account entity
+     * @return a new UserProfile entity
+     */
+    public static UserProfile getUserProfile(String firstName, String lastName, String email, String phoneNumber, Account account) {
+        return UserProfile.builder()
+                .accountId(account.getId())
+                .firstName(firstName)
+                .lastName(lastName)
+                .email(email)
+                .phoneNumber(phoneNumber)
+                .build();
+    }
+
 }
