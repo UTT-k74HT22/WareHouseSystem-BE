@@ -13,5 +13,7 @@ public interface BatchService {
 
     BatchResponse createBatch (CreateBatchRequest request);
 
+    BatchResponse getBatchById(String id);
+
     PageResponse<BatchResponse> getAllBatches(Integer page, Integer size);
 }

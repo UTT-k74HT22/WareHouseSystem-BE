@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -50,6 +51,20 @@ public class BatchServiceImpl implements BatchService {
         log.info("Batch created successfully with ID={}", batch.getId());
 
         return batchMapper.toResponse(batchSave);
+    }
+
+    @Override
+    @Transactional
+    public BatchResponse getBatchById(String Id) {
+        log.info("Fetching batch by ID: {}", Id);
+        Batch batch = batchRepository.findById(Id)
+                .orElseThrow(() -> {
+                    log.warn("Fetching batch by ID: {}", Id);
+                    return new BadRequestException(ErrorCode.BATCH_001);
+                });
+
+        return batchMapper.toResponse(batch);
+
     }
 
     @Override
