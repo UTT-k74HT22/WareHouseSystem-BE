@@ -54,13 +54,18 @@ public class BatchServiceImpl implements BatchService {
         log.info("Update batches: id= {}", id);
 
         Batch batch = batchRepository.findById(id)
-                .orElse(null);
+                .orElseThrow(() -> new BadRequestException(ErrorCode.BATCH_001));
 
         if (request.getBatchNumber() != null &&
-                !request.getBatchNumber().equals(batch.getBatchNumber()) &&
-                batchRepository.existsByBatchNumber(request.getBatchNumber())) {
+                !request.getBatchNumber().equals(batch.getBatchNumber())) {
 
-            throw new BadRequestException(ErrorCode.BATCH_001);
+            Batch existing = batchRepository
+                    .findByBatchNumber(request.getBatchNumber())
+                    .orElse(null);
+
+            if (existing != null && !existing.getId().equals(id)) {
+                throw new BadRequestException(ErrorCode.BATCH_001);
+            }
         }
 
         if (request.getBatchNumber() != null)
@@ -77,9 +82,6 @@ public class BatchServiceImpl implements BatchService {
 
         if (request.getNotes() != null)
             batch.setNotes(request.getNotes());
-
-        if (request.getStatus() != null)
-            batch.setStatus(request.getStatus());
 
         Batch updateBatch = batchRepository.save(batch);
         return batchMapper.toResponse(updateBatch);
