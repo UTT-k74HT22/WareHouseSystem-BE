@@ -90,6 +90,9 @@ public enum ErrorCode {
     COM_003("COM_003", "Bad request - malformed JSON or invalid data format"),
     COM_004("COM_004", "Resource not found"),
     COM_005("COM_005", "Duplicate entry - resource already exists"),
+    COM_006("COM_006", "Page index must not be less than zero"),
+    COM_007("COM_007", "Page size must be greater than zero"),
+    COM_008("COM_008", "Page size must not exceed 100"),
 
     BATCH_001("BATCH_001", "Batch not found"),
     BATCH_002("BATCH_002", "Batch number already exists"),
