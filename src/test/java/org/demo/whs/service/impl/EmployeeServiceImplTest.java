@@ -24,9 +24,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -226,6 +232,63 @@ class EmployeeServiceImplTest {
 
             verify(employeeRepository).findById("emp-1");
             verify(employeeRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("List Employees Tests")
+    class ListEmployeesTests {
+
+        @Test
+        @DisplayName("Should default status to ACTIVE when not provided")
+        void getEmployees_DefaultStatusActive() {
+            Employee employee = new Employee();
+            employee.setId("emp-1");
+            employee.setAccountId("acc-1");
+
+            UserProfile profile = new UserProfile();
+            profile.setAccountId("acc-1");
+
+            EmployeeResponse response = EmployeeResponse.builder()
+                    .id("emp-1")
+                    .build();
+
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+            Page<Employee> page = new PageImpl<>(List.of(employee), pageable, 1);
+
+            when(employeeRepository.findAllWithFilters(any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(page);
+            when(userProfileRepository.findByAccountIdIn(any())).thenReturn(List.of(profile));
+            when(employeeMapper.toResponse(employee, profile)).thenReturn(response);
+
+            employeeService.getEmployees(null, null, null, pageable);
+
+            verify(employeeRepository).findAllWithFilters(eq(null), eq(EmployeeStatus.ACTIVE), eq(null), eq(pageable));
+            verify(employeeMapper).toResponse(employee, profile);
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException for invalid status")
+        void getEmployees_InvalidStatus() {
+            Pageable pageable = PageRequest.of(0, 10);
+
+            assertThatThrownBy(() -> employeeService.getEmployees(null, "INVALID", null, pageable))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
+
+            verify(employeeRepository, never()).findAllWithFilters(any(), any(), any(), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when page size exceeds limit")
+        void getEmployees_SizeTooLarge() {
+            Pageable pageable = PageRequest.of(0, 101);
+
+            assertThatThrownBy(() -> employeeService.getEmployees(null, null, null, pageable))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
+
+            verify(employeeRepository, never()).findAllWithFilters(any(), any(), any(), any(Pageable.class));
         }
     }
 }

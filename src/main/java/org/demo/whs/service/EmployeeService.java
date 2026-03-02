@@ -2,7 +2,9 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Service contract for Employee management operations.
@@ -41,4 +43,15 @@ public interface EmployeeService {
      * @param id employee id
      */
     void softDelete(String id);
+
+    /**
+     * List employees with pagination and filters.
+     *
+     * @param keyword     optional search keyword
+     * @param status      optional status filter (default ACTIVE)
+     * @param warehouseId optional warehouse filter
+     * @param pageable    pagination and sorting
+     * @return paginated employee responses
+     */
+    PageResponse<EmployeeResponse> getEmployees(String keyword, String status, String warehouseId, Pageable pageable);
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -21,10 +22,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
     Optional<UserProfile> findByEmail(String email);
 
     /**
-     * Kiểm tra email đã tồn tại hay chưa.
+     * Kiá»ƒm tra email Ä‘Ã£ tá»“n táº¡i hay chÆ°a.
      *
-     * @param email email người dùng
-     * @return true nếu đã tồn tại
+     * @param email email ngÆ°á»i dÃ¹ng
+     * @return true náº¿u Ä‘Ã£ tá»“n táº¡i
      */
     boolean existsByEmail(String email);
 
@@ -35,5 +36,13 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
      * @return optional user profile
      */
     Optional<UserProfile> findByAccountId(String accountId);
+
+    /**
+     * Find user profiles by account IDs.
+     *
+     * @param accountIds account identifiers
+     * @return list of user profiles
+     */
+    List<UserProfile> findByAccountIdIn(Collection<String> accountIds);
 
 }

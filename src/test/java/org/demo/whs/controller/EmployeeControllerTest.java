@@ -3,6 +3,7 @@ package org.demo.whs.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
@@ -17,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -124,5 +126,34 @@ class EmployeeControllerTest {
         mockMvc.perform(delete("/api/v1/employees/{id}", "emp-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("List employees success -> 200 OK")
+    void listEmployees_Success() throws Exception {
+        EmployeeResponse item = EmployeeResponse.builder()
+                .id("emp-1")
+                .employeeCode("EMP-001")
+                .build();
+
+        PageResponse<EmployeeResponse> pageResponse = PageResponse.<EmployeeResponse>builder()
+                .content(java.util.List.of(item))
+                .page(0)
+                .size(10)
+                .totalElements(1L)
+                .totalPages(1)
+                .isFirst(true)
+                .isLast(true)
+                .build();
+
+        when(employeeService.getEmployees(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/employees")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].id").value("emp-1"));
     }
 }
