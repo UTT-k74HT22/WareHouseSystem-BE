@@ -3,6 +3,7 @@ package org.demo.whs.mapper;
 import org.demo.whs.entity.Employee;
 import org.demo.whs.entity.UserProfile;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
 import org.springframework.stereotype.Component;
@@ -95,6 +96,37 @@ public class EmployeeMapper {
                 .toList();
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    /**
+     * Apply partial updates from {@link UpdateEmployeeRequest} to {@link Employee}.
+     *
+     * @param employee target entity
+     * @param request  update request (nullable)
+     */
+    public void updateEntity(Employee employee, UpdateEmployeeRequest request) {
+        if (employee == null || request == null) {
+            return;
+        }
+
+        if (request.getDepartment() != null) {
+            employee.setDepartment(request.getDepartment());
+        }
+        if (request.getPosition() != null) {
+            employee.setPosition(request.getPosition());
+        }
+        if (request.getHireDate() != null) {
+            employee.setHireDate(request.getHireDate());
+        }
+        if (request.getTerminationDate() != null) {
+            employee.setTerminationDate(request.getTerminationDate());
+        }
+        if (request.getSalaryGrade() != null) {
+            employee.setSalaryGrade(request.getSalaryGrade());
+        }
+        if (request.getWarehouseId() != null && !request.getWarehouseId().isBlank()) {
+            employee.setWarehouseId(request.getWarehouseId());
+        }
+    }
+
+    // --- helpers ------------------------------------------------------------
 
 }
