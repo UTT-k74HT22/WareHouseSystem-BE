@@ -61,7 +61,7 @@ public class InventoryController {
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String direction) {
+            @RequestParam(defaultValue = "DESC") Sort.Direction direction){
 
         List<String> allowedSortFields = List.of(
                 "updatedAt",
