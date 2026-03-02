@@ -36,3 +36,4 @@ application-local.yml
 gha-creds-*.json
 
 .codex/
+.mvn/
