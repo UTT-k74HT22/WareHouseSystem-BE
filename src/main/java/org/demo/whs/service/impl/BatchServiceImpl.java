@@ -60,7 +60,7 @@ public class BatchServiceImpl implements BatchService {
         Batch batch = batchRepository.findById(Id)
                 .orElseThrow(() -> {
                     log.warn("Fetching batch by ID: {}", Id);
-                    return new NotFoundException("Batches not found", ErrorCode.BATCH_001);
+                    return new BadRequestException(ErrorCode.BATCH_001);
                 });
 
         return batchMapper.toResponse(batch);
