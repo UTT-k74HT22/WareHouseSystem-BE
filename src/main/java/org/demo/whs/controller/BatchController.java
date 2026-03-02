@@ -4,9 +4,11 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
+import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.service.BatchService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,5 +32,15 @@ public class BatchController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(BaseResponse.success(response, "Batch created successfully"));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
+            @PathVariable String id,
+            @RequestBody @Valid ChangeBatchStatusRequest request) {
+
+        BatchResponse response = batchService.changeBatchStatus(id, request);
+
+        return ResponseEntity.ok(BaseResponse.success(response, "Batch status changed successfully"));
     }
 }

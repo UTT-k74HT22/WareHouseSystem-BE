@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -44,5 +45,19 @@ public class BatchServiceImpl implements BatchService {
         log.info("Batch created successfully with ID={}", batch.getId());
 
         return batchMapper.toResponse(batchSave);
+    }
+
+    @Override
+    @Transactional
+    public BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request) {
+
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() ->
+                        new BadRequestException(ErrorCode.BATCH_001));
+
+        batch.setStatus(request.getStatus());
+        Batch updateStatus = batchRepository.save(batch);
+        log.info("Batch status changed successfully with ID={}", updateStatus.getId());
+        return batchMapper.toResponse(updateStatus);
     }
 }
