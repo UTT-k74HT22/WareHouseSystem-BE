@@ -16,14 +16,6 @@ import java.time.LocalDate;
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateBatchRequest {
-
-    /**
-     * Batch ID (required)
-     */
-    @NotBlank(message = "Batch ID is required")
-    private String id;
-
-
     /**
      * Batch number (optional)
      */

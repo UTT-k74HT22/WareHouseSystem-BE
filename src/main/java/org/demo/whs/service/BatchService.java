@@ -11,4 +11,6 @@ import org.demo.whs.entity.dto.response.Batch.BatchResponse;
 public interface BatchService {
 
     BatchResponse createBatch (CreateBatchRequest request);
+
+    BatchResponse updateBatch (String id, UpdateBatchRequest request);
 }

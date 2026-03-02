@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
 import org.demo.whs.service.BatchService;
@@ -30,5 +31,15 @@ public class BatchController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(BaseResponse.success(response, "Batch created successfully"));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BaseResponse<BatchResponse>> updateBatch(
+            @PathVariable @Valid String id,
+            @RequestBody @Valid UpdateBatchRequest request
+    ) {
+        BatchResponse response = batchService.updateBatch(id, request);
+
+        return ResponseEntity.ok(BaseResponse.success(response, "Batch updated successfully"));
     }
 }
