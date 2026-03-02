@@ -54,28 +54,4 @@ public class InventoryMapper {
                 .map(this::toResponse)
                 .toList();
     }
-
-    public PageResponse<InventoryResponse> toPageResponse(Page<Inventory> page) {
-        if (page == null || page.isEmpty()) {
-            return PageResponse.<InventoryResponse>builder()
-                    .content(List.of())
-                    .page(0)
-                    .size(0)
-                    .totalElements(0L)
-                    .totalPages(0)
-                    .isFirst(true)
-                    .isLast(true)
-                    .build();
-        }
-
-        return PageResponse.<InventoryResponse>builder()
-                .content(page.map(this::toResponse).getContent())
-                .page(page.getNumber())
-                .size(page.getSize())
-                .totalElements(page.getTotalElements())
-                .totalPages(page.getTotalPages())
-                .isFirst(page.isFirst())
-                .isLast(page.isLast())
-                .build();
-    }
 }

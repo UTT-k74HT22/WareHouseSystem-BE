@@ -36,13 +36,12 @@ public class InventoryServiceImpl implements InventoryService {
         log.info("Fetching inventories with filter: {}, pageable: {}", filter, pageable);
         validatePageable(pageable);
         Page<Inventory> inventoryPage = inventoryRepository.findAll(
-                InventorySpecification.withFilter(filter), 
+                InventorySpecification.withFilter(filter),
                 pageable
         );
 
-        return inventoryMapper.toPageResponse(inventoryPage);
+        return PageResponse.from(inventoryPage, inventoryMapper.toResponses(inventoryPage.getContent()));
     }
-
                     // Private method
     private void validatePageable(Pageable pageable) {
 
