@@ -14,9 +14,15 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the BatchService interface.
@@ -44,5 +50,39 @@ public class BatchServiceImpl implements BatchService {
         log.info("Batch created successfully with ID={}", batch.getId());
 
         return batchMapper.toResponse(batchSave);
+    }
+
+    @Override
+    @Transactional
+    public PageResponse<BatchResponse> getAllBatches(Integer page, Integer size) {
+        log.info("Fetching all batches - page={}, size={}", page, size);
+
+        validatePaginationParams(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Batch> batchPage = batchRepository.findAll(pageable);
+
+        List<BatchResponse> responses = batchPage.getContent()
+                .stream().map(batchMapper::toResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.from(batchPage, responses);
+    }
+
+    /**
+     * Validates pagination parameters.
+     *
+     * @param page the page number
+     * @param size the page size
+     */
+    private void validatePaginationParams(Integer page, Integer size) {
+        if (page < 0) {
+            log.warn("Invalid page number: {}", page);
+            throw new BadRequestException(ErrorCode.COM_003);
+        }
+        if (size <= 0 || size > 100) {
+            log.warn("Invalid page size: {}", size);
+            throw new BadRequestException(ErrorCode.COM_003);
+        }
     }
 }
