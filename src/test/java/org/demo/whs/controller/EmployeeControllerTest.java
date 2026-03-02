@@ -73,7 +73,9 @@ class EmployeeControllerTest {
                 .thenThrow(new NotFoundException("Employee not found", ErrorCode.EMP_001));
 
         mockMvc.perform(get("/api/v1/employees/{id}", "missing"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("EMP_001"))
+                .andExpect(jsonPath("$.message").value("Employee not found"));
     }
 
     @Test
