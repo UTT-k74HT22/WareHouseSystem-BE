@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
+import org.demo.whs.entity.enums.EmployeeStatus;
+import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
@@ -37,6 +40,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final AccountHasRoleRepository accountHasRoleRepository;
     private final UserProfileRepository userProfileRepository;
     private final RoleRepository roleRepository;
+    private final WareHouseRepository wareHouseRepository;
     private final EmployeeMapper employeeMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -99,6 +103,58 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employeeMapper.toResponse(employee, userProfile);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeResponse getById(String id) {
+        log.info("Fetching employee by id={}", id);
+
+        Employee employee = findEmployeeById(id);
+        UserProfile userProfile = userProfileRepository.findByAccountId(employee.getAccountId())
+                .orElse(null);
+
+        return employeeMapper.toResponse(employee, userProfile);
+    }
+
+    @Override
+    @Transactional
+    public EmployeeResponse update(String id, UpdateEmployeeRequest request) {
+        log.info("Updating employee by id={}", id);
+
+        Employee employee = findEmployeeById(id);
+
+        if (request.getWarehouseId() != null && !request.getWarehouseId().isBlank()) {
+            validateWarehouseAssignment(request.getWarehouseId());
+        }
+
+        employeeMapper.updateEntity(employee, request);
+        Employee updatedEmployee = employeeRepository.save(employee);
+
+        UserProfile userProfile = userProfileRepository.findByAccountId(updatedEmployee.getAccountId())
+                .orElse(null);
+
+        log.info("Employee updated successfully: id={}", updatedEmployee.getId());
+        return employeeMapper.toResponse(updatedEmployee, userProfile);
+    }
+
+    @Override
+    @Transactional
+    public void softDelete(String id) {
+        log.info("Soft deleting employee by id={}", id);
+
+        Employee employee = findEmployeeById(id);
+        if (employee.getStatus() == EmployeeStatus.TERMINATED) {
+            throw new BadRequestException(ErrorCode.EMP_005);
+        }
+
+        employee.setStatus(EmployeeStatus.TERMINATED);
+        if (employee.getTerminationDate() == null) {
+            employee.setTerminationDate(java.time.LocalDate.now());
+        }
+
+        employeeRepository.save(employee);
+        log.info("Employee soft deleted successfully: id={}", employee.getId());
+    }
+
     private void validateRequest(CreateEmployeeRequest request) {
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException(ErrorCode.COM_005);
@@ -106,6 +162,20 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
             throw new BadRequestException(ErrorCode.EMP_002);
+        }
+    }
+
+    private Employee findEmployeeById(String id) {
+        return employeeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.EMP_001));
+    }
+
+    private void validateWarehouseAssignment(String warehouseId) {
+        Warehouses warehouse = wareHouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new BadRequestException(ErrorCode.EMP_006));
+
+        if (warehouse.getStatus() != WareHouseStatus.ACTIVE) {
+            throw new BadRequestException(ErrorCode.EMP_006);
         }
     }
 }
