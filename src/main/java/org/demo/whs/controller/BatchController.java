@@ -33,7 +33,7 @@ public class BatchController {
                 .body(BaseResponse.success(response, "Batch created successfully"));
     }
 
-    @GetMapping("{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<BatchResponse>> getBatchesById(
             @PathVariable String id) {
         log.info("Get batches with id: {}", id);
