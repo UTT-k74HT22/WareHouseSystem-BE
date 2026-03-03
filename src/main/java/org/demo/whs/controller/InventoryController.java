@@ -66,8 +66,7 @@ public class InventoryController {
         List<String> allowedSortFields = List.of(
                 "updatedAt",
                 "createdAt",
-                "onHandQuantity",
-                "availableQuantity"
+                "onHandQuantity"
         );
 
         if (!allowedSortFields.contains(sortBy)) {

@@ -1,7 +1,7 @@
 package org.demo.whs.repository.specification;
 
-import jakarta.persistence.criteria.JoinType;
-import org.demo.whs.entity.Inventory;
+import jakarta.persistence.criteria.Subquery;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
@@ -10,14 +10,6 @@ public class InventorySpecification {
 
     public static Specification<Inventory> withFilter(InventoryFilterRequest filter) {
         return (root, query, cb) -> {
-            // Fetch joins to avoid N+1
-            if (Long.class != query.getResultType()) { // Avoid fetch for count query
-                root.fetch("product", JoinType.LEFT);
-                root.fetch("warehouse", JoinType.LEFT);
-                root.fetch("location", JoinType.LEFT);
-                root.fetch("batch", JoinType.LEFT);
-            }
-
             var predicates = cb.conjunction();
 
             if (StringUtils.hasText(filter.getProductId())) {
@@ -36,22 +28,36 @@ public class InventorySpecification {
                 predicates = cb.and(predicates, cb.equal(root.get("batchId"), filter.getBatchId()));
             }
 
-            if (StringUtils.hasText(filter.getProductSku())) {
-                var productJoin = root.join("product", JoinType.LEFT);
-                predicates = cb.and(predicates, cb.like(cb.lower(productJoin.get("sku")), 
-                        "%" + filter.getProductSku().toLowerCase() + "%"));
+            // Filter by Product SKU/Name using Subquery
+            if (StringUtils.hasText(filter.getProductSku()) || StringUtils.hasText(filter.getProductName())) {
+                Subquery<String> productSubquery = query.subquery(String.class);
+                var productRoot = productSubquery.from(Products.class);
+                productSubquery.select(productRoot.get("id"));
+                
+                var productPredicates = cb.conjunction();
+                if (StringUtils.hasText(filter.getProductSku())) {
+                    productPredicates = cb.and(productPredicates, 
+                        cb.like(cb.lower(productRoot.get("sku")), "%" + filter.getProductSku().toLowerCase() + "%"));
+                }
+                if (StringUtils.hasText(filter.getProductName())) {
+                    productPredicates = cb.and(productPredicates, 
+                        cb.like(cb.lower(productRoot.get("name")), "%" + filter.getProductName().toLowerCase() + "%"));
+                }
+                productSubquery.where(productPredicates);
+                
+                predicates = cb.and(predicates, root.get("productId").in(productSubquery));
             }
 
-            if (StringUtils.hasText(filter.getProductName())) {
-                var productJoin = root.join("product", JoinType.LEFT);
-                predicates = cb.and(predicates, cb.like(cb.lower(productJoin.get("name")), 
-                        "%" + filter.getProductName().toLowerCase() + "%"));
-            }
-
+            // Filter by Batch Number using Subquery
             if (StringUtils.hasText(filter.getBatchNumber())) {
-                var batchJoin = root.join("batch", JoinType.LEFT);
-                predicates = cb.and(predicates, cb.like(cb.lower(batchJoin.get("batchNumber")), 
-                        "%" + filter.getBatchNumber().toLowerCase() + "%"));
+                Subquery<String> batchSubquery = query.subquery(String.class);
+                var batchRoot = batchSubquery.from(Batch.class);
+                batchSubquery.select(batchRoot.get("id"));
+                
+                batchSubquery.where(cb.like(cb.lower(batchRoot.get("batchNumber")), 
+                    "%" + filter.getBatchNumber().toLowerCase() + "%"));
+                
+                predicates = cb.and(predicates, root.get("batchId").in(batchSubquery));
             }
 
             return predicates;
