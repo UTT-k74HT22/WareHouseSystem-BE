@@ -29,8 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Validated
 public class StockTransfersController {
+
     private final StockTransfersService stockTransfersService;
 
+    /**
+     * Endpoint to create a new stock transfer.
+     *
+     * @param request the stock transfer request details
+     * @return a response entity containing the created stock transfer response
+     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> createTransfer(
@@ -39,6 +46,12 @@ public class StockTransfersController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to retrieve a stock transfer by its ID.
+     *
+     * @param id the ID of the stock transfer to retrieve
+     * @return a response entity containing the retrieved stock transfer response
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> getTransfer(@PathVariable String id) {
@@ -46,6 +59,13 @@ public class StockTransfersController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to retrieve a paginated list of all stock transfers.
+     *
+     * @param page the page number for pagination
+     * @param size the page size for pagination
+     * @return a response entity containing a paginated response with the list of stock transfers
+     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<PageResponse<StockTransfersResponse>>> getTransfers(
@@ -55,6 +75,12 @@ public class StockTransfersController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to complete a stock transfer.
+     *
+     * @param id the ID of the stock transfer to complete
+     * @return a response entity containing the updated stock transfer response after completion
+     */
     @PutMapping("/{id}/complete")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> completeTransfer(@PathVariable String id) {
@@ -62,6 +88,12 @@ public class StockTransfersController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to cancel a stock transfer.
+     *
+     * @param id the ID of the stock transfer to cancel
+     * @return a response entity containing the updated stock transfer response after cancellation
+     */
     @PutMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> cancelTransfer(@PathVariable String id) {

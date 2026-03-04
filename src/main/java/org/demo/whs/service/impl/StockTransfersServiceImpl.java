@@ -59,6 +59,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     @Override
     @Transactional
     public StockTransfersResponse createTransfer(StockTransfersRequest request) {
+        log.info("StockTransfersServiceImpl createTransfer request={}", request);
+
         validateTransferRequest(request);
 
         String actorId = getCurrentActorId();
@@ -90,6 +92,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     @Override
     @Transactional
     public StockTransfersResponse complete(String id) {
+        log.info("Attempting to complete stock transfer with ID: {}", id);
+
         String actorId = getCurrentActorId();
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
@@ -178,6 +182,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     @Override
     @Transactional
     public StockTransfersResponse cancel(String id) {
+        log.info("Attempting to cancel stock transfer with ID: {}", id);
+
         String actorId = getCurrentActorId();
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));

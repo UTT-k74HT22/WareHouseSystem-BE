@@ -60,19 +60,25 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse createAdjustment(StockAdjustmentsRequest request) {
+        log.info("Attempting to create stock adjustment with details: {}", request);
+
+        //Step 1: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
         Inventory inventory = getInventoryForUpdate(request.getInventoryId());
         BigDecimal quantityBefore = inventory.getOnHandQuantity();
         BigDecimal quantityAfter = request.getQuantityAfter();
         BigDecimal adjustmentQuantity = quantityAfter.subtract(quantityBefore);
 
+        //Step 2: Validate the adjustment request against current inventory state to prevent invalid adjustments
         validateAdjustmentRequest(inventory, quantityAfter, adjustmentQuantity);
 
+        //Step 3: Determine if approval is required and set the target status accordingly
         String actorId = getCurrentActorId();
         boolean requiresApproval = Boolean.TRUE.equals(request.getRequiresApproval());
         StockAdjustmentsStatus targetStatus = requiresApproval
                 ? StockAdjustmentsStatus.PENDING_APPROVAL
                 : StockAdjustmentsStatus.APPROVED;
 
+        //Step 4: Create and save the stock adjustment record in the database
         StockAdjustments adjustment = stockAdjustmentsMapper.toEntity(
                 request,
                 inventory,
@@ -180,6 +186,8 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse approve(String id, ApproveStockAdjustmentRequest request) {
+        log.info("Attempting to approve stock adjustment with ID: {} and approval details: {}", id, request);
+
         String actorId = getCurrentActorId();
         StockAdjustments adjustment = stockAdjustmentsRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock adjustment not found", ErrorCode.STA_404));
@@ -276,6 +284,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         }
     }
 
+    // Applies the new on-hand quantity to the inventory and updates relevant metadata
     private void applyInventoryAfterQuantity(Inventory inventory, BigDecimal quantityAfter) {
         if (quantityAfter.compareTo(inventory.getReservedQuantity()) < 0) {
             throw new BadRequestException("Quantity after cannot be lower than reserved quantity", ErrorCode.STA_001);

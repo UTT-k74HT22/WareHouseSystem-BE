@@ -28,6 +28,12 @@ public class StockMovementsController {
 
     private final StockMovementsService stockMovementsService;
 
+    /**
+     * Endpoint to retrieve a stock movement by its ID.
+     *
+     * @param id the ID of the stock movement to retrieve
+     * @return a response entity containing the retrieved stock movement response
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockMovementsResponse>> getMovement(@PathVariable String id) {
@@ -35,6 +41,13 @@ public class StockMovementsController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to retrieve all stock movements with pagination.
+     *
+     * @param page the page number to retrieve (default is 0)
+     * @param size the number of items per page (default is 20)
+     * @return a response entity containing a paginated list of stock movement responses
+     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<PageResponse<StockMovementsResponse>>> getMovements(
@@ -44,6 +57,15 @@ public class StockMovementsController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Endpoint to retrieve stock movements by reference type and ID with pagination.
+     *
+     * @param referenceType the type of reference (e.g., STOCK_ADJUSTMENT, STOCK_TRANSFER)
+     * @param referenceId   the ID of the reference
+     * @param page          the page number to retrieve (default is 0)
+     * @param size          the number of items per page (default is 20)
+     * @return a response entity containing a paginated list of stock movement responses
+     */
     @GetMapping("/reference/{referenceType}/{referenceId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<PageResponse<StockMovementsResponse>>> getMovementsByReference(
