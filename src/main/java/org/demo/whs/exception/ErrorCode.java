@@ -74,6 +74,7 @@ public enum ErrorCode {
     UOM_001("UOM_001", "Unit of Measure not found"),
     UOM_002("UOM_002", "Unit of Measure code already exists"),
     UOM_003("UOM_003", "Data is not null"),
+    UOM_004("UOM_004", "Unit of Measure is in use by products"),
 
     // Employee errors
     EMP_001("EMP_001", "Employee not found"),
