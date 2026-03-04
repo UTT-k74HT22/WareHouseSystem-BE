@@ -8,6 +8,7 @@ import org.demo.whs.exception.GlobalExceptionHandle;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.EmployeeService;
+import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,9 @@ class EmployeeControllerTest {
 
     @MockitoBean
     private EmployeeService employeeService;
+
+    @MockitoBean
+    private RateLimitService rateLimitService;
 
     @Test
     @DisplayName("Get employee by id success -> 200 OK")
