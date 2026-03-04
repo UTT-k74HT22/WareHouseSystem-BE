@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 02/03/2026 — Employee module reviewed & marked 100% complete  
-> **Phiên bản:** 1.1  
+> **Cập nhật lần cuối:** 04/03/2026 — Category module completed (WHS-18)  
+> **Phiên bản:** 1.2  
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -17,7 +17,7 @@
 | 4 | **Product** | 11 | 9 | 2 | 82% |
 | 5 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
 | 6 | **Business Partner** | 8 | 6 | 2 | 75% |
-| 7 | **Category** | 5 | 0 | 5 | 🔴 0% |
+| 7 | **Category** | 5 | 5 | 0 | ✅ 100% |
 | 8 | **Batch** | 10 | 1 | 9 | 10% |
 | 9 | **Inventory** | 8 | 0 | 8 | 🔴 0% |
 | 10 | **Stock Adjustments** | 4 | 0 | 4 | 🔴 0% |
@@ -35,7 +35,7 @@
 | 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **159** | **62** | **97** | **~39%** |
+| | **TỔNG CỘNG** | **159** | **67** | **92** | **~42%** |
 
 ---
 
@@ -48,7 +48,7 @@ Location           █████████░ 89%
 Product            ████████░░ 82%
 UOM                ██████████ 100% ✅
 Business Partner   ████████░░ 75%
-Category           ░░░░░░░░░░ 0%  🔴
+Category           ██████████ 100% ✅
 Batch              █░░░░░░░░░ 10%
 Inventory          ░░░░░░░░░░ 0%  🔴
 Stock Adjustments  ░░░░░░░░░░ 0%  🔴
@@ -216,18 +216,20 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/categories` | Tạo danh mục sản phẩm | ❌ Not Done |
-| 2 | `GET` | `/api/v1/categories` | Danh sách tất cả danh mục | ❌ Not Done |
-| 3 | `GET` | `/api/v1/categories/{id}` | Chi tiết danh mục theo ID | ❌ Not Done |
-| 4 | `PUT` | `/api/v1/categories/{id}` | Cập nhật danh mục | ❌ Not Done |
+| 1 | `POST` | `/api/v1/categories` | Tạo danh mục sản phẩm | ✅ Done |
+| 2 | `GET` | `/api/v1/categories` | Danh sách danh mục (phân trang, filter status) | ✅ Done |
+| 3 | `GET` | `/api/v1/categories/{id}` | Chi tiết danh mục theo ID | ✅ Done |
+| 4 | `PUT` | `/api/v1/categories/{id}` | Cập nhật danh mục | ✅ Done |
 
 ### 🟣 Advanced APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 5 | `PATCH` | `/api/v1/categories/{id}/status` | Đổi trạng thái danh mục (ACTIVE/INACTIVE) | ❌ Not Done |
+| 5 | `PATCH` | `/api/v1/categories/{id}/status` | Đổi trạng thái danh mục (ACTIVE/INACTIVE) | ✅ Done |
 
-> 🔴 **Controller rỗng hoàn toàn** - Chỉ có class shell, chưa có endpoint nào.
+> ✅ **Module này đã hoàn thành 100%** (WHS-5 → WHS-9 trong epic WHS-18)
+> 
+> **Phân quyền hiện tại:** `POST/PUT/PATCH` yêu cầu `ADMIN`, `GET` cho `USER` hoặc `ADMIN`.
 
 ---
 
@@ -622,7 +624,7 @@ Storage            ██████████ 100% ✅
 ### Phase 1 — Hoàn thiện Master Data (Ưu tiên cao nhất)
 | Ưu tiên | Task | Effort |
 |---------|------|--------|
-| 🔴 P0 | Category CRUD (5 APIs) — Module nền tảng, Product phụ thuộc | 1-2 ngày |
+| ✅ Done | ~~Category CRUD (5 APIs) — Module nền tảng, Product phụ thuộc~~ | — |
 | 🟡 P1 | Warehouse DELETE (soft delete) | 0.5 ngày |
 | 🟡 P1 | Business Partner search + filter by type | 1 ngày |
 | ✅ Done | ~~Employee CRUD còn lại (4 APIs)~~ — **Đã hoàn thành** | — |
@@ -680,12 +682,12 @@ Storage            ██████████ 100% ✅
 | Metric | Value |
 |--------|-------|
 | **Tổng API thiết kế** | 159 |
-| **Đã triển khai** | 62 (~39%) |
-| **Chưa triển khai** | 97 (~61%) |
-| **Module hoàn thành 100%** | UOM, Email, Storage, **Employee** |
-| **Module 0%** | Category, Inventory, Stock Adjustments, Stock Transfers, PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Stock Movements, Reporting |
+| **Đã triển khai** | 67 (~42%) |
+| **Chưa triển khai** | 92 (~58%) |
+| **Module hoàn thành 100%** | UOM, Email, Storage, **Employee, Category** |
+| **Module 0%** | Inventory, Stock Adjustments, Stock Transfers, PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Stock Movements, Reporting |
 | **Entities đã có (DB migration)** | ✅ Tất cả 30 entities đã có migration |
-| **Controllers đã tạo (shell)** | ✅ 26 controllers (nhưng 14 controllers rỗng) |
+| **Controllers đã tạo (shell)** | ✅ 26 controllers (nhưng 13 controllers rỗng) |
 
 > 💡 **Điểm mạnh:** Nền tảng tốt — DB schema, entities, auth, rate-limiting, email, storage đã hoàn thiện.  
 > ✅ **Employee module:** Hoàn thành 100% (5/5 APIs) — tạo, danh sách, chi tiết, cập nhật, xóa mềm.  
