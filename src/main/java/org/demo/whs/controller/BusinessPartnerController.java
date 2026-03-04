@@ -7,14 +7,13 @@ import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.BaseResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.BusinessPartnerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Controller for handling Business Partner APIs.
@@ -53,13 +52,19 @@ public class BusinessPartnerController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<BaseResponse<List<BusinessPartnerResponse>>> getAll() {
-        log.debug("Get all business partners request");
+    public ResponseEntity<BaseResponse<PageResponse<BusinessPartnerResponse>>> getAll(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir) {
+        log.debug("Get paginated business partners request, page={}, size={}, sortBy={}, sortDir={}",
+                page, size, sortBy, sortDir);
 
-        List<BusinessPartnerResponse> responses =
-                businessPartnerService.getAll();
+        PageResponse<BusinessPartnerResponse> responses =
+                businessPartnerService.getAll(page, size, sortBy, sortDir);
 
-        log.info("Fetched {} business partners", responses.size());
+        log.info("Fetched business partners page={}, size={}, totalElements={}",
+                responses.getPage(), responses.getSize(), responses.getTotalElements());
 
         return ResponseEntity.ok(BaseResponse.success(responses));
     }
