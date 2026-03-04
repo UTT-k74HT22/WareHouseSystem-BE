@@ -17,18 +17,29 @@ public class StockAdjustmentsRequest {
     @NotBlank(message = "Inventory ID is required")
     private String inventoryId;
 
-    @NotBlank(message = "Product ID is required")
+    /**
+     * Backward-compatibility field. The authoritative value is loaded from inventory_id.
+     */
     private String productId;
 
-    @NotBlank(message = "Warehouse ID is required")
+    /**
+     * Backward-compatibility field. The authoritative value is loaded from inventory_id.
+     */
     private String warehouseId;
 
+    /**
+     * Backward-compatibility field. The authoritative value is loaded from inventory_id.
+     */
     private String locationId;
 
+    /**
+     * Backward-compatibility field. The authoritative value is loaded from inventory_id.
+     */
     private String batchId;
 
-    @NotNull(message = "Quantity before is required")
-    @DecimalMin(value = "0.00", message = "Quantity before must be greater than or equal to 0")
+    /**
+     * Backward-compatibility field. The authoritative value is loaded from inventory_id.
+     */
     private BigDecimal quantityBefore;
 
     @NotNull(message = "Quantity after is required")

@@ -1,5 +1,6 @@
 package org.demo.whs.mapper;
 
+import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.StockAdjustments;
 import org.demo.whs.entity.dto.request.StockAdjustments.StockAdjustmentsRequest;
 import org.demo.whs.entity.dto.response.StockAdjustments.StockAdjustmentsResponse;
@@ -14,6 +15,7 @@ public class StockAdjustmentsMapper {
 
     public StockAdjustments toEntity(
             StockAdjustmentsRequest request,
+            Inventory inventory,
             String adjustmentNumber,
             String actorId,
             boolean requiresApproval,
@@ -23,17 +25,19 @@ public class StockAdjustmentsMapper {
             return null;
         }
 
-        BigDecimal adjustmentQty = request.getQuantityAfter().subtract(request.getQuantityBefore());
+        BigDecimal quantityBefore = inventory.getOnHandQuantity();
+        BigDecimal quantityAfter = request.getQuantityAfter();
+        BigDecimal adjustmentQty = quantityAfter.subtract(quantityBefore);
 
         StockAdjustments entity = StockAdjustments.builder()
                 .adjustmentNumber(adjustmentNumber)
                 .inventoryId(request.getInventoryId())
-                .productId(request.getProductId())
-                .warehouseId(request.getWarehouseId())
-                .locationId(request.getLocationId())
-                .batchId(request.getBatchId())
-                .quantityBefore(request.getQuantityBefore())
-                .quantityAfter(request.getQuantityAfter())
+                .productId(inventory.getProductId())
+                .warehouseId(inventory.getWarehouseId())
+                .locationId(inventory.getLocationId())
+                .batchId(inventory.getBatchId())
+                .quantityBefore(quantityBefore)
+                .quantityAfter(quantityAfter)
                 .adjustmentQuantity(adjustmentQty)
                 .reason(request.getReason())
                 .status(status)
@@ -44,7 +48,7 @@ public class StockAdjustmentsMapper {
         if (actorId != null && !actorId.isBlank()) {
             entity.setCreatedBy(actorId);
             entity.setUpdatedBy(actorId);
-            if (!requiresApproval) {
+            if (status == StockAdjustmentsStatus.APPROVED) {
                 entity.setApprovedBy(actorId);
                 entity.setApprovedAt(LocalDateTime.now());
             }

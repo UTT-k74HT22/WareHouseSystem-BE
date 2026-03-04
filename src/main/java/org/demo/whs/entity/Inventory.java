@@ -36,6 +36,10 @@ public class Inventory extends BaseEntity {
     @Column(name = "reserved_quantity", nullable = false, precision = 15, scale = 2)
     private BigDecimal reservedQuantity;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Integer version;
+
     @Column(name = "last_movement_at")
     private LocalDateTime lastMovementAt;
 
