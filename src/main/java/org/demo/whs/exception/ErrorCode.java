@@ -59,10 +59,6 @@ public enum ErrorCode {
     PROD_007("PROD_007", "Max stock level must be greater than or equal to min stock level"),
     PROD_008("PROD_008", "Reorder point must be between min and max stock levels"),
 
-    // Category errors
-    CAT_001("CAT_001", "Category not found"),
-    CAT_002("CAT_002", "Category code or name already exists"),
-
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Unit of Measure not found"),
     UOM_002("UOM_002", "Unit of Measure code already exists"),
