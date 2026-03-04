@@ -2,9 +2,11 @@ package org.demo.whs.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.GlobalExceptionHandle;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
@@ -30,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -175,6 +178,63 @@ class CategoryControllerTest {
     @DisplayName("should_ReturnBadRequest_When_CategoryIdIsInvalid")
     void should_ReturnBadRequest_When_CategoryIdIsInvalid() throws Exception {
         mockMvc.perform(get("/api/v1/categories/{id}", "invalid-id"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @DisplayName("should_UpdateCategory_When_RequestIsValid")
+    void should_UpdateCategory_When_RequestIsValid() throws Exception {
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
+        setField(request, "code", "ELEC-NEW");
+        setField(request, "name", "Electronics New");
+        setField(request, "description", "Updated desc");
+
+        CategoryResponse response = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC-NEW")
+                .name("Electronics New")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryService.updateCategory(any(), any(UpdateCategoryRequest.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.code").value("ELEC-NEW"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnConflict_When_UpdateCategoryDuplicated")
+    void should_ReturnConflict_When_UpdateCategoryDuplicated() throws Exception {
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
+        setField(request, "code", "ELEC");
+
+        when(categoryService.updateCategory(any(), any(UpdateCategoryRequest.class)))
+                .thenThrow(new ConflictException(ErrorCode.CAT_002));
+
+        mockMvc.perform(put("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error_code").value("CAT_002"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnBadRequest_When_UpdatePayloadInvalid")
+    void should_ReturnBadRequest_When_UpdatePayloadInvalid() throws Exception {
+        String invalidPayload = """
+                {
+                  "code": "invalid code with spaces"
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidPayload))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
     }

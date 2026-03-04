@@ -60,11 +60,11 @@ public class CategoryMapper {
         }
 
         if (request.getCode() != null && !request.getCode().isBlank()) {
-            entity.setCode(request.getCode());
+            entity.setCode(request.getCode().trim());
         }
 
         if (request.getName() != null && !request.getName().isBlank()) {
-            entity.setName(request.getName());
+            entity.setName(request.getName().trim());
         }
 
         if (request.getDescription() != null) {

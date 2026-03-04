@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -73,9 +74,49 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryMapper.toResponse(category);
     }
 
+    @Override
+    @Transactional
+    public CategoryResponse updateCategory(String id, UpdateCategoryRequest request) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Category not found", ErrorCode.CAT_001));
+
+        if (!hasAnyUpdatableField(request)) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        String normalizedCode = normalize(request.getCode());
+        String normalizedName = normalize(request.getName());
+
+        if (normalizedCode != null && categoryRepository.existsByCodeIgnoreCaseAndIdNot(normalizedCode, id)) {
+            throw new ConflictException(ErrorCode.CAT_002);
+        }
+
+        if (normalizedName != null && categoryRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, id)) {
+            throw new ConflictException(ErrorCode.CAT_002);
+        }
+
+        categoryMapper.updateEntity(category, request);
+        Category updatedCategory = categoryRepository.save(category);
+        return categoryMapper.toResponse(updatedCategory);
+    }
+
     private void validatePageable(Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() <= 0 || pageable.getPageSize() > 100) {
             throw new BadRequestException(ErrorCode.COM_001);
         }
+    }
+
+    private boolean hasAnyUpdatableField(UpdateCategoryRequest request) {
+        return normalize(request.getCode()) != null
+                || normalize(request.getName()) != null
+                || request.getDescription() != null;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

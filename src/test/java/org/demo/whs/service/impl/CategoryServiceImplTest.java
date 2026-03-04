@@ -2,6 +2,7 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -167,6 +168,95 @@ class CategoryServiceImplTest {
         assertThatThrownBy(() -> categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
                 .isInstanceOf(NotFoundException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
+    }
+
+    @Test
+    @DisplayName("should_UpdateCategory_When_RequestIsValid")
+    void should_UpdateCategory_When_RequestIsValid() {
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
+        try {
+            setField(request, "code", "ELEC-NEW");
+            setField(request, "name", "Electronics New");
+            setField(request, "description", "Updated desc");
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
+
+        Category existing = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        Category updated = Category.builder()
+                .code("ELEC-NEW")
+                .name("Electronics New")
+                .description("Updated desc")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        updated.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        CategoryResponse mapped = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC-NEW")
+                .name("Electronics New")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
+        when(categoryRepository.existsByCodeIgnoreCaseAndIdNot("ELEC-NEW", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(false);
+        when(categoryRepository.existsByNameIgnoreCaseAndIdNot("Electronics New", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(false);
+        when(categoryRepository.save(existing)).thenReturn(updated);
+        when(categoryMapper.toResponse(updated)).thenReturn(mapped);
+
+        CategoryResponse actual = categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getCode()).isEqualTo("ELEC-NEW");
+        verify(categoryMapper).updateEntity(existing, request);
+    }
+
+    @Test
+    @DisplayName("should_ThrowConflictException_When_UpdatingToDuplicatedCode")
+    void should_ThrowConflictException_When_UpdatingToDuplicatedCode() {
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
+        try {
+            setField(request, "code", "ELEC");
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
+
+        Category existing = Category.builder()
+                .code("OLD")
+                .name("Old Name")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
+        when(categoryRepository.existsByCodeIgnoreCaseAndIdNot("ELEC", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(true);
+
+        assertThatThrownBy(() -> categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CAT_002");
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_UpdatePayloadHasNoFields")
+    void should_ThrowBadRequest_When_UpdatePayloadHasNoFields() {
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
+        Category existing = Category.builder()
+                .code("OLD")
+                .name("Old Name")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
     }
 
     private CreateCategoryRequest buildCreateRequest(String code, String name, CategoryStatus status) {
