@@ -24,11 +24,11 @@ SET @seed_admin_id := COALESCE(
 -- ================================
 INSERT INTO units_of_measure (id, code, name, description, type, created_by, updated_by)
 VALUES
-    ('91000000-0000-0000-0000-000000000001', 'UOM-DEV-001', 'Piece',  'Count by piece',   'COUNT',  @seed_admin_id, @seed_admin_id),
-    ('91000000-0000-0000-0000-000000000002', 'UOM-DEV-002', 'Box',    'Count by box',     'COUNT',  @seed_admin_id, @seed_admin_id),
-    ('91000000-0000-0000-0000-000000000003', 'UOM-DEV-003', 'Kg',     'Weight in kg',     'WEIGHT', @seed_admin_id, @seed_admin_id),
-    ('91000000-0000-0000-0000-000000000004', 'UOM-DEV-004', 'Meter',  'Length in meter',  'LENGTH', @seed_admin_id, @seed_admin_id),
-    ('91000000-0000-0000-0000-000000000005', 'UOM-DEV-005', 'Liter',  'Volume in liter',  'VOLUME', @seed_admin_id, @seed_admin_id)
+    ('91000000-0000-0000-0000-000000000001', 'UOMD001', 'Piece',  'Count by piece',   'COUNT',  @seed_admin_id, @seed_admin_id),
+    ('91000000-0000-0000-0000-000000000002', 'UOMD002', 'Box',    'Count by box',     'COUNT',  @seed_admin_id, @seed_admin_id),
+    ('91000000-0000-0000-0000-000000000003', 'UOMD003', 'Kg',     'Weight in kg',     'WEIGHT', @seed_admin_id, @seed_admin_id),
+    ('91000000-0000-0000-0000-000000000004', 'UOMD004', 'Meter',  'Length in meter',  'LENGTH', @seed_admin_id, @seed_admin_id),
+    ('91000000-0000-0000-0000-000000000005', 'UOMD005', 'Liter',  'Volume in liter',  'VOLUME', @seed_admin_id, @seed_admin_id)
 ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO categories (id, code, name, description, status, created_by, updated_by)
