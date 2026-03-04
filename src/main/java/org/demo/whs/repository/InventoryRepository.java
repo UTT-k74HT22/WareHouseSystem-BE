@@ -25,7 +25,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, String> {
         SELECT i FROM Inventory i
         WHERE i.productId = :productId
           AND i.warehouseId = :warehouseId
-          AND i.locationId = :locationId
+          AND ((:locationId IS NULL AND i.locationId IS NULL) OR i.locationId = :locationId)
           AND ((:batchId IS NULL AND i.batchId IS NULL) OR i.batchId = :batchId)
         """)
     Optional<Inventory> findByDimensionForUpdate(
