@@ -509,4 +509,33 @@ Recommended additional task:
 
 ---
 
+## 17) WHS-70 Implementation Notes
+
+Implemented changes for `feature/WHS-70-inventory-schema-consistency`:
+
+1. New migration: `V20260404_01__Refactor_inventory_schema_consistency.sql`.
+2. `inventory` logical uniqueness now normalizes nullable dimensions (`location_id`, `batch_id`) before unique enforcement.
+3. `stock_adjustments` now enforces:
+   - non-negative quantities,
+   - arithmetic consistency (`adjustment_quantity = quantity_after - quantity_before`),
+   - non-zero delta,
+   - strict workflow metadata for pending/approved/rejected states.
+4. `stock_movements` and JPA entity mapping are aligned (including `warehouse_id`, nullable `location_id/reference` fields).
+5. `StockAdjustmentsServiceImpl` now fully implements:
+   - create (pending and auto-approved),
+   - approve/reject transition checks,
+   - atomic inventory + movement side effects.
+6. `StockTransfersServiceImpl` now fully implements:
+   - create/list/detail,
+   - complete/cancel transitions,
+   - atomic source/destination inventory updates with `TRANSFER_OUT` + `TRANSFER_IN` movements.
+7. Added integration tests for adjustment constraints and inventory optimistic lock behavior, plus unit tests for adjustment/transfer workflows.
+
+### Backward-Compatibility Notes
+
+1. `POST /api/v1/stock-adjustments` still accepts legacy fields (`product_id`, `warehouse_id`, `location_id`, `batch_id`, `quantity_before`) but now treats `inventory_id` as source-of-truth and derives snapshot values from inventory at runtime.
+2. `StockTransfersStatus` enum typo was fixed from `DAFT` to `DRAFT` to align with DB enum values. Any client-side use of `DAFT` must be updated.
+
+---
+
 **End of document**
