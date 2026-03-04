@@ -10,6 +10,7 @@ import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.CategoryMapper;
 import org.demo.whs.repository.CategoryRepository;
 import org.demo.whs.service.CategoryService;
@@ -62,6 +63,14 @@ public class CategoryServiceImpl implements CategoryService {
 
         List<CategoryResponse> responses = categoryMapper.toResponseList(categoryPage.getContent());
         return PageResponse.from(categoryPage, responses);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CategoryResponse getCategoryById(String id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Category not found", ErrorCode.CAT_001));
+        return categoryMapper.toResponse(category);
     }
 
     private void validatePageable(Pageable pageable) {

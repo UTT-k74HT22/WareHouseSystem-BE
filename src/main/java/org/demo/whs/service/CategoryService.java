@@ -14,4 +14,6 @@ public interface CategoryService {
     CategoryResponse createCategory(CreateCategoryRequest request);
 
     PageResponse<CategoryResponse> getCategories(CategoryStatus status, Pageable pageable);
+
+    CategoryResponse getCategoryById(String id);
 }

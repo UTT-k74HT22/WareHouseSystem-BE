@@ -6,6 +6,8 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.CategoryService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -136,6 +138,44 @@ class CategoryControllerTest {
                         .param("status", "INVALID"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @DisplayName("should_GetCategoryById_When_CategoryExists")
+    void should_GetCategoryById_When_CategoryExists() throws Exception {
+        CategoryResponse response = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("7c9e6679-7425-40de-944b-e07fc1f90ae7"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnNotFound_When_CategoryDoesNotExist")
+    void should_ReturnNotFound_When_CategoryDoesNotExist() throws Exception {
+        when(categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .thenThrow(new NotFoundException("Category not found", ErrorCode.CAT_001));
+
+        mockMvc.perform(get("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("CAT_001"))
+                .andExpect(jsonPath("$.message").value("Category not found"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnBadRequest_When_CategoryIdIsInvalid")
+    void should_ReturnBadRequest_When_CategoryIdIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/categories/{id}", "invalid-id"))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 
