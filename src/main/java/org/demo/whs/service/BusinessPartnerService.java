@@ -4,15 +4,14 @@ package org.demo.whs.service;
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
-
-import java.util.List;
+import org.demo.whs.entity.dto.response.PageResponse;
 
 public interface BusinessPartnerService {
 
     /**
      * Lấy danh sách đối tác
      */
-    List<BusinessPartnerResponse> getAll();
+    PageResponse<BusinessPartnerResponse> getAll(Integer page, Integer size, String sortBy, String sortDir);
 
     /**
      * Lấy chi tiết theo id

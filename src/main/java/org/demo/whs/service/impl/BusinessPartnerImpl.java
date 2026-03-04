@@ -6,14 +6,20 @@ import org.demo.whs.entity.BusinessPartners;
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BusinessPartnerStatus;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.BusinessPartnerMapper;
 import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.service.BusinessPartnerService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Implementation of the BusinessPartnerService interface.
@@ -29,6 +35,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BusinessPartnerImpl implements BusinessPartnerService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id", "code", "name", "type", "status", "createdAt", "updatedAt"
+    );
+
     private final BusinessPartnersRepository repository;
     private final BusinessPartnerMapper mapper;
 
@@ -36,14 +46,35 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Retrieve all business partners.
      */
     @Override
-    public List<BusinessPartnerResponse> getAll() {
-        log.info("[SERVICE][GET_ALL] Fetching all business partners");
+    @Transactional(readOnly = true)
+    public PageResponse<BusinessPartnerResponse> getAll(Integer page, Integer size, String sortBy, String sortDir) {
+        int targetPage = page == null ? 0 : page;
+        int targetSize = size == null ? 10 : size;
 
-        List<BusinessPartners> entities = repository.findAll();
+        if (targetPage < 0) {
+            throw new BadRequestException(ErrorCode.COM_006);
+        }
+        if (targetSize <= 0) {
+            throw new BadRequestException(ErrorCode.COM_007);
+        }
+        if (targetSize > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
+        }
 
-        log.info("[SERVICE][GET_ALL] Found {} business partners", entities.size());
+        String sortField = (sortBy == null || sortBy.isBlank()) ? "createdAt" : sortBy;
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
 
-        return mapper.toResponseList(entities);
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        PageRequest pageRequest = PageRequest.of(targetPage, targetSize, Sort.by(direction, sortField));
+
+        log.info("[SERVICE][GET_ALL] Fetching business partners page={}, size={}, sortField={}, direction={}",
+                targetPage, targetSize, sortField, direction);
+
+        Page<BusinessPartners> entityPage = repository.findAll(pageRequest);
+
+        return PageResponse.from(entityPage, mapper.toResponseList(entityPage.getContent()));
     }
 
     /**
