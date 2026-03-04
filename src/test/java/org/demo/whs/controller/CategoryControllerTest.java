@@ -2,9 +2,12 @@ package org.demo.whs.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.CategoryService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -21,8 +24,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,6 +97,85 @@ class CategoryControllerTest {
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @DisplayName("should_GetCategories_When_RequestIsValid")
+    void should_GetCategories_When_RequestIsValid() throws Exception {
+        CategoryResponse category = CategoryResponse.builder()
+                .id("cat-1")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        PageResponse<CategoryResponse> pageResponse = PageResponse.<CategoryResponse>builder()
+                .content(List.of(category))
+                .page(0)
+                .size(10)
+                .totalElements(1L)
+                .totalPages(1)
+                .isFirst(true)
+                .isLast(true)
+                .build();
+
+        when(categoryService.getCategories(any(), any())).thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/categories")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("status", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].id").value("cat-1"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnBadRequest_When_StatusFilterIsInvalid")
+    void should_ReturnBadRequest_When_StatusFilterIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/categories")
+                        .param("status", "INVALID"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @DisplayName("should_GetCategoryById_When_CategoryExists")
+    void should_GetCategoryById_When_CategoryExists() throws Exception {
+        CategoryResponse response = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("7c9e6679-7425-40de-944b-e07fc1f90ae7"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnNotFound_When_CategoryDoesNotExist")
+    void should_ReturnNotFound_When_CategoryDoesNotExist() throws Exception {
+        when(categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .thenThrow(new NotFoundException("Category not found", ErrorCode.CAT_001));
+
+        mockMvc.perform(get("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("CAT_001"))
+                .andExpect(jsonPath("$.message").value("Category not found"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnBadRequest_When_CategoryIdIsInvalid")
+    void should_ReturnBadRequest_When_CategoryIdIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/categories/{id}", "invalid-id"))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 

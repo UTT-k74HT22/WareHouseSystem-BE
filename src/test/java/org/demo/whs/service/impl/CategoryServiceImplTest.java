@@ -2,9 +2,12 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.CategoryMapper;
 import org.demo.whs.repository.CategoryRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -80,6 +91,82 @@ class CategoryServiceImplTest {
         assertThatThrownBy(() -> categoryService.createCategory(request))
                 .isInstanceOf(ConflictException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CAT_002");
+    }
+
+    @Test
+    @DisplayName("should_GetCategories_When_StatusFilterProvided")
+    void should_GetCategories_When_StatusFilterProvided() {
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        Category category = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        category.setId("cat-1");
+
+        Page<Category> page = new PageImpl<>(List.of(category), pageable, 1);
+        CategoryResponse mapped = CategoryResponse.builder()
+                .id("cat-1")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryRepository.findAllByStatus(CategoryStatus.ACTIVE, pageable)).thenReturn(page);
+        when(categoryMapper.toResponseList(page.getContent())).thenReturn(List.of(mapped));
+
+        PageResponse<CategoryResponse> actual = categoryService.getCategories(CategoryStatus.ACTIVE, pageable);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getContent()).hasSize(1);
+        assertThat(actual.getContent().get(0).getId()).isEqualTo("cat-1");
+        verify(categoryRepository).findAllByStatus(CategoryStatus.ACTIVE, pageable);
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_PageSizeExceedsLimit")
+    void should_ThrowBadRequest_When_PageSizeExceedsLimit() {
+        Pageable pageable = PageRequest.of(0, 101);
+
+        assertThatThrownBy(() -> categoryService.getCategories(null, pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    @DisplayName("should_GetCategoryById_When_CategoryExists")
+    void should_GetCategoryById_When_CategoryExists() {
+        Category category = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        category.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        CategoryResponse mapped = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(category));
+        when(categoryMapper.toResponse(category)).thenReturn(mapped);
+
+        CategoryResponse actual = categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getId()).isEqualTo("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+    }
+
+    @Test
+    @DisplayName("should_ThrowNotFoundException_When_CategoryDoesNotExist")
+    void should_ThrowNotFoundException_When_CategoryDoesNotExist() {
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .isInstanceOf(NotFoundException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
     }
 
     private CreateCategoryRequest buildCreateRequest(String code, String name, CategoryStatus status) {
