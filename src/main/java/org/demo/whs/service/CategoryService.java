@@ -1,7 +1,12 @@
 package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
+import org.demo.whs.entity.enums.CategoryStatus;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Service interface for category-related operations.
@@ -9,4 +14,12 @@ import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 public interface CategoryService {
 
     CategoryResponse createCategory(CreateCategoryRequest request);
+
+    PageResponse<CategoryResponse> getCategories(CategoryStatus status, Pageable pageable);
+
+    CategoryResponse getCategoryById(String id);
+
+    CategoryResponse updateCategory(String id, UpdateCategoryRequest request);
+
+    CategoryResponse updateCategoryStatus(String id, UpdateCategoryStatusRequest request);
 }
