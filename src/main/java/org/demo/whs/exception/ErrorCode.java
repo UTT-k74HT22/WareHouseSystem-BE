@@ -66,6 +66,10 @@ public enum ErrorCode {
     PROD_007("PROD_007", "Max stock level must be greater than or equal to min stock level"),
     PROD_008("PROD_008", "Reorder point must be between min and max stock levels"),
 
+    // Category errors
+    CAT_001("CAT_001", "Category not found"),
+    CAT_002("CAT_002", "Category code or name already exists"),
+
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Unit of Measure not found"),
     UOM_002("UOM_002", "Unit of Measure code already exists"),
@@ -97,6 +101,9 @@ public enum ErrorCode {
     COM_003("COM_003", "Bad request - malformed JSON or invalid data format"),
     COM_004("COM_004", "Resource not found"),
     COM_005("COM_005", "Duplicate entry - resource already exists"),
+    COM_006("COM_006", "Page index must not be less than zero"),
+    COM_007("COM_007", "Page size must be greater than zero"),
+    COM_008("COM_008", "Page size must not exceed 100"),
 
     BATCH_001("BATCH_001", "Batch not found"),
     BATCH_002("BATCH_002", "Batch number already exists"),
