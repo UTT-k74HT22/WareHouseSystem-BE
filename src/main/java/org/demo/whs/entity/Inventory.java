@@ -3,6 +3,7 @@ package org.demo.whs.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,12 +29,13 @@ public class Inventory extends BaseEntity {
     @Column(name = "batch_id", length = 36, columnDefinition = "char(36)")
     private String batchId;
 
-    @Column(name = "on_hand_quantity", nullable = false, precision = 19, scale = 6)
+    @Column(name = "on_hand_quantity", nullable = false, precision = 15, scale = 2)
     private BigDecimal onHandQuantity;
 
-    @Column(name = "reserved_quantity", nullable = false, precision = 19, scale = 6)
+    @Column(name = "reserved_quantity", nullable = false, precision = 15, scale = 2)
     private BigDecimal reservedQuantity;
 
+    @Version
     @Column(name = "version", nullable = false)
     private Integer version;
 
