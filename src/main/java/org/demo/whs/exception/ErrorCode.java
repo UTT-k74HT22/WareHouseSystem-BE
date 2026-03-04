@@ -16,7 +16,7 @@ public enum ErrorCode {
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
     AUTH_009("AUTH_009", "Account is not active"),
-    AUTH_010("AUTH_009", "Account is not found"),
+    AUTH_010("AUTH_010", "Account is not found"),
 
     // Password reset errors
     RESET_001("RESET_001", "Invalid or expired reset token"),
