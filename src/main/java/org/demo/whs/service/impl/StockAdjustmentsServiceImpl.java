@@ -281,6 +281,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
             throw new BadRequestException("Quantity after cannot be lower than reserved quantity", ErrorCode.STA_001);
         }
         inventory.setOnHandQuantity(quantityAfter);
+        inventory.setUpdatedBy(getCurrentActorId());
         inventory.setLastMovementAt(LocalDateTime.now());
     }
 
