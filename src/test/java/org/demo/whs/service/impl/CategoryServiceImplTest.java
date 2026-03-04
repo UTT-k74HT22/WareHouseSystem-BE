@@ -3,6 +3,7 @@ package org.demo.whs.service.impl;
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -257,6 +258,64 @@ class CategoryServiceImplTest {
         assertThatThrownBy(() -> categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    @DisplayName("should_UpdateCategoryStatus_When_RequestIsValid")
+    void should_UpdateCategoryStatus_When_RequestIsValid() {
+        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        try {
+            setField(request, "status", CategoryStatus.INACTIVE);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
+
+        Category existing = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        Category updated = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.INACTIVE)
+                .build();
+        updated.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        CategoryResponse mapped = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.INACTIVE)
+                .build();
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
+        when(categoryRepository.save(existing)).thenReturn(updated);
+        when(categoryMapper.toResponse(updated)).thenReturn(mapped);
+
+        CategoryResponse actual = categoryService.updateCategoryStatus("7c9e6679-7425-40de-944b-e07fc1f90ae7", request);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getStatus()).isEqualTo(CategoryStatus.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("should_ThrowNotFoundException_When_UpdatingStatusOfMissingCategory")
+    void should_ThrowNotFoundException_When_UpdatingStatusOfMissingCategory() {
+        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        try {
+            setField(request, "status", CategoryStatus.INACTIVE);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.updateCategoryStatus("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
+                .isInstanceOf(NotFoundException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
     }
 
     private CreateCategoryRequest buildCreateRequest(String code, String name, CategoryStatus status) {
