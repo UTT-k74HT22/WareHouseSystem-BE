@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.CategoryMapper;
 import org.demo.whs.repository.CategoryRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -129,6 +131,42 @@ class CategoryServiceImplTest {
         assertThatThrownBy(() -> categoryService.getCategories(null, pageable))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    @DisplayName("should_GetCategoryById_When_CategoryExists")
+    void should_GetCategoryById_When_CategoryExists() {
+        Category category = Category.builder()
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+        category.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        CategoryResponse mapped = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(category));
+        when(categoryMapper.toResponse(category)).thenReturn(mapped);
+
+        CategoryResponse actual = categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getId()).isEqualTo("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+    }
+
+    @Test
+    @DisplayName("should_ThrowNotFoundException_When_CategoryDoesNotExist")
+    void should_ThrowNotFoundException_When_CategoryDoesNotExist() {
+        when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .isInstanceOf(NotFoundException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
     }
 
     private CreateCategoryRequest buildCreateRequest(String code, String name, CategoryStatus status) {
