@@ -26,6 +26,17 @@ CREATE INDEX idx_inventory_dimension_lookup
 -- ================================
 -- stock_adjustments: tighten quantity and workflow constraints
 -- ================================
+-- Keep approver metadata stable for approved/rejected rows:
+-- ON DELETE SET NULL conflicts with status metadata CHECK in MySQL.
+ALTER TABLE stock_adjustments
+    DROP FOREIGN KEY fk_adjustment_approved_by;
+
+ALTER TABLE stock_adjustments
+    ADD CONSTRAINT fk_adjustment_approved_by
+        FOREIGN KEY (approved_by) REFERENCES accounts (id)
+            ON DELETE RESTRICT
+            ON UPDATE RESTRICT;
+
 ALTER TABLE stock_adjustments
     DROP CHECK chk_adjustment_calculation;
 
