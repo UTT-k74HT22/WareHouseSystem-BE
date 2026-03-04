@@ -2,6 +2,7 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -19,4 +20,6 @@ public interface CategoryService {
     CategoryResponse getCategoryById(String id);
 
     CategoryResponse updateCategory(String id, UpdateCategoryRequest request);
+
+    CategoryResponse updateCategoryStatus(String id, UpdateCategoryStatusRequest request);
 }

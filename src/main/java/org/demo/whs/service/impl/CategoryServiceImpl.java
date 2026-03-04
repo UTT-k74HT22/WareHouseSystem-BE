@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -96,6 +97,17 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         categoryMapper.updateEntity(category, request);
+        Category updatedCategory = categoryRepository.save(category);
+        return categoryMapper.toResponse(updatedCategory);
+    }
+
+    @Override
+    @Transactional
+    public CategoryResponse updateCategoryStatus(String id, UpdateCategoryStatusRequest request) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Category not found", ErrorCode.CAT_001));
+
+        category.setStatus(request.getStatus());
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(updatedCategory);
     }

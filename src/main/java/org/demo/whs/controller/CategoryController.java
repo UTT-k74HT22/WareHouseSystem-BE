@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -78,6 +80,17 @@ public class CategoryController {
             @RequestBody @Valid UpdateCategoryRequest request
     ) {
         CategoryResponse response = categoryService.updateCategory(id, request);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<CategoryResponse>> updateCategoryStatus(
+            @PathVariable
+            @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id,
+            @RequestBody @Valid UpdateCategoryStatusRequest request
+    ) {
+        CategoryResponse response = categoryService.updateCategoryStatus(id, request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

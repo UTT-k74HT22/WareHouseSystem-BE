@@ -3,6 +3,7 @@ package org.demo.whs.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -31,6 +32,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -233,6 +235,45 @@ class CategoryControllerTest {
                 """;
 
         mockMvc.perform(put("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @DisplayName("should_UpdateCategoryStatus_When_RequestIsValid")
+    void should_UpdateCategoryStatus_When_RequestIsValid() throws Exception {
+        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        setField(request, "status", CategoryStatus.INACTIVE);
+
+        CategoryResponse response = CategoryResponse.builder()
+                .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .code("ELEC")
+                .name("Electronics")
+                .status(CategoryStatus.INACTIVE)
+                .build();
+
+        when(categoryService.updateCategoryStatus(any(), any(UpdateCategoryStatusRequest.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/api/v1/categories/{id}/status", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+    }
+
+    @Test
+    @DisplayName("should_ReturnBadRequest_When_StatusPayloadIsInvalid")
+    void should_ReturnBadRequest_When_StatusPayloadIsInvalid() throws Exception {
+        String invalidPayload = """
+                {
+                  "status": null
+                }
+                """;
+
+        mockMvc.perform(patch("/api/v1/categories/{id}/status", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())
