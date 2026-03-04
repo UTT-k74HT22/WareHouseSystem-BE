@@ -28,7 +28,7 @@ public class StockAdjustments extends BaseEntity {
     @Column(name = "warehouse_id", nullable = false, length = 36, columnDefinition = "char(36)")
     private String warehouseId;
 
-    @Column(name = "location_id", nullable = false, length = 36, columnDefinition = "char(36)")
+    @Column(name = "location_id", length = 36, columnDefinition = "char(36)")
     private String locationId;
 
     @Column(name = "batch_id", length = 36, columnDefinition = "char(36)")
@@ -39,6 +39,9 @@ public class StockAdjustments extends BaseEntity {
 
     @Column(name = "quantity_after", nullable = false, precision = 15, scale = 5)
     private BigDecimal quantityAfter;
+
+    @Column(name = "adjustment_quantity", nullable = false, precision = 15, scale = 5)
+    private BigDecimal adjustmentQuantity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reason", nullable = false, length = 20)

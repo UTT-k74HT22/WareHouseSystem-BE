@@ -1,7 +1,7 @@
 package org.demo.whs.entity.enums;
 
 public enum ReasonType {
-    DAMAGED,
+    DAMAGE,
     THEFT,
     COUNT_ERROR,
     EXPIRED,
