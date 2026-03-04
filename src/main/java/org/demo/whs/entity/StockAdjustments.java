@@ -13,8 +13,13 @@ import java.time.LocalDateTime;
 @Check(constraints = "quantity_before >= 0 AND quantity_after >= 0 " +
         "AND adjustment_quantity = quantity_after - quantity_before " +
         "AND adjustment_quantity <> 0 " +
-        "AND ((status <> 'APPROVED') OR (approved_by IS NOT NULL AND approved_at IS NOT NULL)) " +
-        "AND ((status <> 'REJECTED') OR (rejection_reason IS NOT NULL))")
+        "AND ((" +
+        "status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL AND rejection_reason IS NULL" +
+        ") OR (" +
+        "status = 'APPROVED' AND approved_by IS NOT NULL AND approved_at IS NOT NULL AND rejection_reason IS NULL" +
+        ") OR (" +
+        "status = 'REJECTED' AND approved_by IS NOT NULL AND approved_at IS NOT NULL AND rejection_reason IS NOT NULL" +
+        "))")
 @Getter
 @Setter
 @Builder
