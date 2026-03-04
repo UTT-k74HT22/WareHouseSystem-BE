@@ -122,19 +122,47 @@ public class StorageController {
     // =========================================================================
 
     /**
-     * Delete a stored object.  Requires ADMIN or MANAGER role.
+     * Delete a stored object by query param.
+     * Recommended for object names that contain nested path segments.
      *
-     * @param objectName URL-encoded full object path
+     * Example:
+     * DELETE /api/v1/storage?objectName=products/2026/03/file.png
+     *
+     * @param objectName full object path
      */
     @Operation(summary = "Delete a file from MinIO storage")
-    @DeleteMapping("/{objectName}")
+    @DeleteMapping(params = "objectName")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<BaseResponse<Void>> deleteFile(
-            @PathVariable String objectName) {
+            @NotBlank(message = "objectName must not be blank")
+            @RequestParam("objectName") String objectName) {
 
-        log.info("DELETE /api/v1/storage/{}", objectName);
+        log.info("DELETE /api/v1/storage?objectName={}", objectName);
 
         storageService.deleteFile(objectName);
+        return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
+    }
+
+    /**
+     * Backward-compatible delete endpoint using path segment wildcard.
+     *
+     * Example:
+     * DELETE /api/v1/storage/products/2026/03/file.png
+     *
+     * @param objectName full object path captured from wildcard path variable
+     */
+    @DeleteMapping("/{*objectName}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<BaseResponse<Void>> deleteFileLegacyPath(
+            @PathVariable String objectName) {
+
+        String normalizedObjectName = objectName.startsWith("/")
+                ? objectName.substring(1)
+                : objectName;
+
+        log.info("DELETE /api/v1/storage/{}", normalizedObjectName);
+
+        storageService.deleteFile(normalizedObjectName);
         return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
     }
 
