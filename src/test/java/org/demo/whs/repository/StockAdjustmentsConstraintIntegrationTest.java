@@ -63,6 +63,37 @@ class StockAdjustmentsConstraintIntegrationTest {
         assertThat(saved.getId()).isNotBlank();
     }
 
+    @Test
+    void should_RejectAdjustment_When_RejectedWithoutRejectionReason() {
+        StockAdjustments adjustment = baseAdjustment();
+        adjustment.setStatus(StockAdjustmentsStatus.REJECTED);
+        adjustment.setQuantityBefore(new BigDecimal("100.00"));
+        adjustment.setQuantityAfter(new BigDecimal("90.00"));
+        adjustment.setAdjustmentQuantity(new BigDecimal("-10.00"));
+        adjustment.setApprovedBy("acc-1");
+        adjustment.setApprovedAt(LocalDateTime.now());
+        adjustment.setRejectionReason(null);
+
+        assertThatThrownBy(() -> stockAdjustmentsRepository.saveAndFlush(adjustment))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void should_SaveAdjustment_When_RejectedWithApprovalMetadataAndReason() {
+        StockAdjustments adjustment = baseAdjustment();
+        adjustment.setStatus(StockAdjustmentsStatus.REJECTED);
+        adjustment.setQuantityBefore(new BigDecimal("100.00"));
+        adjustment.setQuantityAfter(new BigDecimal("90.00"));
+        adjustment.setAdjustmentQuantity(new BigDecimal("-10.00"));
+        adjustment.setApprovedBy("acc-1");
+        adjustment.setApprovedAt(LocalDateTime.now());
+        adjustment.setRejectionReason("Count mismatch");
+
+        StockAdjustments saved = stockAdjustmentsRepository.saveAndFlush(adjustment);
+
+        assertThat(saved.getId()).isNotBlank();
+    }
+
     private StockAdjustments baseAdjustment() {
         return StockAdjustments.builder()
                 .adjustmentNumber("ADJ-TEST-" + UUID.randomUUID())

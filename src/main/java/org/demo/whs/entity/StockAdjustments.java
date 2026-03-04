@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
         "AND adjustment_quantity = quantity_after - quantity_before " +
         "AND adjustment_quantity <> 0 " +
         "AND ((" +
-        "status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL AND rejection_reason IS NULL" +
+        "status = 'PENDING_APPROVAL' AND approved_by IS NULL AND approved_at IS NULL AND rejection_reason IS NULL" +
         ") OR (" +
         "status = 'APPROVED' AND approved_by IS NOT NULL AND approved_at IS NOT NULL AND rejection_reason IS NULL" +
         ") OR (" +
