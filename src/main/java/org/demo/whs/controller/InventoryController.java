@@ -2,13 +2,16 @@ package org.demo.whs.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -145,6 +148,21 @@ public class InventoryController {
                 .build();
                 
         List<InventoryByLocationResponse> response = inventoryService.getInventoryByLocation(filter);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Check inventory availability for a product.
+     *
+     * @param request The check availability request
+     * @return Availability result
+     */
+    @Operation(summary = "Check inventory availability", description = "Checks if requested quantity is available for a product, optionally filtered by warehouse/location")
+    @PostMapping("/check-availability")
+    public ResponseEntity<BaseResponse<CheckAvailabilityResponse>> checkAvailability(
+            @RequestBody @Valid CheckAvailabilityRequest request) {
+        log.info("Received request to check inventory availability: {}", request);
+        CheckAvailabilityResponse response = inventoryService.checkAvailability(request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

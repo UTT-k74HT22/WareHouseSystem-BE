@@ -1,5 +1,8 @@
 package org.demo.whs.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -22,6 +25,7 @@ import java.util.List;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
@@ -30,6 +34,9 @@ class InventoryControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private InventoryService inventoryService;
@@ -40,6 +47,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 200 when request is valid")
     void shouldReturn200WhenValidRequest() throws Exception {
+// ... existing tests ...
 
         PageResponse<InventoryResponse> mockPage =
                 PageResponse.<InventoryResponse>builder()
@@ -194,5 +202,52 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.data[0].location_code").value("LOC-001"))
                 .andExpect(jsonPath("$.data[0].items[0].product_sku").value("SKU-001"))
                 .andExpect(jsonPath("$.data[0].items[0].on_hand_quantity").value(100.00));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when checking availability is successful")
+    void shouldReturn200WhenCheckAvailabilityIsSuccessful() throws Exception {
+        CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
+                .productId("prod-1")
+                .quantity(new BigDecimal("10.00"))
+                .build();
+
+        CheckAvailabilityResponse mockResponse = CheckAvailabilityResponse.builder()
+                .productId("prod-1")
+                .requestedQuantity(new BigDecimal("10.00"))
+                .availableQuantity(new BigDecimal("100.00"))
+                .isAvailable(true)
+                .build();
+
+        when(inventoryService.checkAvailability(ArgumentMatchers.any(CheckAvailabilityRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/check-availability")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.product_id").value("prod-1"))
+                .andExpect(jsonPath("$.data.available").value(true))
+                .andExpect(jsonPath("$.data.available_quantity").value(100.00))
+                .andExpect(jsonPath("$.data.message").value("Đủ hàng"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when check availability request is invalid")
+    void shouldReturn400WhenCheckAvailabilityRequestIsInvalid() throws Exception {
+        CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
+                // productId is missing
+                .quantity(new BigDecimal("-1.00")) // negative quantity
+                .build();
+
+        mockMvc.perform(post("/api/v1/inventories/check-availability")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 }

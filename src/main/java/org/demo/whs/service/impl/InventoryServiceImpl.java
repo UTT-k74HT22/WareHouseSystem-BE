@@ -3,7 +3,9 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -13,6 +15,7 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.repository.*;
+import org.demo.whs.repository.projection.InventoryAvailabilityProjection;
 import org.demo.whs.repository.projection.InventorySummaryProjection;
 import org.demo.whs.repository.specification.InventorySpecification;
 import org.demo.whs.service.InventoryService;
@@ -21,10 +24,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.demo.whs.exception.ErrorCode.PROD_001;
+import static org.demo.whs.exception.ErrorCode.WH_001;
+import static org.demo.whs.exception.ErrorCode.LOC_001;
 
 @Service
 @RequiredArgsConstructor
@@ -164,6 +170,42 @@ public class InventoryServiceImpl implements InventoryService {
                         batchMap
                 ))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckAvailabilityResponse checkAvailability(CheckAvailabilityRequest request) {
+        log.info("Checking inventory availability for request: {}", request);
+
+        // 1. Validate Product existence
+        if (!productRepository.existsById(request.getProductId())) {
+            throw new NotFoundException(PROD_001);
+        }
+
+        // 2. Validate Warehouse existence if provided
+        if (request.getWarehouseId() != null && !wareHouseRepository.existsById(request.getWarehouseId())) {
+            throw new NotFoundException(WH_001);
+        }
+
+        // 3. Validate Location existence if provided
+        if (request.getLocationId() != null && !locationRepository.existsById(request.getLocationId())) {
+            throw new NotFoundException(LOC_001);
+        }
+
+        // 4. Get availability from repository
+        InventoryAvailabilityProjection availability = inventoryRepository.getAvailability(
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getLocationId()
+        );
+
+        BigDecimal onHand = Optional.ofNullable(availability.getTotalOnHandQuantity()).orElse(BigDecimal.ZERO);
+        BigDecimal reserved = Optional.ofNullable(availability.getTotalReservedQuantity()).orElse(BigDecimal.ZERO);
+        BigDecimal available = onHand.subtract(reserved);
+
+        boolean isAvailable = available.compareTo(request.getQuantity()) >= 0;
+
+        return inventoryMapper.toCheckAvailabilityResponse(request,available,isAvailable);
     }
 
     private void validatePageable(Pageable pageable) {

@@ -2,6 +2,8 @@ package org.demo.whs.mapper;
 
 import lombok.RequiredArgsConstructor;
 import org.demo.whs.entity.*;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -137,6 +139,27 @@ public class InventoryMapper {
                 .warehouseId(warehouseId)
                 .warehouseName(wh != null ? wh.getName() : "Unknown")
                 .items(items)
+                .build();
+    }
+    public CheckAvailabilityResponse toCheckAvailabilityResponse(
+            CheckAvailabilityRequest request,
+            BigDecimal available,
+            boolean isAvailable) {
+
+        if (request == null) {
+            return null;
+        }
+
+        String message = isAvailable ? "Stock available" : "Stock not available";
+
+        return CheckAvailabilityResponse.builder()
+                .productId(request.getProductId())
+                .warehouseId(request.getWarehouseId())
+                .locationId(request.getLocationId())
+                .requestedQuantity(request.getQuantity())
+                .availableQuantity(available)
+                .isAvailable(isAvailable)
+                .message(message)
                 .build();
     }
 }
