@@ -1,5 +1,7 @@
 package org.demo.whs.entity.dto.response;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -10,6 +12,7 @@ import java.time.Instant;
  */
 @Getter
 @Builder
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class FileUploadResponse {
 
     /** Object name (path) inside the bucket, e.g. "products/2026/image.png" */

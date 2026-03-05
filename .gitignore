@@ -34,3 +34,6 @@ application-local.yml
 
 .gemini/
 gha-creds-*.json
+
+.codex/
+.mvn/
