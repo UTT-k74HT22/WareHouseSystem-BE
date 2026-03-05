@@ -7,11 +7,15 @@ import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.enums.BusinessPartnerStatus;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.BusinessPartnerMapper;
 import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.service.BusinessPartnerService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -36,6 +40,7 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Retrieve all business partners.
      */
     @Override
+    @Transactional(readOnly = true)
     public List<BusinessPartnerResponse> getAll() {
         log.info("[SERVICE][GET_ALL] Fetching all business partners");
 
@@ -50,13 +55,14 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Retrieve a business partner by its identifier.
      */
     @Override
+    @Transactional(readOnly = true)
     public BusinessPartnerResponse getById(String id) {
         log.info("[SERVICE][GET_BY_ID] Start, id={}", id);
 
         BusinessPartners entity = repository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("[SERVICE][GET_BY_ID] Not found, id={}", id);
-                    return new RuntimeException(ErrorCode.BP_001.getCode());
+                    return new NotFoundException(ErrorCode.BP_001);
                 });
 
 //        if (entity.getStatus() == BusinessPartnerStatus.INACTIVE) {
@@ -74,12 +80,13 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Create a new business partner.
      */
     @Override
+    @Transactional
     public BusinessPartnerResponse create(BusinessPartnerRequest request) {
         log.info("[SERVICE][CREATE] Start, code={}", request.getCode());
 
         if (repository.existsByCode(request.getCode())) {
             log.warn("[SERVICE][CREATE] Code already exists, code={}", request.getCode());
-            throw new RuntimeException(ErrorCode.BP_002.getCode());
+            throw new ConflictException(ErrorCode.BP_002);
         }
 
         BusinessPartners entity = mapper.toEntity(request);
@@ -95,13 +102,14 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Update an existing business partner.
      */
     @Override
+    @Transactional
     public BusinessPartnerResponse update(String id, UpdateBusinessPartnerRequest request) {
         log.info("[SERVICE][UPDATE] Start, id={}", id);
 
         BusinessPartners entity = repository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("[SERVICE][UPDATE] Not found, id={}", id);
-                    return new RuntimeException(ErrorCode.BP_001.getCode());
+                    return new NotFoundException(ErrorCode.BP_001);
                 });
 
         mapper.updateEntity(entity, request);
@@ -117,13 +125,14 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Soft delete a business partner.
      */
     @Override
+    @Transactional
     public void delete(String id) {
         log.info("[SERVICE][DELETE] Start, id={}", id);
 
         BusinessPartners entity = repository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("[SERVICE][DELETE] Not found, id={}", id);
-                    return new RuntimeException(ErrorCode.BP_001.getCode());
+                    return new NotFoundException(ErrorCode.BP_001);
                 });
 
         entity.setStatus(BusinessPartnerStatus.INACTIVE);
@@ -137,22 +146,23 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      * Change the status of a business partner.
      */
     @Override
+    @Transactional
     public BusinessPartnerResponse changeStatus(String id, String status) {
         log.info("[SERVICE][CHANGE_STATUS] Start, id={}, status={}", id, status);
 
         BusinessPartners entity = repository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("[SERVICE][CHANGE_STATUS] Not found, id={}", id);
-                    return new RuntimeException(ErrorCode.BP_001.getCode());
+                    return new NotFoundException(ErrorCode.BP_001);
                 });
 
         try {
             entity.setStatus(
                     BusinessPartnerStatus.valueOf(status.toUpperCase())
             );
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | NullPointerException ex) {
             log.warn("[SERVICE][CHANGE_STATUS] Invalid status={}, id={}", status, id);
-            throw new RuntimeException(ErrorCode.BP_003.getCode());
+            throw new BadRequestException(ErrorCode.BP_003);
         }
 
         repository.save(entity);
