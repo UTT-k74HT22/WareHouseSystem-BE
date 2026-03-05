@@ -50,23 +50,42 @@ public class BatchServiceImpl implements BatchService {
 
     @Override
     @Transactional
-    public BatchResponse updateBatch (String id, UpdateBatchRequest request) {
-        log.info("Update batches: id= {}", id);
+    public BatchResponse updateBatch(String id, UpdateBatchRequest request) {
+
+        log.info("Updating batch with id={}", id);
 
         Batch batch = batchRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.BATCH_001));
+                .orElseThrow(() -> new NotFoundException("",ErrorCode.BATCH_001));
 
-        if (request.getBatchNumber() != null &&
-                !request.getBatchNumber().equals(batch.getBatchNumber())) {
+        validateBatchNumber(request.getBatchNumber(), batch);
 
-            Batch existing = batchRepository
-                    .findByBatchNumber(request.getBatchNumber())
-                    .orElse(null);
+        updateBatchFields(batch, request);
 
-            if (existing != null && !existing.getId().equals(id)) {
-                throw new BadRequestException(ErrorCode.BATCH_001);
-            }
+        Batch updated = batchRepository.save(batch);
+
+        log.info("Batch updated successfully with id={}", id);
+
+        return batchMapper.toResponse(updated);
+    }
+
+    private void validateBatchNumber(String newBatchNumber, Batch currentBatch) {
+
+        if (newBatchNumber == null ||
+                newBatchNumber.equals(currentBatch.getBatchNumber())) {
+            return;
         }
+
+        Batch existing = batchRepository
+                .findByBatchNumber(newBatchNumber)
+                .orElse(null);
+
+        if (existing != null && !existing.getId().equals(currentBatch.getId())) {
+            log.warn("Batch number {} already exists", newBatchNumber);
+            throw new BadRequestException(ErrorCode.BATCH_001);
+        }
+    }
+
+    private void updateBatchFields(Batch batch, UpdateBatchRequest request) {
 
         if (request.getBatchNumber() != null)
             batch.setBatchNumber(request.getBatchNumber());
@@ -82,8 +101,5 @@ public class BatchServiceImpl implements BatchService {
 
         if (request.getNotes() != null)
             batch.setNotes(request.getNotes());
-
-        Batch updateBatch = batchRepository.save(batch);
-        return batchMapper.toResponse(updateBatch);
     }
 }

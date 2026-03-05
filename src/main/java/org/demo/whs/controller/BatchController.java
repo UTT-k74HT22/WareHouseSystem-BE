@@ -33,13 +33,20 @@ public class BatchController {
                 .body(BaseResponse.success(response, "Batch created successfully"));
     }
 
+
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<BatchResponse>> updateBatch(
-            @PathVariable @Valid String id,
-            @RequestBody @Valid UpdateBatchRequest request
-    ) {
+            @PathVariable String id,
+            @RequestBody @Valid UpdateBatchRequest request) {
+
+        log.info("Received update request for batch id={}, payload={}", id, request);
+
         BatchResponse response = batchService.updateBatch(id, request);
 
-        return ResponseEntity.ok(BaseResponse.success(response, "Batch updated successfully"));
+        log.info("Update completed for batch id={}", id);
+
+        return ResponseEntity.ok(
+                BaseResponse.success(response, "Batch updated successfully")
+        );
     }
 }
