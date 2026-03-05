@@ -38,7 +38,6 @@ public interface InventoryRepository extends
         GROUP BY p.id, p.sku, p.name
         """)
     Optional<InventorySummaryProjection> getSummaryByProductId(@Param("productId") String productId);
-public interface InventoryRepository extends JpaRepository<Inventory, String>, JpaSpecificationExecutor<Inventory> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Inventory i WHERE i.id = :id")
