@@ -8,6 +8,7 @@ import org.demo.whs.entity.enums.UnitsOfMeasureType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
+import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,6 +42,9 @@ class UnitsOfMeasureImplTest {
 
     @Mock
     private UnitsOfMeasureMapper unitsOfMeasureMapper;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private UnitsOfMeasureImpl unitsOfMeasureService;
@@ -414,6 +418,7 @@ class UnitsOfMeasureImplTest {
                     .build();
 
             when(unitsOfMeasureRepository.findById(id)).thenReturn(Optional.of(entity));
+            when(productRepository.countByUomId(id)).thenReturn(0L);
             doNothing().when(unitsOfMeasureRepository).delete(entity);
 
             // When
@@ -421,7 +426,33 @@ class UnitsOfMeasureImplTest {
 
             // Then
             verify(unitsOfMeasureRepository).findById(id);
+            verify(productRepository).countByUomId(id);
             verify(unitsOfMeasureRepository).delete(entity);
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when unit of measure is referenced by products")
+        void delete_InUseByProducts() {
+            // Given
+            String id = "uom-001";
+            UnitsOfMeasure entity = UnitsOfMeasure.builder()
+                    .id(id)
+                    .code("KG")
+                    .name("Kilogram")
+                    .type(UnitsOfMeasureType.WEIGHT)
+                    .build();
+
+            when(unitsOfMeasureRepository.findById(id)).thenReturn(Optional.of(entity));
+            when(productRepository.countByUomId(id)).thenReturn(2L);
+
+            // When & Then
+            assertThatThrownBy(() -> unitsOfMeasureService.delete(id))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_004.getCode());
+
+            verify(unitsOfMeasureRepository).findById(id);
+            verify(productRepository).countByUomId(id);
+            verify(unitsOfMeasureRepository, never()).delete(any());
         }
 
         @Test
