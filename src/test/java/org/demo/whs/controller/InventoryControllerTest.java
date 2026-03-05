@@ -1,5 +1,6 @@
 package org.demo.whs.controller;
 
+import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -158,5 +159,40 @@ class InventoryControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 and inventory by location when requested")
+    void shouldReturn200AndInventoryByLocation() throws Exception {
+        InventoryByLocationResponse mockResponse = InventoryByLocationResponse.builder()
+                .locationId("loc-1")
+                .locationCode("LOC-001")
+                .locationName("Location 001")
+                .warehouseId("wh-1")
+                .warehouseName("Warehouse 001")
+                .items(List.of(
+                        InventoryByLocationResponse.LocationInventoryItem.builder()
+                                .productId("prod-1")
+                                .productSku("SKU-001")
+                                .productName("Product 001")
+                                .onHandQuantity(new BigDecimal("100.00"))
+                                .reservedQuantity(BigDecimal.ZERO)
+                                .availableQuantity(new BigDecimal("100.00"))
+                                .build()
+                ))
+                .build();
+
+        when(inventoryService.getInventoryByLocation(ArgumentMatchers.any())).thenReturn(List.of(mockResponse));
+
+        mockMvc.perform(get("/api/v1/inventories/by-location")
+                        .param("warehouseId", "wh-1")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].location_id").value("loc-1"))
+                .andExpect(jsonPath("$.data[0].location_code").value("LOC-001"))
+                .andExpect(jsonPath("$.data[0].items[0].product_sku").value("SKU-001"))
+                .andExpect(jsonPath("$.data[0].items[0].on_hand_quantity").value(100.00));
     }
 }

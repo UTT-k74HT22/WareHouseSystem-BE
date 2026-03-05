@@ -28,7 +28,6 @@ public class InventoryResponse {
     private BigDecimal onHandQuantity;
     private BigDecimal reservedQuantity;
     private BigDecimal availableQuantity;
-    private Integer version;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastMovementAt;
