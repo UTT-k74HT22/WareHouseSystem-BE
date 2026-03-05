@@ -1,6 +1,7 @@
 package org.demo.whs.controller;
 
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.RateLimitService;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -116,5 +118,45 @@ class InventoryControllerTest {
                         .param("size", "101"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("COM_008"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 and inventory summary when productId is valid")
+    void shouldReturn200AndSummaryWhenProductIdIsValid() throws Exception {
+        String productId = "550e8400-e29b-41d4-a716-446655440000";
+        InventorySummaryResponse mockResponse = InventorySummaryResponse.builder()
+                .productId(productId)
+                .productSku("SKU001")
+                .productName("Product 001")
+                .totalOnHandQuantity(new BigDecimal("100.00"))
+                .totalReservedQuantity(new BigDecimal("20.00"))
+                .totalAvailableQuantity(new BigDecimal("80.00"))
+                .warehouseCount(2L)
+                .locationCount(5L)
+                .build();
+
+        when(inventoryService.getSummaryByProduct(productId)).thenReturn(mockResponse);
+
+        mockMvc.perform(get("/api/v1/inventories/summary/{productId}", productId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.product_id").value(productId))
+                .andExpect(jsonPath("$.data.total_on_hand_quantity").value(100.00))
+                .andExpect(jsonPath("$.data.warehouse_count").value(2));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when productId format is invalid")
+    void shouldReturn400WhenProductIdIsInvalid() throws Exception {
+        String invalidProductId = "invalid-uuid";
+
+        mockMvc.perform(get("/api/v1/inventories/summary/{productId}", invalidProductId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 }
