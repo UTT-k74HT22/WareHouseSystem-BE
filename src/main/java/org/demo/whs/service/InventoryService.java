@@ -2,6 +2,7 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -16,4 +17,12 @@ public interface InventoryService {
      * @return PageResponse<InventoryResponse>
      */
     PageResponse<InventoryResponse> getInventories(InventoryFilterRequest filter, Pageable pageable);
+
+    /**
+     * Get inventory summary for a specific product.
+     *
+     * @param productId The product ID
+     * @return Inventory summary
+     */
+    InventorySummaryResponse getSummaryByProduct(String productId);
 }

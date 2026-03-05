@@ -2,11 +2,13 @@ package org.demo.whs.controller;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.InventoryService;
 import org.springframework.data.domain.PageRequest;
@@ -14,10 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -88,6 +87,20 @@ public class InventoryController {
         PageResponse<InventoryResponse> response =
                 inventoryService.getInventories(filter, pageable);
 
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Get inventory summary for a specific product.
+     *
+     * @param productId The product ID (must be a valid UUID)
+     * @return Inventory summary
+     */
+    @GetMapping("/summary/{productId}")
+    public ResponseEntity<BaseResponse<InventorySummaryResponse>> getInventorySummary(
+            @PathVariable @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$") String productId) {
+        log.info("Received request to get inventory summary for product ID: {}", productId);
+        InventorySummaryResponse response = inventoryService.getSummaryByProduct(productId);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 }
