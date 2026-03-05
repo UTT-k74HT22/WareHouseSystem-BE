@@ -42,8 +42,10 @@ public enum ErrorCode {
     WH_004("WHS_004", "Warehouse code already exists"),
     INV_001("INV_001", "Inventory not found"),
     INV_004("INV_004", "Insufficient available stock"),
+
     STA_001("STA_001", "Invalid stock adjustment request"),
     STA_002("STA_002", "Invalid stock adjustment status transition"),
+    STA_003("STA_003", "Rejection reason is required"),
     STA_404("STA_404", "Stock adjustment not found"),
     STF_001("STF_001", "Stock transfer not found"),
     STF_002("STF_002", "Invalid stock transfer status transition"),
@@ -111,6 +113,8 @@ public enum ErrorCode {
     BATCH_003("BATCH_003", "Invalid batch status"),
     BATCH_004("BATCH_004", "Batch already expired"),
     BATCH_005("BATCH_005", "Manufacturing date is invalid"),
+
+
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
 

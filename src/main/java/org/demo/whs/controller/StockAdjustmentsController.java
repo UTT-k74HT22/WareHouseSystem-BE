@@ -38,7 +38,6 @@ public class StockAdjustmentsController {
      * @return a response entity containing the created stock adjustment response
      */
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> createStockAdjustment(
             @RequestBody @Valid StockAdjustmentsRequest request) {
         log.info("Attempting to create stock adjustment with details: {}", request);

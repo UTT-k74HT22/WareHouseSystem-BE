@@ -2,42 +2,35 @@ package org.demo.whs.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.Account;
-import org.demo.whs.entity.Inventory;
-import org.demo.whs.entity.StockAdjustments;
-import org.demo.whs.entity.StockMovements;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.StockAdjustments.ApproveStockAdjustmentRequest;
 import org.demo.whs.entity.dto.request.StockAdjustments.RejectStockAdjustmentRequest;
 import org.demo.whs.entity.dto.request.StockAdjustments.SearchStockAdjustmentsRequest;
 import org.demo.whs.entity.dto.request.StockAdjustments.StockAdjustmentsRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockAdjustments.StockAdjustmentsResponse;
-import org.demo.whs.entity.enums.ReferenceType;
-import org.demo.whs.entity.enums.StockAdjustmentsStatus;
-import org.demo.whs.entity.enums.StockMovementsType;
+import org.demo.whs.entity.enums.*;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.StockAdjustmentsMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
-import org.demo.whs.repository.AccountRepository;
-import org.demo.whs.repository.InventoryRepository;
-import org.demo.whs.repository.StockAdjustmentsRepository;
-import org.demo.whs.repository.StockMovementsRepository;
+import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockAdjustmentsService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+import static java.math.BigDecimal.*;
 
 @Service
 @Slf4j
@@ -50,6 +43,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     private final AccountRepository accountRepository;
     private final StockAdjustmentsMapper stockAdjustmentsMapper;
     private final StockMovementsMapper stockMovementsMapper;
+    private final RoleRepository roleRepository;
 
     /**
      * Creates a new stock adjustment request.
@@ -62,35 +56,58 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     public StockAdjustmentsResponse createAdjustment(StockAdjustmentsRequest request) {
         log.info("Attempting to create stock adjustment with details: {}", request);
 
-        //Step 1: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
+        //Step 1: Check current user (ROLE_NAME)
+        String actorId = getCurrentActorId();
+        List<String> roles = roleRepository.findRoleNamesByAccountId(actorId);
+
+        //Step 2: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
         Inventory inventory = getInventoryForUpdate(request.getInventoryId());
         BigDecimal quantityBefore = inventory.getOnHandQuantity();
         BigDecimal quantityAfter = request.getQuantityAfter();
         BigDecimal adjustmentQuantity = quantityAfter.subtract(quantityBefore);
 
-        //Step 2: Validate the adjustment request against current inventory state to prevent invalid adjustments
+        //Step 3: Validate quantity after check
         validateAdjustmentRequest(inventory, quantityAfter, adjustmentQuantity);
 
-        //Step 3: Determine if approval is required and set the target status accordingly
-        String actorId = getCurrentActorId();
-        boolean requiresApproval = Boolean.TRUE.equals(request.getRequiresApproval());
-        StockAdjustmentsStatus targetStatus = requiresApproval
-                ? StockAdjustmentsStatus.PENDING_APPROVAL
-                : StockAdjustmentsStatus.APPROVED;
+        //Step 4: Check requiresApproval and set status
+        boolean requiresApproval = requiresApproval(roles, request.getReason(), adjustmentQuantity);
+        StockAdjustmentsStatus status = requiresApproval ? StockAdjustmentsStatus.PENDING_APPROVAL : StockAdjustmentsStatus.APPROVED;
 
-        //Step 4: Create and save the stock adjustment record in the database
-        StockAdjustments adjustment = stockAdjustmentsMapper.toEntity(
+        //Step 5: Create and save stock adjustment record
+        LocalDateTime now = LocalDateTime.now();
+        StockAdjustments stockAdjustments = stockAdjustmentsMapper.toEntity(
                 request,
                 inventory,
                 generateAdjustmentNumber(),
                 actorId,
                 requiresApproval,
-                targetStatus
+                status
         );
-        StockAdjustments savedAdjustment = stockAdjustmentsRepository.save(adjustment);
 
+        // IMPORTANT: satisfy chk_adjustment_status_metadata (DB strict)
+        if (status == StockAdjustmentsStatus.APPROVED) {
+            stockAdjustments.setApprovedBy(actorId);
+            stockAdjustments.setApprovedAt(now);
+            stockAdjustments.setRejectionReason(null);
+        } else {
+            stockAdjustments.setApprovedBy(null);
+            stockAdjustments.setApprovedAt(null);
+            stockAdjustments.setRejectionReason(null);
+        }
+
+        StockAdjustments savedAdjustment;
+        try {
+            savedAdjustment = stockAdjustmentsRepository.save(stockAdjustments);
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation while creating stock adjustment: {}", e.getMessage(), e);
+            throw new BadRequestException("Failed to create stock adjustment due to data integrity violation", ErrorCode.STA_001);
+        }
+
+        //Step 6: If no approval required, apply inventory changes and create stock movement record
         if (!requiresApproval) {
-            applyInventoryAfterQuantity(inventory, quantityAfter);
+            log.info("Stock adjustment does not require approval, applying inventory changes immediately for inventory ID: {}", inventory.getId());
+
+            applyInventoryAfterQuantity(inventory, quantityAfter, actorId, now);
             inventoryRepository.save(inventory);
 
             StockMovements movement = stockMovementsMapper.toEntity(
@@ -111,6 +128,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
             stockMovementsRepository.save(movement);
         }
 
+        //Step 7: Return response
         return stockAdjustmentsMapper.toResponse(savedAdjustment);
     }
 
@@ -188,32 +206,52 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     public StockAdjustmentsResponse approve(String id, ApproveStockAdjustmentRequest request) {
         log.info("Attempting to approve stock adjustment with ID: {} and approval details: {}", id, request);
 
+        //Step 1: Check current user (ROLE_NAME)
         String actorId = getCurrentActorId();
+        List<String> roles = roleRepository.findRoleNamesByAccountId(actorId);
+        assertCanApproveReject(roles);
+
+        //Step 2: Retrieve stock adjustment with pessimistic lock to ensure data integrity during update
         StockAdjustments adjustment = stockAdjustmentsRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock adjustment not found", ErrorCode.STA_404));
 
+        //Step 3: Validate that adjustment is in pending status before allowing approval
         if (adjustment.getStatus() != StockAdjustmentsStatus.PENDING_APPROVAL) {
             throw new BadRequestException("Adjustment is not in pending status", ErrorCode.STA_002);
         }
 
+        //Step 4: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment approval
         Inventory inventory = getInventoryForUpdate(adjustment.getInventoryId());
 
-        BigDecimal quantityBefore = inventory.getOnHandQuantity();
+        // IMPORTANT: Use adjustment fields for audit correctness
+        BigDecimal quantityBefore = adjustment.getQuantityBefore();
         BigDecimal quantityAfter = adjustment.getQuantityAfter();
-        BigDecimal quantityChange = quantityAfter.subtract(quantityBefore);
+        BigDecimal quantityChange = adjustment.getAdjustmentQuantity();
 
-        if (quantityAfter.compareTo(BigDecimal.ZERO) < 0
+        //check: nếu inventory đã bị thay đổi từ lúc tạo adjustment → không approve
+        if (inventory.getOnHandQuantity().compareTo(quantityBefore) != 0) {
+            throw new BadRequestException(
+                    "Inventory on-hand quantity has changed since adjustment was created. Please review and recreate the adjustment.",
+                    ErrorCode.STA_001
+            );
+        }
+
+        //Step 5: Validate that the adjustment is still valid at approval time
+        if (quantityAfter.compareTo(ZERO) < 0
                 || quantityAfter.compareTo(inventory.getReservedQuantity()) < 0
-                || quantityChange.compareTo(BigDecimal.ZERO) == 0) {
+                || quantityChange.compareTo(ZERO) == 0) {
             throw new BadRequestException("Inventory state changed and adjustment is no longer valid", ErrorCode.STA_001);
         }
 
-        applyInventoryAfterQuantity(inventory, quantityAfter);
+        //Step 6: Apply the inventory changes and update the stock adjustment record with approval details
+        LocalDateTime now = LocalDateTime.now();
+        applyInventoryAfterQuantity(inventory, quantityAfter, actorId, now);
         inventoryRepository.save(inventory);
 
+        //Step 7: Update stock adjustment record with approval details and save
         adjustment.setStatus(StockAdjustmentsStatus.APPROVED);
         adjustment.setApprovedBy(actorId);
-        adjustment.setApprovedAt(LocalDateTime.now());
+        adjustment.setApprovedAt(now);
         adjustment.setRejectionReason(null);
         adjustment.setUpdatedBy(actorId);
         if (request != null && request.getApprovalNote() != null && !request.getApprovalNote().isBlank()) {
@@ -249,20 +287,37 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse reject(String id, RejectStockAdjustmentRequest request) {
+        log.info("Attempting to reject stock adjustment with ID: {} and rejection details: {}", id, request);
+
+        //Step 1: Check current user (ROLE_NAME)
         String actorId = getCurrentActorId();
+        List<String> roles = roleRepository.findRoleNamesByAccountId(actorId);
+        assertCanApproveReject(roles);
+
+        //Step 2: Retrieve stock adjustment with pessimistic lock to ensure data integrity during update
         StockAdjustments adjustment = stockAdjustmentsRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock adjustment not found", ErrorCode.STA_404));
 
+        //Step 3: Validate that adjustment is in pending status before allowing rejection
         if (adjustment.getStatus() != StockAdjustmentsStatus.PENDING_APPROVAL) {
             throw new BadRequestException("Adjustment is not in pending status", ErrorCode.STA_002);
         }
 
+        if (request == null || request.getRejectionReason() == null || request.getRejectionReason().isBlank()) {
+            throw new BadRequestException("Rejection reason is required", ErrorCode.STA_003);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         adjustment.setStatus(StockAdjustmentsStatus.REJECTED);
         adjustment.setRejectionReason(request.getRejectionReason());
         adjustment.setApprovedBy(actorId);
-        adjustment.setApprovedAt(LocalDateTime.now());
+        adjustment.setApprovedAt(now);
         adjustment.setUpdatedBy(actorId);
 
+        // If rejection reason is provided, append it to notes for audit trail
+        adjustment.setNotes(appendNote(adjustment.getNotes(), "REJECTION_REASON", request.getRejectionReason()));
+
+        //Step 4: Save the updated stock adjustment record with rejection details
         StockAdjustments savedAdjustment = stockAdjustmentsRepository.save(adjustment);
         return stockAdjustmentsMapper.toResponse(savedAdjustment);
     }
@@ -273,25 +328,25 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     }
 
     private void validateAdjustmentRequest(Inventory inventory, BigDecimal quantityAfter, BigDecimal adjustmentQuantity) {
-        if (quantityAfter.compareTo(BigDecimal.ZERO) < 0) {
+        if (quantityAfter.compareTo(ZERO) < 0) {
             throw new BadRequestException("Quantity after must be non-negative", ErrorCode.STA_001);
         }
         if (quantityAfter.compareTo(inventory.getReservedQuantity()) < 0) {
             throw new BadRequestException("Quantity after cannot be lower than reserved quantity", ErrorCode.STA_001);
         }
-        if (adjustmentQuantity.compareTo(BigDecimal.ZERO) == 0) {
+        if (adjustmentQuantity.compareTo(ZERO) == 0) {
             throw new BadRequestException("Adjustment quantity cannot be zero", ErrorCode.STA_001);
         }
     }
 
     // Applies the new on-hand quantity to the inventory and updates relevant metadata
-    private void applyInventoryAfterQuantity(Inventory inventory, BigDecimal quantityAfter) {
+    private void applyInventoryAfterQuantity(Inventory inventory, BigDecimal quantityAfter, String actorId, LocalDateTime now) {
         if (quantityAfter.compareTo(inventory.getReservedQuantity()) < 0) {
             throw new BadRequestException("Quantity after cannot be lower than reserved quantity", ErrorCode.STA_001);
         }
         inventory.setOnHandQuantity(quantityAfter);
-        inventory.setUpdatedBy(getCurrentActorId());
-        inventory.setLastMovementAt(LocalDateTime.now());
+        inventory.setUpdatedBy(actorId);
+        inventory.setLastMovementAt(now);
     }
 
     private Pageable buildPageable(Integer page, Integer size) {
@@ -317,13 +372,13 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
     private String generateAdjustmentNumber() {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 5; i++) {
             String candidate = "ADJ-" + timestamp + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
             if (!stockAdjustmentsRepository.existsByAdjustmentNumber(candidate)) {
                 return candidate;
             }
         }
-        throw new BadRequestException("Unable to generate unique adjustment number", ErrorCode.STA_001);
+        throw new BadRequestException("Unable to generate unique adjustment number after retries", ErrorCode.STA_001);
     }
 
     private String appendNote(String existing, String key, String value) {
@@ -334,5 +389,37 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
             return key + ": " + value.trim();
         }
         return existing + System.lineSeparator() + key + ": " + value.trim();
+    }
+
+    private boolean requiresApproval(List<String> actorRoles, ReasonType reasonType, BigDecimal adjustmentQuantity) {
+        // ADMIN tự approve, không cần chờ
+        if (hasRole(actorRoles, RoleType.ADMIN)) return false;
+
+        // Các lý do nhạy cảm: luôn cần duyệt
+        if (reasonType == ReasonType.THEFT || reasonType == ReasonType.SYSTEM_ERROR) return true;
+
+        // Delta lớn: cần duyệt (rule mẫu, bạn có thể cấu hình theo kho)
+        if (adjustmentQuantity.abs().compareTo(new BigDecimal("5.00")) >= 0) return true;
+
+        // Default: cần duyệt
+        return true;
+    }
+
+    private void assertCanApproveReject(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            throw new BadRequestException("User role not found", ErrorCode.AUTH_002);
+        }
+        if (!hasRole(roles, RoleType.ADMIN)) {
+            throw new BadRequestException("You do not have permission to approve/reject adjustments", ErrorCode.AUTH_002);
+        }
+    }
+
+    /**
+     * Checks whether the given role name list contains the specified role.
+     * Safe for null/empty lists and handles String↔RoleType comparison.
+     */
+    private boolean hasRole(List<String> roleNames, RoleType target) {
+        if (roleNames == null || roleNames.isEmpty()) return false;
+        return roleNames.contains(target.name());
     }
 }
