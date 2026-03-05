@@ -74,7 +74,8 @@ public class AuthController {
         limit = 10,
         duration = 60,
         type = RateLimitType.USER,
-        message = "Too many token refresh requests. Please try again later."
+        message = "Too many token refresh requests. Please try again later.",
+        failClosed = true  // Security-sensitive endpoint: block when Redis is unavailable
     )
     public ResponseEntity<BaseResponse<RefreshTokenResponse>> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
         log.debug("Refresh token request received");
