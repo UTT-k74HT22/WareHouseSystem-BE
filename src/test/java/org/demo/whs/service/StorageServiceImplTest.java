@@ -12,9 +12,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -36,8 +38,8 @@ class StorageServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(minioProperties.getBucketName()).thenReturn("whs-storage");
-        when(minioProperties.getPresignedUrlExpiry()).thenReturn(3600);
+        lenient().when(minioProperties.getBucketName()).thenReturn("whs-storage");
+        lenient().when(minioProperties.getPresignedUrlExpiry()).thenReturn(3600);
     }
 
     // =========================================================================
@@ -96,6 +98,7 @@ class StorageServiceImplTest {
 
         assertThatThrownBy(() -> storageService.uploadFile(file, "uploads"))
                 .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .hasMessageContaining("File type not allowed");
     }
 
@@ -113,7 +116,8 @@ class StorageServiceImplTest {
     @DisplayName("uploadFile – null file – throws StorageException")
     void uploadFile_nullFile_throwsStorageException() {
         assertThatThrownBy(() -> storageService.uploadFile(null, "uploads"))
-                .isInstanceOf(StorageException.class);
+                .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -125,6 +129,7 @@ class StorageServiceImplTest {
 
         assertThatThrownBy(() -> storageService.uploadFile(file, "uploads"))
                 .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.PAYLOAD_TOO_LARGE)
                 .hasMessageContaining("File size exceeds maximum allowed limit");
     }
 
@@ -168,17 +173,30 @@ class StorageServiceImplTest {
     }
 
     @Test
-    @DisplayName("uploadFiles – empty list – returns empty list")
-    void uploadFiles_emptyList_returnsEmptyList() {
-        List<FileUploadResponse> responses = storageService.uploadFiles(List.of(), "gallery");
-        assertThat(responses).isEmpty();
+    @DisplayName("uploadFiles – empty list – throws StorageException with 400")
+    void uploadFiles_emptyList_throwsStorageException() {
+        assertThatThrownBy(() -> storageService.uploadFiles(List.of(), "gallery"))
+                .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    @DisplayName("uploadFiles – null list – returns empty list")
-    void uploadFiles_nullList_returnsEmptyList() {
-        List<FileUploadResponse> responses = storageService.uploadFiles(null, "gallery");
-        assertThat(responses).isEmpty();
+    @DisplayName("uploadFiles – null list – throws StorageException with 400")
+    void uploadFiles_nullList_throwsStorageException() {
+        assertThatThrownBy(() -> storageService.uploadFiles(null, "gallery"))
+                .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("uploadFiles – list contains null file – throws StorageException with 400")
+    void uploadFiles_listContainsNull_throwsStorageException() {
+        MockMultipartFile validFile = new MockMultipartFile(
+                "files", "img1.jpg", "image/jpeg", "bytes1".getBytes());
+
+        assertThatThrownBy(() -> storageService.uploadFiles(Arrays.asList(validFile, null), "gallery"))
+                .isInstanceOf(StorageException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
     }
 
     // =========================================================================
