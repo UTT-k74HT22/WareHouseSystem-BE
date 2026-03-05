@@ -132,7 +132,7 @@ public class InventoryController {
      * @return List of inventory grouped by location
      */
     @Operation(summary = "Get inventory grouped by location", description = "Returns inventory data grouped by location to support picking and replenishment")
-    @GetMapping("/{locationId}")
+    @GetMapping("/locations")
     public ResponseEntity<BaseResponse<List<InventoryByLocationResponse>>> getInventoryByLocation(
             @RequestParam(required = false) String warehouseId,
             @RequestParam(required = false) String productId) {
