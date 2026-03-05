@@ -4,11 +4,22 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.demo.whs.entity.enums.ReasonType;
 import org.demo.whs.entity.enums.StockAdjustmentsStatus;
+import org.hibernate.annotations.Check;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "stock_adjustments")
+@Check(constraints = "quantity_before >= 0 AND quantity_after >= 0 " +
+        "AND adjustment_quantity = quantity_after - quantity_before " +
+        "AND adjustment_quantity <> 0 " +
+        "AND ((" +
+        "status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL AND rejection_reason IS NULL" +
+        ") OR (" +
+        "status = 'APPROVED' AND approved_by IS NOT NULL AND approved_at IS NOT NULL AND rejection_reason IS NULL" +
+        ") OR (" +
+        "status = 'REJECTED' AND approved_by IS NOT NULL AND approved_at IS NOT NULL AND rejection_reason IS NOT NULL" +
+        "))")
 @Getter
 @Setter
 @Builder
@@ -28,17 +39,20 @@ public class StockAdjustments extends BaseEntity {
     @Column(name = "warehouse_id", nullable = false, length = 36, columnDefinition = "char(36)")
     private String warehouseId;
 
-    @Column(name = "location_id", nullable = false, length = 36, columnDefinition = "char(36)")
+    @Column(name = "location_id", length = 36, columnDefinition = "char(36)")
     private String locationId;
 
     @Column(name = "batch_id", length = 36, columnDefinition = "char(36)")
     private String batchId;
 
-    @Column(name = "quantity_before", nullable = false, precision = 15, scale = 5)
+    @Column(name = "quantity_before", nullable = false, precision = 15, scale = 2)
     private BigDecimal quantityBefore;
 
-    @Column(name = "quantity_after", nullable = false, precision = 15, scale = 5)
+    @Column(name = "quantity_after", nullable = false, precision = 15, scale = 2)
     private BigDecimal quantityAfter;
+
+    @Column(name = "adjustment_quantity", nullable = false, precision = 15, scale = 2)
+    private BigDecimal adjustmentQuantity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reason", nullable = false, length = 20)
@@ -60,6 +74,6 @@ public class StockAdjustments extends BaseEntity {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 }

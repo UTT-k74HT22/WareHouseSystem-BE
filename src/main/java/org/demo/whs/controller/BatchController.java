@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.BatchService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +49,27 @@ public class BatchController {
         return ResponseEntity.ok(
                 BaseResponse.success(response, "Batch updated successfully")
         );
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BaseResponse<BatchResponse>> getBatchesById(
+            @PathVariable String id) {
+        log.info("Get batches with id: {}", id);
+
+        BatchResponse response = batchService.getBatchById(id);
+        BaseResponse<BatchResponse> baseResponse = BaseResponse.success(response, "Batch retrieved successfully");
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    @GetMapping
+    public ResponseEntity<BaseResponse<PageResponse<BatchResponse>>> getAllBatches(
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        log.info("Fetching all batches - page: {}, size: {}", page, size);
+
+        PageResponse<BatchResponse> response = batchService.getAllBatches(page, size);
+        BaseResponse<PageResponse<BatchResponse>> baseResponse = BaseResponse.success(response);
+
+        return ResponseEntity.ok(baseResponse);
     }
 }

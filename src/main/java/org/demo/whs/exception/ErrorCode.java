@@ -40,6 +40,13 @@ public enum ErrorCode {
     WH_002("WHS_002", "Insufficient stock in warehouse"),
     WH_003("WHS_003", "Invalid warehouse operation"),
     WH_004("WHS_004", "Warehouse code already exists"),
+    INV_001("INV_001", "Inventory not found"),
+    INV_004("INV_004", "Insufficient available stock"),
+    STA_001("STA_001", "Invalid stock adjustment request"),
+    STA_002("STA_002", "Invalid stock adjustment status transition"),
+    STA_404("STA_404", "Stock adjustment not found"),
+    STF_001("STF_001", "Stock transfer not found"),
+    STF_002("STF_002", "Invalid stock transfer status transition"),
 
     // Location errors
     LOC_001("LOC_001", "Location not found"),
@@ -58,6 +65,10 @@ public enum ErrorCode {
     PROD_006("PROD_006", "Cannot disable batch tracking - batch inventory exists"),
     PROD_007("PROD_007", "Max stock level must be greater than or equal to min stock level"),
     PROD_008("PROD_008", "Reorder point must be between min and max stock levels"),
+
+    // Category errors
+    CAT_001("CAT_001", "Category not found"),
+    CAT_002("CAT_002", "Category code or name already exists"),
 
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Unit of Measure not found"),
@@ -90,6 +101,9 @@ public enum ErrorCode {
     COM_003("COM_003", "Bad request - malformed JSON or invalid data format"),
     COM_004("COM_004", "Resource not found"),
     COM_005("COM_005", "Duplicate entry - resource already exists"),
+    COM_006("COM_006", "Page index must not be less than zero"),
+    COM_007("COM_007", "Page size must be greater than zero"),
+    COM_008("COM_008", "Page size must not exceed 100"),
 
     BATCH_001("BATCH_001", "Batch not found"),
     BATCH_002("BATCH_002", "Batch number already exists"),
