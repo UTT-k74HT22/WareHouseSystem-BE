@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.repository.projection.InventorySummaryProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
@@ -104,13 +105,13 @@ public class InventoryServiceImpl implements InventoryService {
 
     private void validatePageable(Pageable pageable) {
         if (pageable.getPageNumber() < 0) {
-            throw new IllegalArgumentException(ErrorCode.COM_006.getMessage());
+            throw new BadRequestException(ErrorCode.COM_006);
         }
         if (pageable.getPageSize() <= 0) {
-            throw new IllegalArgumentException(ErrorCode.COM_007.getMessage());
+            throw new BadRequestException(ErrorCode.COM_007);
         }
         if (pageable.getPageSize() > 100) {
-            throw new IllegalArgumentException(ErrorCode.COM_008.getMessage());
+            throw new BadRequestException(ErrorCode.COM_008);
         }
     }
 }

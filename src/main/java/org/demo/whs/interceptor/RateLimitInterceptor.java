@@ -12,7 +12,6 @@ import org.demo.whs.security.RateLimitFilter;
 import org.demo.whs.service.RateLimitService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -32,7 +31,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Deprecated(since = "2.0", forRemoval = true)
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class RateLimitInterceptor implements HandlerInterceptor {
     

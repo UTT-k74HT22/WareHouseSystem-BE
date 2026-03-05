@@ -25,6 +25,9 @@ import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -98,20 +101,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
-        
-        String requestURI = request.getRequestURI();
+
+        HttpServletRequest requestToUse = wrapRefreshTokenRequest(request);
+        String requestURI = requestToUse.getRequestURI();
         
         // Skip excluded paths
         if (isExcludedPath(requestURI)) {
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(requestToUse, response);
             return;
         }
         
         try {
             // Lấy handler method để tìm @RateLimit annotation
-            HandlerExecutionChain executionChain = handlerMapping.getHandler(request);
+            HandlerExecutionChain executionChain = handlerMapping.getHandler(requestToUse);
             if (executionChain == null || !(executionChain.getHandler() instanceof HandlerMethod)) {
-                filterChain.doFilter(request, response);
+                filterChain.doFilter(requestToUse, response);
                 return;
             }
             
@@ -125,15 +129,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
             
             // Nếu không có annotation, skip rate limit check
             if (rateLimitAnnotation == null) {
-                filterChain.doFilter(request, response);
+                filterChain.doFilter(requestToUse, response);
                 return;
             }
             
             // Xác định identifier dựa trên RateLimitType
-            String identifier = getIdentifier(request, rateLimitAnnotation.type());
+            String identifier = getIdentifier(
+                requestToUse,
+                rateLimitAnnotation.type(),
+                rateLimitAnnotation.key()
+            );
             
             // Tạo route key = METHOD + best matching pattern
-            String routeKey = buildRouteKey(request, handlerMethod);
+            String routeKey = buildRouteKey(requestToUse, handlerMethod);
             
             log.debug("Rate limit check for endpoint: {}, type: {}, identifier: {}, routeKey: {}", 
                 requestURI, rateLimitAnnotation.type(), identifier, routeKey);
@@ -158,12 +166,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 requestURI, rateLimitDTO.getRemaining());
             
             // Allow request to proceed
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(requestToUse, response);
             
         } catch (Exception e) {
             log.error("Error in rate limit filter for URI: {}", requestURI, e);
             // Fail-open: allow request on errors to prevent blocking entire system
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(requestToUse, response);
         }
     }
     
@@ -216,10 +224,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * @param type Rate limit type
      * @return Identifier string
      */
-    private String getIdentifier(HttpServletRequest request, RateLimitType type) {
+    private String getIdentifier(HttpServletRequest request, RateLimitType type, String rateLimitKey) {
         return switch (type) {
             case IP -> getTrustedClientIp(request);
-            case USER -> getUserIdentifier();
+            case USER -> getUserIdentifier(request, rateLimitKey);
             case API -> request.getRequestURI();
             case GLOBAL -> "global";
         };
@@ -284,19 +292,103 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /**
      * Lấy user identifier từ SecurityContext
      * 
-     * NOTE: Filter chạy SAU JwtAuthFilter, nên SecurityContext đã có authentication
+     * Nếu SecurityContext đã có authentication thì ưu tiên username.
+     * Nếu chưa có (ví dụ endpoint permitAll như refresh-token), dùng strategy fallback.
      * 
      * @return Username hoặc "anonymous"
      */
-    private String getUserIdentifier() {
+    private String getUserIdentifier(HttpServletRequest request, String rateLimitKey) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication != null && authentication.isAuthenticated() 
             && !"anonymousUser".equals(authentication.getPrincipal())) {
             return authentication.getName();
         }
-        
+
+        if (isRefreshTokenRequest(request, rateLimitKey)) {
+            return getRefreshTokenStableIdentifier(request);
+        }
+
         return "anonymous";
+    }
+
+    /**
+     * Build a stable rate-limit identifier for refresh-token endpoint
+     * when user authentication context is not available yet.
+     *
+     * Strategy: refresh-ip:{clientIp}:token:{sha256(refreshToken)}
+     */
+    private String getRefreshTokenStableIdentifier(HttpServletRequest request) {
+        String clientIp = getTrustedClientIp(request);
+        String refreshToken = extractRefreshTokenFromBody(request);
+
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return "refresh-ip:" + clientIp;
+        }
+
+        return "refresh-ip:" + clientIp + ":token:" + sha256(refreshToken);
+    }
+
+    private boolean isRefreshTokenRequest(HttpServletRequest request, String rateLimitKey) {
+        if ("refresh-token".equals(rateLimitKey)) {
+            return true;
+        }
+        String requestUri = request.getRequestURI();
+        return requestUri != null && requestUri.endsWith("/api/v1/auth/refresh-token");
+    }
+
+    private HttpServletRequest wrapRefreshTokenRequest(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        if (requestUri == null || !requestUri.endsWith("/api/v1/auth/refresh-token")) {
+            return request;
+        }
+        if (request instanceof CachedBodyHttpServletRequest) {
+            return request;
+        }
+        try {
+            return new CachedBodyHttpServletRequest(request);
+        } catch (IOException ex) {
+            log.warn("Failed to cache refresh-token request body for rate limiting", ex);
+            return request;
+        }
+    }
+
+    private String extractRefreshTokenFromBody(HttpServletRequest request) {
+        try {
+            byte[] requestBodyBytes = request.getInputStream().readAllBytes();
+            if (requestBodyBytes.length == 0) {
+                return null;
+            }
+
+            String requestBody = new String(requestBodyBytes, StandardCharsets.UTF_8);
+            if (requestBody.isBlank()) {
+                return null;
+            }
+
+            String refreshToken = objectMapper.readTree(requestBody).path("refresh_token").asText(null);
+            if (refreshToken == null || refreshToken.isBlank()) {
+                refreshToken = objectMapper.readTree(requestBody).path("refreshToken").asText(null);
+            }
+            return refreshToken;
+        } catch (Exception ex) {
+            log.debug("Cannot extract refresh token from request body for rate-limit key: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", ex);
+        }
     }
     
     /**

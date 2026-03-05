@@ -15,17 +15,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -128,6 +133,80 @@ class EmailServiceImplTest {
 
     // Note: sendEmailAsync test is skipped in unit tests because it requires transaction synchronization
     // which is better tested in integration tests with @Transactional context
+
+    @Test
+    void testSendEmailAsync_WhenProducerUnavailable_UsesSingleLogRecord() {
+        // Arrange
+        EmailServiceImpl serviceWithoutProducer = new EmailServiceImpl(
+                mailSender,
+                emailLogRepository,
+                accountRepository,
+                emailProperties,
+                templateEngine,
+                Optional.empty(),
+                emailMapper
+        );
+
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        AtomicInteger idSequence = new AtomicInteger(1);
+        when(emailLogRepository.save(any(EmailLog.class))).thenAnswer(invocation -> {
+            EmailLog log = invocation.getArgument(0);
+            if (log.getId() == null) {
+                log.setId("email-" + idSequence.getAndIncrement());
+            }
+            return log;
+        });
+
+        // Act
+        EmailLog result = serviceWithoutProducer.sendEmailAsync(sendEmailRequest);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(EmailStatus.SENT, result.getStatus());
+
+        ArgumentCaptor<EmailLog> captor = ArgumentCaptor.forClass(EmailLog.class);
+        verify(emailLogRepository, times(3)).save(captor.capture());
+
+        Set<String> persistedIds = captor.getAllValues().stream()
+                .map(EmailLog::getId)
+                .collect(Collectors.toSet());
+        assertEquals(1, persistedIds.size());
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void testSendEmailAsync_WhenProducerAvailable_QueuesAfterCommit() {
+        // Arrange
+        when(emailLogRepository.save(any(EmailLog.class))).thenAnswer(invocation -> {
+            EmailLog log = invocation.getArgument(0);
+            if (log.getId() == null) {
+                log.setId("email-1");
+            }
+            return log;
+        });
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            // Act
+            EmailLog result = emailService.sendEmailAsync(sendEmailRequest);
+
+            // Assert pre-commit
+            assertNotNull(result);
+            assertEquals("email-1", result.getId());
+            assertEquals(EmailStatus.PENDING, result.getStatus());
+            verify(emailLogRepository, times(1)).save(any(EmailLog.class));
+
+            List<TransactionSynchronization> synchronizations =
+                    TransactionSynchronizationManager.getSynchronizations();
+            assertEquals(1, synchronizations.size());
+
+            synchronizations.forEach(TransactionSynchronization::afterCommit);
+            verify(emailProducerService, times(1)).sendEmailToQueue(result);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
 
     @Test
     void testSendSimpleEmail() {

@@ -16,7 +16,7 @@ public enum ErrorCode {
     AUTH_007("AUTH_007", "Account is locked due to suspicious activity"),
     AUTH_008("AUTH_008", "Too many failed login attempts - please try again later"),
     AUTH_009("AUTH_009", "Account is not active"),
-    AUTH_010("AUTH_009", "Account is not found"),
+    AUTH_010("AUTH_010", "Account is not found"),
 
     // Password reset errors
     RESET_001("RESET_001", "Invalid or expired reset token"),
@@ -40,6 +40,13 @@ public enum ErrorCode {
     WH_002("WHS_002", "Insufficient stock in warehouse"),
     WH_003("WHS_003", "Invalid warehouse operation"),
     WH_004("WHS_004", "Warehouse code already exists"),
+    INV_001("INV_001", "Inventory not found"),
+    INV_004("INV_004", "Insufficient available stock"),
+    STA_001("STA_001", "Invalid stock adjustment request"),
+    STA_002("STA_002", "Invalid stock adjustment status transition"),
+    STA_404("STA_404", "Stock adjustment not found"),
+    STF_001("STF_001", "Stock transfer not found"),
+    STF_002("STF_002", "Invalid stock transfer status transition"),
 
     // Location errors
     LOC_001("LOC_001", "Location not found"),
@@ -67,6 +74,7 @@ public enum ErrorCode {
     UOM_001("UOM_001", "Unit of Measure not found"),
     UOM_002("UOM_002", "Unit of Measure code already exists"),
     UOM_003("UOM_003", "Data is not null"),
+    UOM_004("UOM_004", "Unit of Measure is in use by products"),
 
     // Employee errors
     EMP_001("EMP_001", "Employee not found"),

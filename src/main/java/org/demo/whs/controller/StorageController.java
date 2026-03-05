@@ -60,8 +60,9 @@ public class StorageController {
             @Parameter(description = "Logical folder prefix, e.g. 'products' or 'inbound/receipts'")
             @RequestParam(value = "folder", defaultValue = "uploads") String folder) {
 
+        String originalFilename = file == null ? null : file.getOriginalFilename();
         log.info("POST /api/v1/storage/upload – file='{}', folder='{}'",
-                file.getOriginalFilename(), folder);
+                originalFilename, folder);
 
         FileUploadResponse response = storageService.uploadFile(file, folder);
         return ResponseEntity.ok(BaseResponse.success(response, "File uploaded successfully"));
@@ -81,17 +82,18 @@ public class StorageController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "folder", defaultValue = "uploads") String folder) {
 
+        int fileCount = files == null ? 0 : files.size();
         log.info("POST /api/v1/storage/upload/batch – count={}, folder='{}'",
-                files.size(), folder);
+                fileCount, folder);
 
-        if (files.size() > 10) {
+        if (fileCount > 10) {
             return ResponseEntity.badRequest()
                     .body(BaseResponse.error("COM_003", "Maximum 10 files per batch upload", null));
         }
 
         List<FileUploadResponse> responses = storageService.uploadFiles(files, folder);
         return ResponseEntity.ok(
-                BaseResponse.success(responses, files.size() + " file(s) uploaded successfully"));
+                BaseResponse.success(responses, fileCount + " file(s) uploaded successfully"));
     }
 
     // =========================================================================
@@ -122,19 +124,47 @@ public class StorageController {
     // =========================================================================
 
     /**
-     * Delete a stored object.  Requires ADMIN or MANAGER role.
+     * Delete a stored object by query param.
+     * Recommended for object names that contain nested path segments.
      *
-     * @param objectName URL-encoded full object path
+     * Example:
+     * DELETE /api/v1/storage?objectName=products/2026/03/file.png
+     *
+     * @param objectName full object path
      */
     @Operation(summary = "Delete a file from MinIO storage")
-    @DeleteMapping("/{objectName}")
+    @DeleteMapping(params = "objectName")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<BaseResponse<Void>> deleteFile(
-            @PathVariable String objectName) {
+            @NotBlank(message = "objectName must not be blank")
+            @RequestParam("objectName") String objectName) {
 
-        log.info("DELETE /api/v1/storage/{}", objectName);
+        log.info("DELETE /api/v1/storage?objectName={}", objectName);
 
         storageService.deleteFile(objectName);
+        return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
+    }
+
+    /**
+     * Backward-compatible delete endpoint using path segment wildcard.
+     *
+     * Example:
+     * DELETE /api/v1/storage/products/2026/03/file.png
+     *
+     * @param objectName full object path captured from wildcard path variable
+     */
+    @DeleteMapping("/{*objectName}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<BaseResponse<Void>> deleteFileLegacyPath(
+            @PathVariable String objectName) {
+
+        String normalizedObjectName = objectName.startsWith("/")
+                ? objectName.substring(1)
+                : objectName;
+
+        log.info("DELETE /api/v1/storage/{}", normalizedObjectName);
+
+        storageService.deleteFile(normalizedObjectName);
         return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
     }
 

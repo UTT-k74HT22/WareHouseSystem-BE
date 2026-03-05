@@ -10,6 +10,8 @@ import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.InventoryService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -57,8 +59,8 @@ public class InventoryController {
             @RequestParam(required = false) String locationId,
             @RequestParam(required = false) String batchId,
             @RequestParam(required = false) String batchNumber,
-            @RequestParam(defaultValue = "0") @Min(0) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
             @RequestParam(defaultValue = "DESC") Sort.Direction direction){
 
@@ -69,7 +71,19 @@ public class InventoryController {
         );
 
         if (!allowedSortFields.contains(sortBy)) {
-            throw new IllegalArgumentException("COM_001 - Invalid sort field");
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        if (page < 0) {
+            throw new BadRequestException(ErrorCode.COM_006);
+        }
+
+        if (size <= 0) {
+            throw new BadRequestException(ErrorCode.COM_007);
+        }
+
+        if (size > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
         }
 
         InventoryFilterRequest filter = InventoryFilterRequest.builder()

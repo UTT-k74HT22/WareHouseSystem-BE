@@ -60,7 +60,7 @@ public class StorageServiceImpl implements StorageService {
      */
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new StorageException(ErrorCode.STORAGE_001);
+            throw new StorageException(ErrorCode.STORAGE_001, HttpStatus.BAD_REQUEST);
         }
 
         String contentType = file.getContentType();
@@ -114,10 +114,11 @@ public class StorageServiceImpl implements StorageService {
      */
     @Override
     public FileUploadResponse uploadFile(MultipartFile file, String folder) {
-        log.info("Uploading file: {} to folder: {}", file.getOriginalFilename(), folder);
+        String originalFilename = file == null ? null : file.getOriginalFilename();
+        log.info("Uploading file: {} to folder: {}", originalFilename, folder);
         validateFile(file);
 
-        String objectName = buildObjectName(folder, file.getOriginalFilename());
+        String objectName = buildObjectName(folder, originalFilename);
         try (InputStream inputStream = file.getInputStream()) {
 
             // Upload the file to MinIO
@@ -138,7 +139,7 @@ public class StorageServiceImpl implements StorageService {
             return FileMapper.toResponse(objectName, file, presignedUrl, expiresAt);
 
         } catch (Exception e) {
-            log.error("Failed to upload file: {} to MinIO", file.getOriginalFilename(), e);
+            log.error("Failed to upload file: {} to MinIO", originalFilename, e);
             throw new StorageException(ErrorCode.STORAGE_001);
         }
     }
@@ -153,7 +154,11 @@ public class StorageServiceImpl implements StorageService {
     @Override
     public List<FileUploadResponse> uploadFiles(List<MultipartFile> files, String folder) {
         if (files == null || files.isEmpty()) {
-            throw new StorageException(ErrorCode.STORAGE_001);
+            throw new StorageException(ErrorCode.STORAGE_001, HttpStatus.BAD_REQUEST);
+        }
+
+        if (files.stream().anyMatch(Objects::isNull)) {
+            throw new StorageException(ErrorCode.STORAGE_001, HttpStatus.BAD_REQUEST);
         }
 
         return files.stream()

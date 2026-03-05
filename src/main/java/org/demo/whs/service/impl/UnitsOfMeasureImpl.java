@@ -10,6 +10,7 @@ import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
+import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.service.UnitsOfMeasureService;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,6 +30,7 @@ import java.util.List;
 public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
 
     private final UnitsOfMeasureRepository unitsOfMeasureRepository;
+    private final ProductRepository productRepository;
     private final UnitsOfMeasureMapper unitsOfMeasureMapper;
 
     /**
@@ -131,8 +133,12 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
                     return new BadRequestException(ErrorCode.UOM_001);
                 });
 
-        // TODO: Add validation to check if UOM is referenced by products
-        // For now, proceed with hard delete
+        long referencedProducts = productRepository.countByUomId(id);
+        if (referencedProducts > 0) {
+            log.warn("Cannot delete unit of measure id {} because it is referenced by {} product(s)", id, referencedProducts);
+            throw new BadRequestException(ErrorCode.UOM_004);
+        }
+
         unitsOfMeasureRepository.delete(unitsOfMeasure);
 
         log.info("Unit of measure with id {} deleted successfully (hard delete)", id);

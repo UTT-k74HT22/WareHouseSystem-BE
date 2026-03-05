@@ -119,9 +119,7 @@ public class EmailServiceImpl implements EmailService {
         // 3. Nếu không có EmailProducerService -> fallback về sync
         if (emailProducerService.isEmpty()) {
             log.warn("EmailProducerService not available, sending email synchronously instead");
-            // Gửi sync thêm 1 log khác – trường hợp này hiếm, chấp nhận duplication nhẹ
-            sendEmail(request);
-            return emailLog;
+            return sendExistingLogSynchronously(emailLog, request);
         }
 
         // 4. Đăng ký callback sau khi transaction commit
@@ -371,6 +369,32 @@ public class EmailServiceImpl implements EmailService {
     // =============================================================================
     // Private Helper Methods
     // =============================================================================
+    private EmailLog sendExistingLogSynchronously(EmailLog emailLog, SendEmailRequest request) {
+        emailLog.setStatus(EmailStatus.SENDING);
+        emailLogRepository.save(emailLog);
+
+        try {
+            sendMimeMessage(
+                    request.getRecipient(),
+                    request.getCc(),
+                    request.getBcc(),
+                    request.getSubject(),
+                    request.getContent(),
+                    request.getAttachmentPath()
+            );
+
+            emailLog.setStatus(EmailStatus.SENT);
+            emailLog.setSentAt(LocalDateTime.now());
+        } catch (Exception e) {
+            log.error("Failed to send fallback email synchronously to: {}", request.getRecipient(), e);
+            emailLog.setStatus(EmailStatus.FAILED);
+            emailLog.setErrorMessage(e.getMessage());
+            emailLog.setRetryCount(emailLog.getRetryCount() + 1);
+        }
+
+        return emailLogRepository.save(emailLog);
+    }
+
     private EmailLog createEmailLog(SendEmailRequest request) {
         EmailLog emailLog = EmailLog.builder()
                 .recipient(request.getRecipient())
