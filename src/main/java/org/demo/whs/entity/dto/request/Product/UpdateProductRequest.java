@@ -64,7 +64,10 @@ public class UpdateProductRequest {
     private String barcode;
 
     @Size(max = 255, message = "Image URL must not exceed 255 characters")
-    @Pattern(regexp = "^(https?://.*|)$", message = "Image URL must be a valid HTTP/HTTPS URL or empty")
+    @Pattern(
+            regexp = "^(https?://\\S+|(products|uploads)/[\\w\\-./]+|)$",
+            message = "Image must be a valid HTTP/HTTPS URL, a MinIO object path, or empty"
+    )
     private String imageUrl;
 
     private Boolean requiresBatchTracking;

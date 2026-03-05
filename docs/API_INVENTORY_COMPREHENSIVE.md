@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 04/03/2026 — Category module completed (WHS-18)  
-> **Phiên bản:** 1.2  
+> **Cập nhật lần cuối:** 05/03/2026 — Đồng bộ theo PR #50 (WHS-70) + Jira sync  
+> **Phiên bản:** 1.3  
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -18,10 +18,10 @@
 | 5 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
 | 6 | **Business Partner** | 8 | 6 | 2 | 75% |
 | 7 | **Category** | 5 | 5 | 0 | ✅ 100% |
-| 8 | **Batch** | 10 | 1 | 9 | 10% |
-| 9 | **Inventory** | 8 | 0 | 8 | 🔴 0% |
-| 10 | **Stock Adjustments** | 4 | 0 | 4 | 🔴 0% |
-| 11 | **Stock Transfers** | 2 | 0 | 2 | 🔴 0% |
+| 8 | **Batch** | 10 | 3 | 7 | 30% |
+| 9 | **Inventory** | 8 | 1 | 7 | 13% |
+| 10 | **Stock Adjustments** | 4 | 4 | 0 | ✅ 100% |
+| 11 | **Stock Transfers** | 2 | 2 | 0 | ✅ 100% |
 | 12 | **Purchase Orders** | 6 | 0 | 6 | 🔴 0% |
 | 13 | **Purchase Order Lines** | 3 | 0 | 3 | 🔴 0% |
 | 14 | **Inbound Receipts** | 7 | 0 | 7 | 🔴 0% |
@@ -30,12 +30,12 @@
 | 17 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
 | 18 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
 | 19 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
-| 20 | **Stock Movements** | 8 | 0 | 8 | 🔴 0% |
+| 20 | **Stock Movements** | 8 | 2 | 6 | 25% |
 | 21 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
 | 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **159** | **67** | **92** | **~42%** |
+| | **TỔNG CỘNG** | **159** | **78** | **81** | **~49%** |
 
 ---
 
@@ -49,10 +49,10 @@ Product            ████████░░ 82%
 UOM                ██████████ 100% ✅
 Business Partner   ████████░░ 75%
 Category           ██████████ 100% ✅
-Batch              █░░░░░░░░░ 10%
-Inventory          ░░░░░░░░░░ 0%  🔴
-Stock Adjustments  ░░░░░░░░░░ 0%  🔴
-Stock Transfers    ░░░░░░░░░░ 0%  🔴
+Batch              ███░░░░░░░ 30%
+Inventory          █░░░░░░░░░ 13%
+Stock Adjustments  ██████████ 100% ✅
+Stock Transfers    ██████████ 100% ✅
 Purchase Orders    ░░░░░░░░░░ 0%  🔴
 PO Lines           ░░░░░░░░░░ 0%  🔴
 Inbound Receipts   ░░░░░░░░░░ 0%  🔴
@@ -61,7 +61,7 @@ Sales Orders       ░░░░░░░░░░ 0%  🔴
 SO Lines           ░░░░░░░░░░ 0%  🔴
 Outbound Shipments ░░░░░░░░░░ 0%  🔴
 OS Lines           ░░░░░░░░░░ 0%  🔴
-Stock Movements    ░░░░░░░░░░ 0%  🔴
+Stock Movements    ██░░░░░░░░ 25%
 Reporting          ░░░░░░░░░░ 0%  🔴
 Employee           ██████████ 100% ✅
 Email              ██████████ 100% ✅
@@ -69,6 +69,13 @@ Storage            ██████████ 100% ✅
 ```
 
 ---
+
+## 🔄 Đồng Bộ Jira/GitHub (05/03/2026)
+
+- `WHS-70` đã `Done`; PR `#50` đã merge vào `develop` lúc `2026-03-04 15:00:05 UTC` (`22:00:05 ICT`).
+- Đã cập nhật `Done` cho cụm task liên quan được gộp bởi PR `#50`: `WHS-21`, `WHS-22`, `WHS-23`, `WHS-24`, `WHS-25`, `WHS-26`, `WHS-27`.
+- Snapshot re-check cuối cùng (09:04 ICT, 05/03/2026): `WHS-71..WHS-81` đã `Done` (PR đã merge), chỉ còn `WHS-82` ở `IN REVIEW` do PR `#70` còn `Open`.
+- `WHS-51` vẫn `In Progress`; `WHS-64`, `WHS-66` vẫn `To Do` do chưa đủ endpoint theo AC (đặc biệt `by-product`, `by-batch`, traceability/analytics).
 
 ---
 
@@ -240,8 +247,8 @@ Storage            ██████████ 100% ✅
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
 | 1 | `POST` | `/api/v1/batches` | Tạo lô hàng mới | ✅ Done |
-| 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng (filters: product, status, dates) | ❌ Not Done |
-| 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID | ❌ Not Done |
+| 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng (filters: product, status, dates) | ✅ Done |
+| 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID | ✅ Done |
 | 4 | `PUT` | `/api/v1/batches/{id}` | Cập nhật thông tin lô | ❌ Not Done |
 
 ### 🟣 Advanced APIs
@@ -263,7 +270,7 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `GET` | `/api/v1/inventories` | Danh sách tồn kho (filters) | ❌ Not Done |
+| 1 | `GET` | `/api/v1/inventories` | Danh sách tồn kho (filters) | ✅ Done |
 | 2 | `GET` | `/api/v1/inventories/summary/{productId}` | Tổng hợp tồn kho theo sản phẩm | ❌ Not Done |
 | 3 | `GET` | `/api/v1/inventories/by-location` | Tồn kho nhóm theo vị trí | ❌ Not Done |
 
@@ -277,7 +284,7 @@ Storage            ██████████ 100% ✅
 | 7 | `POST` | `/api/v1/inventories/increase` | Tăng tồn kho (từ inbound) | ❌ Not Done |
 | 8 | `POST` | `/api/v1/inventories/decrease` | Giảm tồn kho (từ outbound) | ❌ Not Done |
 
-> 🔴 **Controller rỗng hoàn toàn** - Entity & migration đã có.
+> 🟡 **Đã có 1 endpoint cốt lõi** (`GET /api/v1/inventories`); các API summary/reservation/increase/decrease vẫn chưa triển khai.
 
 ---
 
@@ -287,17 +294,18 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/stock-adjustments` | Tạo điều chỉnh tồn kho | ❌ Not Done |
-| 2 | `GET` | `/api/v1/stock-adjustments` | Danh sách điều chỉnh | ❌ Not Done |
+| 1 | `POST` | `/api/v1/stock-adjustments` | Tạo điều chỉnh tồn kho | ✅ Done |
+| 2 | `GET` | `/api/v1/stock-adjustments` | Danh sách điều chỉnh | ✅ Done |
 
 ### 🟣 Advanced APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 3 | `PUT` | `/api/v1/stock-adjustments/{id}/approve` | Phê duyệt điều chỉnh | ❌ Not Done |
-| 4 | `PUT` | `/api/v1/stock-adjustments/{id}/reject` | Từ chối điều chỉnh | ❌ Not Done |
+| 3 | `PUT` | `/api/v1/stock-adjustments/{id}/approve` | Phê duyệt điều chỉnh | ✅ Done |
+| 4 | `PUT` | `/api/v1/stock-adjustments/{id}/reject` | Từ chối điều chỉnh | ✅ Done |
 
-> 🔴 **Controller rỗng hoàn toàn**
+> ✅ **Đã hoàn thành theo Jira:** `WHS-21`, `WHS-22`, `WHS-23`, `WHS-24` (sync 05/03/2026).  
+> ℹ️ Có thêm endpoint đã triển khai trong code: `GET /api/v1/stock-adjustments/{id}`.
 
 ---
 
@@ -307,10 +315,11 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/stock-transfers` | Tạo chuyển kho nội bộ | ❌ Not Done |
-| 2 | `GET` | `/api/v1/stock-transfers` | Danh sách chuyển kho | ❌ Not Done |
+| 1 | `POST` | `/api/v1/stock-transfers` | Tạo chuyển kho nội bộ | ✅ Done |
+| 2 | `GET` | `/api/v1/stock-transfers` | Danh sách chuyển kho | ✅ Done |
 
-> 🔴 **Controller rỗng hoàn toàn**
+> ✅ **Đã hoàn thành theo Jira:** `WHS-25`, `WHS-26`, `WHS-27` (sync 05/03/2026).  
+> ℹ️ Có thêm endpoint đã triển khai trong code: `GET /api/v1/stock-transfers/{id}`, `PUT /api/v1/stock-transfers/{id}/complete`, `PUT /api/v1/stock-transfers/{id}/cancel`.
 
 ---
 
@@ -465,8 +474,8 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `GET` | `/api/v1/stock-movements` | Danh sách biến động kho (filters) | ❌ Not Done |
-| 2 | `GET` | `/api/v1/stock-movements/{id}` | Chi tiết biến động | ❌ Not Done |
+| 1 | `GET` | `/api/v1/stock-movements` | Danh sách biến động kho (filters) | ✅ Done |
+| 2 | `GET` | `/api/v1/stock-movements/{id}` | Chi tiết biến động | ✅ Done |
 
 ### 🟣 Advanced APIs
 
@@ -479,7 +488,8 @@ Storage            ██████████ 100% ✅
 | 7 | `GET` | `/api/v1/stock-movements/analytics` | Phân tích biến động kho | ❌ Not Done |
 | 8 | `GET` | `/api/v1/stock-movements/export` | Export Excel/PDF | ❌ Not Done |
 
-> 🔴 **Controller rỗng hoàn toàn** - Records are immutable (insert-only by system).
+> 🟡 **Đã triển khai một phần**: list + detail + `GET /api/v1/stock-movements/reference/{referenceType}/{referenceId}`.  
+> 🔴 Các API `by-product`, `by-batch`, traceability/analytics/export vẫn chưa có.
 
 ---
 
@@ -632,18 +642,18 @@ Storage            ██████████ 100% ✅
 ### Phase 2 — Batch Management
 | Ưu tiên | Task | Effort |
 |---------|------|--------|
-| 🔴 P0 | Batch CRUD (list, get, update) — 3 APIs | 2 ngày |
+| 🟡 P1 | Batch update — 1 API còn lại của CRUD | 1 ngày |
 | 🟡 P1 | Batch quarantine/release — 2 APIs | 1-2 ngày |
 | 🟡 P2 | Batch traceability, expiring, FIFO — 4 APIs | 3 ngày |
 
 ### Phase 3 — Inventory Core
 | Ưu tiên | Task | Effort |
 |---------|------|--------|
-| 🔴 P0 | Inventory list, summary, by-location — 3 APIs | 3 ngày |
+| 🟡 P1 | Inventory summary + by-location — 2 APIs còn lại | 2 ngày |
 | 🔴 P0 | check-availability, reserve, unreserve — 3 APIs | 3 ngày |
 | 🟡 P1 | increase, decrease — 2 APIs (internal service) | 2 ngày |
-| 🟡 P1 | Stock Adjustments CRUD + approve/reject — 4 APIs | 3 ngày |
-| 🟡 P1 | Stock Transfers CRUD — 2 APIs | 2 ngày |
+| ✅ Done | ~~Stock Adjustments CRUD + approve/reject — 4 APIs~~ | — |
+| ✅ Done | ~~Stock Transfers CRUD — 2 APIs~~ | — |
 
 ### Phase 4 — Inbound Operations
 | Ưu tiên | Task | Effort |
@@ -664,7 +674,7 @@ Storage            ██████████ 100% ✅
 ### Phase 6 — Stock Movements & Reporting
 | Ưu tiên | Task | Effort |
 |---------|------|--------|
-| 🟡 P1 | Stock Movements query + traceability — 8 APIs | 5 ngày |
+| 🔴 P0 | Stock Movements còn thiếu (6 APIs): by-product, by-batch, traceability, analytics, export | 4-5 ngày |
 | 🟡 P2 | Reporting on-demand — 6 APIs | 5 ngày |
 | 🟢 P3 | Reporting async — 4 APIs | 3 ngày |
 | 🟢 P3 | Reporting scheduled — 6 APIs | 4 ngày |
@@ -682,13 +692,13 @@ Storage            ██████████ 100% ✅
 | Metric | Value |
 |--------|-------|
 | **Tổng API thiết kế** | 159 |
-| **Đã triển khai** | 67 (~42%) |
-| **Chưa triển khai** | 92 (~58%) |
-| **Module hoàn thành 100%** | UOM, Email, Storage, **Employee, Category** |
-| **Module 0%** | Inventory, Stock Adjustments, Stock Transfers, PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Stock Movements, Reporting |
+| **Đã triển khai** | 78 (~49%) |
+| **Chưa triển khai** | 81 (~51%) |
+| **Module hoàn thành 100%** | UOM, Email, Storage, Employee, Category, **Stock Adjustments, Stock Transfers** |
+| **Module 0%** | PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Reporting |
 | **Entities đã có (DB migration)** | ✅ Tất cả 30 entities đã có migration |
-| **Controllers đã tạo (shell)** | ✅ 26 controllers (nhưng 13 controllers rỗng) |
+| **Controllers đã tạo (shell)** | ✅ 26 controllers (8 controllers chưa có method API) |
 
-> 💡 **Điểm mạnh:** Nền tảng tốt — DB schema, entities, auth, rate-limiting, email, storage đã hoàn thiện.  
+> 💡 **Điểm mạnh:** Nền tảng tốt — DB schema, entities, auth, rate-limiting, email, storage đã hoàn thiện; module điều chỉnh/chuyển kho đã có API vận hành chính.  
 > ✅ **Employee module:** Hoàn thành 100% (5/5 APIs) — tạo, danh sách, chi tiết, cập nhật, xóa mềm.  
-> ⚠️ **Điểm yếu:** Toàn bộ business logic core (Inventory, Inbound, Outbound, Reporting) chưa triển khai.
+> ⚠️ **Điểm yếu:** Inbound/Outbound/Reporting chưa triển khai; Inventory và Stock Movements mới ở mức partial.
