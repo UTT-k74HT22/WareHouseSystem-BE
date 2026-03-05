@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.service.BatchService;
@@ -156,5 +157,19 @@ public class BatchServiceImpl implements BatchService {
             log.warn("Invalid page size: {}", size);
             throw new BadRequestException(ErrorCode.COM_003);
         }
+    }
+
+    @Override
+    @Transactional
+    public BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request) {
+
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() ->
+                        new BadRequestException(ErrorCode.BATCH_001));
+
+        batch.setStatus(request.getStatus());
+        Batch updateStatus = batchRepository.save(batch);
+        log.info("Batch status changed successfully with ID={}", updateStatus.getId());
+        return batchMapper.toResponse(updateStatus);
     }
 }

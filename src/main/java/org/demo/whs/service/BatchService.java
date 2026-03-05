@@ -1,5 +1,7 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
+import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -18,4 +20,6 @@ public interface BatchService {
     BatchResponse getBatchById(String id);
 
     PageResponse<BatchResponse> getAllBatches(Integer page, Integer size);
+
+    BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request);
 }
