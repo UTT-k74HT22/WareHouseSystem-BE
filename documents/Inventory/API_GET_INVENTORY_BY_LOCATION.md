@@ -1,13 +1,13 @@
-# API Documentation: Get Inventory by Location
+# API Documentation: Get Inventory Grouped by Location
 ## Lấy thông tin tồn kho gom nhóm theo vị trí (Location)
 
 ---
 
 ## 1. Thông tin chung
-- **Endpoint**: `/api/v1/inventories/locations`
+- **Endpoint**: `/api/v1/inventories/by-location`
 - **Method**: `GET`
 - **Auth**: Yêu cầu Token hợp lệ (Bearer Token)
-- **Mô tả**: Trả về danh sách tồn kho được gom nhóm theo từng vị trí (Location). Hỗ trợ nhân viên kho trong việc lấy hàng (Picking) và bổ sung hàng hóa (Replenishment) bằng cách biết chính xác sản phẩm nào đang nằm ở đâu.
+- **Mô tả**: Trả về danh sách tồn kho được gom nhóm theo từng vị trí (Location). Mục tiêu chính là hỗ trợ nhân viên kho thực hiện các nghiệp vụ lấy hàng (Picking) và bổ sung hàng hóa (Replenishment) một cách tối ưu.
 
 ---
 
@@ -16,8 +16,8 @@
 ### 2.1. Query Parameters
 | Tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `warehouseId` | `String (UUID)` | Không | Lọc tồn kho theo ID kho cụ thể. |
-| `productId` | `String (UUID)` | Không | Lọc tồn kho của một sản phẩm cụ thể trên các vị trí. |
+| `warehouseId` | `String (UUID)` | Không | Lọc dữ liệu gom nhóm cho một kho cụ thể. |
+| `productId` | `String (UUID)` | Không | Lọc xem một sản phẩm cụ thể đang nằm ở những vị trí nào. |
 
 ---
 

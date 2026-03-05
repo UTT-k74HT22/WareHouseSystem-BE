@@ -131,7 +131,7 @@ public class InventoryMapper {
                         .toList();
 
         return InventoryByLocationResponse.builder()
-                .locationId("unassigned".equals(locationId) ? null : locationId)
+                .locationId("UNASSIGNED".equals(locationId) ? null : locationId)
                 .locationCode(loc != null ? loc.getCode() : "N/A")
                 .locationName(loc != null ? loc.getName() : "Unassigned")
                 .warehouseId(warehouseId)

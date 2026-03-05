@@ -185,7 +185,7 @@ class InventoryControllerTest {
 
         when(inventoryService.getInventoryByLocation(ArgumentMatchers.any())).thenReturn(List.of(mockResponse));
 
-        mockMvc.perform(get("/api/v1/inventories/locations")
+        mockMvc.perform(get("/api/v1/inventories/by-location")
                         .param("warehouseId", "wh-1")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
