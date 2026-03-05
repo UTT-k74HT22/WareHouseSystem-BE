@@ -177,22 +177,10 @@ public class InventoryServiceImpl implements InventoryService {
     public CheckAvailabilityResponse checkAvailability(CheckAvailabilityRequest request) {
         log.info("Checking inventory availability for request: {}", request);
 
-        // 1. Validate Product existence
-        if (!productRepository.existsById(request.getProductId())) {
-            throw new NotFoundException(PROD_001);
-        }
+        // 1. Validate request
+        validateCheckAvailabilityRequest(request);
 
-        // 2. Validate Warehouse existence if provided
-        if (request.getWarehouseId() != null && !wareHouseRepository.existsById(request.getWarehouseId())) {
-            throw new NotFoundException(WH_001);
-        }
-
-        // 3. Validate Location existence if provided
-        if (request.getLocationId() != null && !locationRepository.existsById(request.getLocationId())) {
-            throw new NotFoundException(LOC_001);
-        }
-
-        // 4. Get availability from repository
+        // 2. Get availability from repository
         InventoryAvailabilityProjection availability = inventoryRepository.getAvailability(
                 request.getProductId(),
                 request.getWarehouseId(),
@@ -205,7 +193,24 @@ public class InventoryServiceImpl implements InventoryService {
 
         boolean isAvailable = available.compareTo(request.getQuantity()) >= 0;
 
-        return inventoryMapper.toCheckAvailabilityResponse(request,available,isAvailable);
+        return inventoryMapper.toCheckAvailabilityResponse(request, available, isAvailable);
+    }
+
+    private void validateCheckAvailabilityRequest(CheckAvailabilityRequest request) {
+        // Validate Product existence
+        if (!productRepository.existsById(request.getProductId())) {
+            throw new NotFoundException(PROD_001);
+        }
+
+        // Validate Warehouse existence if provided
+        if (request.getWarehouseId() != null && !wareHouseRepository.existsById(request.getWarehouseId())) {
+            throw new NotFoundException(WH_001);
+        }
+
+        // Validate Location existence if provided
+        if (request.getLocationId() != null && !locationRepository.existsById(request.getLocationId())) {
+            throw new NotFoundException(LOC_001);
+        }
     }
 
     private void validatePageable(Pageable pageable) {
