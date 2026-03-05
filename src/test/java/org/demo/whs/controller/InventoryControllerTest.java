@@ -1,7 +1,5 @@
 package org.demo.whs.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.InventoryService;
@@ -24,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
+@WithMockUser
 class InventoryControllerTest {
 
     @Autowired
@@ -35,11 +34,7 @@ class InventoryControllerTest {
     @MockBean
     private RateLimitService rateLimitService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when request is valid")
     void shouldReturn200WhenValidRequest() throws Exception {
 
@@ -77,7 +72,8 @@ class InventoryControllerTest {
         mockMvc.perform(get("/api/v1/inventories")
                         .param("sortBy", "abcxyz")
                         .param("direction", "ASC"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 
     @Test
@@ -87,7 +83,8 @@ class InventoryControllerTest {
         mockMvc.perform(get("/api/v1/inventories")
                         .param("sortBy", "updatedAt")
                         .param("direction", "HELLO"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
     }
 
     @Test
@@ -97,7 +94,18 @@ class InventoryControllerTest {
         mockMvc.perform(get("/api/v1/inventories")
                         .param("page", "-1")
                         .param("size", "10"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_006"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is zero")
+    void shouldReturn400WhenSizeIsZero() throws Exception {
+
+        mockMvc.perform(get("/api/v1/inventories")
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_007"));
     }
 
     @Test
@@ -106,6 +114,7 @@ class InventoryControllerTest {
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("size", "101"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("COM_008"));
     }
 }
