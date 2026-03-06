@@ -36,5 +36,6 @@ public class InventoryByLocationResponse {
         private BigDecimal onHandQuantity;
         private BigDecimal reservedQuantity;
         private BigDecimal availableQuantity;
+
     }
 }
