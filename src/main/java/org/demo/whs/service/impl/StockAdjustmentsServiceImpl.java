@@ -54,7 +54,9 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse createAdjustment(StockAdjustmentsRequest request) {
-        log.info("Attempting to create stock adjustment with details: {}", request);
+        log.info("Attempting to create stock adjustment. inventoryId={}, reason={}",
+                request == null ? null : request.getInventoryId(),
+                request == null ? null : request.getReason());
 
         //Step 1: Check current user (ROLE_NAME)
         String actorId = getCurrentActorId();
@@ -176,6 +178,10 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<StockAdjustmentsResponse> search(SearchStockAdjustmentsRequest request, Integer page, Integer size) {
+        if (request == null) {
+            request = new SearchStockAdjustmentsRequest();
+        }
+        validateSearchRequest(request);
         Pageable pageable = buildPageable(page, size);
         Page<StockAdjustments> adjustmentPage = stockAdjustmentsRepository.search(
                 request.getStatus(),
@@ -204,7 +210,8 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse approve(String id, ApproveStockAdjustmentRequest request) {
-        log.info("Attempting to approve stock adjustment with ID: {} and approval details: {}", id, request);
+        log.info("Attempting to approve stock adjustment with ID: {} and approval note present: {}",
+                id, request != null && request.getApprovalNote() != null && !request.getApprovalNote().isBlank());
 
         //Step 1: Check current user (ROLE_NAME)
         String actorId = getCurrentActorId();
@@ -287,7 +294,8 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     @Override
     @Transactional
     public StockAdjustmentsResponse reject(String id, RejectStockAdjustmentRequest request) {
-        log.info("Attempting to reject stock adjustment with ID: {} and rejection details: {}", id, request);
+        log.info("Attempting to reject stock adjustment with ID: {} and rejection reason present: {}",
+                id, request != null && request.getRejectionReason() != null && !request.getRejectionReason().isBlank());
 
         //Step 1: Check current user (ROLE_NAME)
         String actorId = getCurrentActorId();
@@ -328,6 +336,8 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     }
 
     private void validateAdjustmentRequest(Inventory inventory, BigDecimal quantityAfter, BigDecimal adjustmentQuantity) {
+        validateQuantityFormat(quantityAfter);
+
         if (quantityAfter.compareTo(ZERO) < 0) {
             throw new BadRequestException("Quantity after must be non-negative", ErrorCode.STA_001);
         }
@@ -336,6 +346,21 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         }
         if (adjustmentQuantity.compareTo(ZERO) == 0) {
             throw new BadRequestException("Adjustment quantity cannot be zero", ErrorCode.STA_001);
+        }
+    }
+
+    private void validateQuantityFormat(BigDecimal quantityAfter) {
+        if (quantityAfter == null) {
+            throw new BadRequestException("Quantity after is required", ErrorCode.STA_001);
+        }
+        if (quantityAfter.scale() > 2) {
+            throw new BadRequestException("Quantity after must not exceed 2 decimal places", ErrorCode.STA_001);
+        }
+        String plain = quantityAfter.abs().toPlainString();
+        int dotIdx = plain.indexOf('.');
+        String integerPart = dotIdx >= 0 ? plain.substring(0, dotIdx) : plain;
+        if (integerPart.length() > 13) {
+            throw new BadRequestException("Quantity after exceeds maximum supported value", ErrorCode.STA_001);
         }
     }
 
@@ -392,17 +417,31 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     }
 
     private boolean requiresApproval(List<String> actorRoles, ReasonType reasonType, BigDecimal adjustmentQuantity) {
-        // ADMIN tự approve, không cần chờ
-        if (hasRole(actorRoles, RoleType.ADMIN)) return false;
+        if (hasRole(actorRoles, RoleType.ADMIN)) {
+            return false;
+        }
 
-        // Các lý do nhạy cảm: luôn cần duyệt
-        if (reasonType == ReasonType.THEFT || reasonType == ReasonType.SYSTEM_ERROR) return true;
+        boolean sensitiveReason = reasonType == ReasonType.THEFT || reasonType == ReasonType.SYSTEM_ERROR;
+        boolean largeDelta = adjustmentQuantity.abs().compareTo(new BigDecimal("5.00")) >= 0;
 
-        // Delta lớn: cần duyệt (rule mẫu, bạn có thể cấu hình theo kho)
-        if (adjustmentQuantity.abs().compareTo(new BigDecimal("5.00")) >= 0) return true;
+        // MANAGER có thể auto-apply các điều chỉnh nhỏ và không nhạy cảm.
+        if (hasRole(actorRoles, RoleType.MANAGER)) {
+            return sensitiveReason || largeDelta;
+        }
 
-        // Default: cần duyệt
+        // USER và các role khác luôn cần duyệt.
         return true;
+    }
+
+    private void validateSearchRequest(SearchStockAdjustmentsRequest request) {
+        if (request == null) {
+            return;
+        }
+        LocalDateTime createdFrom = request.getCreatedFrom();
+        LocalDateTime createdTo = request.getCreatedTo();
+        if (createdFrom != null && createdTo != null && createdFrom.isAfter(createdTo)) {
+            throw new BadRequestException("createdFrom must be before or equal to createdTo", ErrorCode.COM_001);
+        }
     }
 
     private void assertCanApproveReject(List<String> roles) {

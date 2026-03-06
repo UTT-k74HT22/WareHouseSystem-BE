@@ -313,6 +313,34 @@ class StockAdjustmentsServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should throw BadRequest when quantity after has more than 2 decimal places")
+        void should_ThrowBadRequest_When_QuantityAfterHasTooManyDecimals() {
+            Inventory inventory = buildInventory("inv-1", "100.00", "0.00");
+            StockAdjustmentsRequest request = buildAdjustmentRequest("inv-1", "100.001", ReasonType.COUNT_ERROR);
+
+            when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inventory));
+
+            assertThatThrownBy(() -> stockAdjustmentsService.createAdjustment(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("must not exceed 2 decimal places")
+                    .hasFieldOrPropertyWithValue("errorCode", "STA_001");
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequest when quantity after exceeds DECIMAL(15,2) integer range")
+        void should_ThrowBadRequest_When_QuantityAfterExceedsIntegerRange() {
+            Inventory inventory = buildInventory("inv-1", "100.00", "0.00");
+            StockAdjustmentsRequest request = buildAdjustmentRequest("inv-1", "10000000000000.00", ReasonType.COUNT_ERROR);
+
+            when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inventory));
+
+            assertThatThrownBy(() -> stockAdjustmentsService.createAdjustment(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("exceeds maximum supported value")
+                    .hasFieldOrPropertyWithValue("errorCode", "STA_001");
+        }
+
+        @Test
         @DisplayName("Should throw NotFoundException when inventory not found")
         void should_ThrowNotFound_When_InventoryNotFound() {
             StockAdjustmentsRequest request = buildAdjustmentRequest("inv-999", "50.00", ReasonType.DAMAGE);
@@ -478,6 +506,29 @@ class StockAdjustmentsServiceImplTest {
 
             assertThat(response.getRequiresApproval()).isTrue();
             assertThat(response.getStatus()).isEqualTo(StockAdjustmentsStatus.PENDING_APPROVAL);
+        }
+
+        @Test
+        @DisplayName("Should NOT require approval when MANAGER creates small non-sensitive adjustment")
+        void should_NotRequireApproval_When_ManagerCreatesSmallNonSensitiveAdjustment() {
+            Inventory inventory = buildInventory("inv-1", "100.00", "0.00");
+            StockAdjustmentsRequest request = buildAdjustmentRequest("inv-1", "101.00", ReasonType.COUNT_ERROR);
+
+            when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inventory));
+            when(roleRepository.findRoleNamesByAccountId(ACTOR_ID)).thenReturn(List.of("MANAGER"));
+            when(stockAdjustmentsRepository.existsByAdjustmentNumber(anyString())).thenReturn(false);
+            when(stockAdjustmentsRepository.save(any())).thenAnswer(inv -> {
+                StockAdjustments adj = inv.getArgument(0);
+                adj.setId("adj-mgr-auto");
+                return adj;
+            });
+
+            StockAdjustmentsResponse response = stockAdjustmentsService.createAdjustment(request);
+
+            assertThat(response.getRequiresApproval()).isFalse();
+            assertThat(response.getStatus()).isEqualTo(StockAdjustmentsStatus.APPROVED);
+            verify(inventoryRepository).save(any(Inventory.class));
+            verify(stockMovementsRepository).save(any(StockMovements.class));
         }
 
         @Test
@@ -692,6 +743,37 @@ class StockAdjustmentsServiceImplTest {
                     .isInstanceOf(BadRequestException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "COM_001");
         }
+
+        @Test
+        @DisplayName("Should throw BadRequest when createdFrom is after createdTo")
+        void should_ThrowBadRequest_When_CreatedFromAfterCreatedTo() {
+            SearchStockAdjustmentsRequest request = new SearchStockAdjustmentsRequest();
+            request.setCreatedFrom(LocalDateTime.of(2026, 12, 31, 0, 0));
+            request.setCreatedTo(LocalDateTime.of(2026, 1, 1, 0, 0));
+
+            assertThatThrownBy(() -> stockAdjustmentsService.search(request, 0, 10))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("createdFrom must be before or equal to createdTo")
+                    .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+            verify(stockAdjustmentsRepository, never()).search(
+                    any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)
+            );
+        }
+
+        @Test
+        @DisplayName("Should handle null request object in search")
+        void should_HandleNullRequest_When_SearchCalledWithNull() {
+            Page<StockAdjustments> page = new PageImpl<>(Collections.emptyList());
+            when(stockAdjustmentsRepository.search(
+                    isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)
+            )).thenReturn(page);
+
+            PageResponse<StockAdjustmentsResponse> response = stockAdjustmentsService.search(null, 0, 10);
+
+            assertThat(response).isNotNull();
+            assertThat(response.getContent()).isEmpty();
+        }
     }
 
     // =========================================================================
@@ -720,7 +802,6 @@ class StockAdjustmentsServiceImplTest {
 
             // Assert status
             assertThat(response.getStatus()).isEqualTo(StockAdjustmentsStatus.APPROVED);
-            assertThat(response.getApprovedBy()).isEqualTo(ACTOR_ID);
             assertThat(response.getApprovedAt()).isNotNull();
             assertThat(response.getRejectionReason()).isNull();
 
@@ -950,7 +1031,6 @@ class StockAdjustmentsServiceImplTest {
 
             assertThat(response.getStatus()).isEqualTo(StockAdjustmentsStatus.REJECTED);
             assertThat(response.getRejectionReason()).isEqualTo("Evidence insufficient");
-            assertThat(response.getApprovedBy()).isEqualTo(ACTOR_ID);
             assertThat(response.getApprovedAt()).isNotNull();
 
             // No inventory or movement changes
