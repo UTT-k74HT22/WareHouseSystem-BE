@@ -49,6 +49,7 @@ public enum ErrorCode {
     STA_404("STA_404", "Stock adjustment not found"),
     STF_001("STF_001", "Stock transfer not found"),
     STF_002("STF_002", "Invalid stock transfer status transition"),
+    STF_003("STF_003", "Quantity must be greater than 0"),
 
     // Location errors
     LOC_001("LOC_001", "Location not found"),
