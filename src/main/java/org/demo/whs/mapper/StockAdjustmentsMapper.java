@@ -77,12 +77,9 @@ public class StockAdjustmentsMapper {
                 .status(entity.getStatus())
                 .notes(entity.getNotes())
                 .requiresApproval(entity.getRequiresApproval())
-                .approvedBy(entity.getApprovedBy())
                 .approvedAt(entity.getApprovedAt())
                 .rejectionReason(entity.getRejectionReason())
-                .createdBy(entity.getCreatedBy())
                 .createdAt(entity.getCreatedAt())
-                .updatedBy(entity.getUpdatedBy())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
     }
