@@ -42,5 +42,11 @@ public interface StockTransfersService {
      */
     StockTransfersResponse complete(String id);
 
+    /**
+     * Cancels a stock transfer based on its unique identifier.
+     *
+     * @param id the unique identifier of the stock transfer to cancel
+     * @return the response containing the details of the canceled stock transfer
+     */
     StockTransfersResponse cancel(String id);
 }
