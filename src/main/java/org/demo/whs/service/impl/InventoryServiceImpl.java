@@ -2,18 +2,29 @@ package org.demo.whs.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.*;
+import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Inventory;
+import org.demo.whs.entity.Locations;
+import org.demo.whs.entity.Products;
+import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
-import org.demo.whs.repository.*;
-import org.demo.whs.repository.projection.InventorySummaryProjection;
+import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.InventoryRepository;
+import org.demo.whs.repository.LocationRepository;
+import org.demo.whs.repository.ProductRepository;
+import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.repository.specification.InventorySpecification;
 import org.demo.whs.service.InventoryService;
 import org.springframework.data.domain.Page;
@@ -21,10 +32,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.demo.whs.exception.ErrorCode.PROD_001;
+
 
 @Service
 @RequiredArgsConstructor
@@ -41,93 +59,42 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<InventoryResponse> getInventories(InventoryFilterRequest filter, Pageable pageable) {
+
         log.info("Fetching inventories with filter: {}, pageable: {}", filter, pageable);
+
         validatePageable(pageable);
 
-        // 1. Fetch Inventory page (Thin Entity)
         Page<Inventory> inventoryPage = inventoryRepository.findAll(
                 InventorySpecification.withFilter(filter),
                 pageable
         );
 
         List<Inventory> content = inventoryPage.getContent();
+
         if (content.isEmpty()) {
             return PageResponse.from(inventoryPage, List.of());
         }
 
-        // 2. Collect Unique IDs
-        Set<String> productIds = content.stream().map(Inventory::getProductId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Set<String> warehouseIds = content.stream().map(Inventory::getWarehouseId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Set<String> locationIds = content.stream().map(Inventory::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Set<String> batchIds = content.stream().map(Inventory::getBatchId).filter(Objects::nonNull).collect(Collectors.toSet());
-
-        // 3. Bulk Fetch related entities
-        Map<String, Products> productMap = productRepository.findAllById(productIds)
-                .stream().collect(Collectors.toMap(Products::getId, p -> p));
-
-        Map<String, Warehouses> warehouseMap = wareHouseRepository.findAllById(warehouseIds)
-                .stream().collect(Collectors.toMap(Warehouses::getId, w -> w));
-
-        Map<String, Locations> locationMap = locationRepository.findAllById(locationIds)
-                .stream().collect(Collectors.toMap(Locations::getId, l -> l));
-
-        Map<String, Batch> batchMap = batchRepository.findAllById(batchIds)
-                .stream().collect(Collectors.toMap(Batch::getId, b -> b));
-
-        // 4. Map to Responses with related data
-        List<InventoryResponse> responses = inventoryMapper.toResponses(content, productMap, warehouseMap, locationMap, batchMap);
-
-        return PageResponse.from(inventoryPage, responses);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public InventorySummaryResponse getSummaryByProduct(String productId) {
-        log.info("Getting inventory summary for product ID: {}", productId);
-
-        InventorySummaryProjection projection =
-                inventoryRepository.getSummaryByProductId(productId)
-                        .orElseThrow(() -> new NotFoundException(PROD_001));
-
-        return inventoryMapper.toSummaryResponse(projection);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter) {
-
-        log.info("Getting inventory grouped by location");
-
-        // 1. Fetch inventories
-        List<Inventory> inventories =
-                inventoryRepository.findAll(InventorySpecification.withFilter(filter));
-
-        if (inventories.isEmpty()) {
-            return List.of();
-        }
-
-        // 2. Collect IDs for bulk fetching
-        Set<String> productIds = inventories.stream()
+        Set<String> productIds = content.stream()
                 .map(Inventory::getProductId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Set<String> warehouseIds = inventories.stream()
+        Set<String> warehouseIds = content.stream()
                 .map(Inventory::getWarehouseId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Set<String> locationIds = inventories.stream()
+        Set<String> locationIds = content.stream()
                 .map(Inventory::getLocationId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Set<String> batchIds = inventories.stream()
+        Set<String> batchIds = content.stream()
                 .map(Inventory::getBatchId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // 3. Bulk fetch related data
         Map<String, Products> productMap = productRepository.findAllById(productIds)
                 .stream()
                 .collect(Collectors.toMap(Products::getId, p -> p));
@@ -144,28 +111,69 @@ public class InventoryServiceImpl implements InventoryService {
                 .stream()
                 .collect(Collectors.toMap(Batch::getId, b -> b));
 
-        // 4. Group inventories by location
-        Map<String, List<Inventory>> groupedByLocation =
-                inventories.stream()
-                        .collect(Collectors.groupingBy(
-                                inv -> Optional.ofNullable(inv.getLocationId())
-                                        .orElse("UNASSIGNED")
-                        ));
+        List<InventoryResponse> responses = inventoryMapper.toResponses(
+                content,
+                productMap,
+                warehouseMap,
+                locationMap,
+                batchMap
+        );
 
-        // 5. Build response using mapper
-        return groupedByLocation.entrySet()
-                .stream()
-                .map(entry -> inventoryMapper.toLocationResponse(
-                        entry.getKey(),
-                        entry.getValue(),
-                        productMap,
-                        warehouseMap,
-                        locationMap,
-                        batchMap
-                ))
-                .toList();
+        return PageResponse.from(inventoryPage, responses);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public InventorySummaryResponse getSummaryByProduct(String productId) {
+        log.info("Getting inventory summary for product ID: {}", productId);
+
+        return inventoryRepository.getSummaryByProductId(productId)
+                .orElseThrow(() -> new NotFoundException(PROD_001));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter) {
+        log.info("Getting inventory grouped by location for filters: {}", filter);
+
+        List<InventoryLocationProjection> projections = inventoryRepository.getInventoryByLocation(filter);
+
+        Map<String, InventoryByLocationResponse> responseMap = new LinkedHashMap<>();
+
+        for (InventoryLocationProjection p : projections) {
+            String locationGroupKey = buildLocationGroupKey(p);
+            InventoryByLocationResponse locationResponse = responseMap.computeIfAbsent(locationGroupKey, id ->
+                InventoryByLocationResponse.builder()
+                    .locationId(p.getLocationId())
+                    .locationCode(p.getLocationCode())
+                    .locationName(p.getLocationName() != null ? p.getLocationName() : "Unassigned")
+                    .warehouseId(p.getWarehouseId())
+                    .warehouseName(p.getWarehouseName())
+                    .items(new ArrayList<>())
+                    .build()
+            );
+
+            BigDecimal onHand = p.getOnHandQuantity() != null ? p.getOnHandQuantity() : BigDecimal.ZERO;
+            BigDecimal reserved = p.getReservedQuantity() != null ? p.getReservedQuantity() : BigDecimal.ZERO;
+
+            locationResponse.getItems().add(
+                LocationInventoryItemResponse.builder()
+                    .productId(p.getProductId())
+                    .productSku(p.getProductSku())
+                    .productName(p.getProductName())
+                    .batchId(p.getBatchId())
+                    .batchNumber(p.getBatchNumber())
+                    .onHandQuantity(onHand)
+                    .reservedQuantity(reserved)
+                    .availableQuantity(onHand.subtract(reserved))
+                    .build()
+            );
+        }
+
+        return new ArrayList<>(responseMap.values());
+    }
+
+    /* ----------PRIVATE METHOD--------------*/
     private void validatePageable(Pageable pageable) {
         if (pageable.getPageNumber() < 0) {
             throw new BadRequestException(ErrorCode.COM_006);
@@ -176,5 +184,55 @@ public class InventoryServiceImpl implements InventoryService {
         if (pageable.getPageSize() > 100) {
             throw new BadRequestException(ErrorCode.COM_008);
         }
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public CheckAvailabilityResponse checkAvailability(CheckAvailabilityRequest request) {
+
+        log.info("Checking inventory availability for request: {}", request);
+
+        // 1. Validate product
+        productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new NotFoundException(PROD_001));
+
+        // 2. Validate warehouse (optional)
+        Warehouses warehouse = null;
+        if (request.getWarehouseId() != null) {
+            warehouse = wareHouseRepository.findById(request.getWarehouseId())
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.WHS_001));
+        }
+
+        // 3. Validate location (optional)
+        Locations location = null;
+        if (request.getLocationId() != null) {
+            location = locationRepository.findById(request.getLocationId())
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.LOC_001));
+        }
+
+        if (warehouse != null && location != null
+                && !warehouse.getId().equals(location.getWarehouseId())) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        // 4. Aggregate inventory
+        CheckAvailabilityResponse availability = inventoryRepository.getAvailability(
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getLocationId()
+        );
+
+        BigDecimal availableQuantity = availability.getAvailableQuantity();
+        boolean isAvailable = availableQuantity.compareTo(request.getQuantity()) >= 0;
+
+        return inventoryMapper.toCheckAvailabilityResponse(
+                request,
+                availableQuantity,
+                isAvailable
+        );
+    }
+
+    private String buildLocationGroupKey(InventoryLocationProjection projection) {
+        return projection.getWarehouseId() + ":" +
+                (projection.getLocationId() != null ? projection.getLocationId() : "UNASSIGNED");
     }
 }

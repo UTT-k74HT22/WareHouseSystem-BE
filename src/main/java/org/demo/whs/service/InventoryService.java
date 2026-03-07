@@ -1,6 +1,8 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -35,4 +37,12 @@ public interface InventoryService {
      * @return List<InventoryByLocationResponse>
      */
     List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter);
+
+    /**
+     * Check if requested quantity is available for a product.
+     *
+     * @param request The check availability request
+     * @return Availability result
+     */
+    CheckAvailabilityResponse checkAvailability(CheckAvailabilityRequest request);
 }
