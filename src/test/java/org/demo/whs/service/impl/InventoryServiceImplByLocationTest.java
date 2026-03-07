@@ -120,6 +120,43 @@ class InventoryServiceImplByLocationTest {
         assertThat(result).hasSize(1);
         InventoryByLocationResponse locResponse = result.get(0);
         assertThat(locResponse.getLocationId()).isNull();
+        assertThat(locResponse.getLocationName()).isEqualTo("Unassigned");
         assertThat(locResponse.getItems()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("should_NotMergeUnassignedInventoryAcrossWarehouses")
+    void should_NotMergeUnassignedInventoryAcrossWarehouses() {
+        InventoryLocationProjection first = InventoryLocationProjection.builder()
+                .locationId(null)
+                .warehouseId("wh-1")
+                .warehouseName("Warehouse 1")
+                .productId("prod-1")
+                .productSku("SKU-1")
+                .productName("Product 1")
+                .onHandQuantity(BigDecimal.TEN)
+                .reservedQuantity(BigDecimal.ZERO)
+                .build();
+
+        InventoryLocationProjection second = InventoryLocationProjection.builder()
+                .locationId(null)
+                .warehouseId("wh-2")
+                .warehouseName("Warehouse 2")
+                .productId("prod-2")
+                .productSku("SKU-2")
+                .productName("Product 2")
+                .onHandQuantity(BigDecimal.ONE)
+                .reservedQuantity(BigDecimal.ZERO)
+                .build();
+
+        when(inventoryRepository.getInventoryByLocation(any(InventoryFilterRequest.class)))
+                .thenReturn(List.of(first, second));
+
+        List<InventoryByLocationResponse> result =
+                inventoryService.getInventoryByLocation(InventoryFilterRequest.builder().build());
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(InventoryByLocationResponse::getWarehouseId)
+                .containsExactly("wh-1", "wh-2");
     }
 }

@@ -141,11 +141,12 @@ public class InventoryServiceImpl implements InventoryService {
         Map<String, InventoryByLocationResponse> responseMap = new LinkedHashMap<>();
 
         for (InventoryLocationProjection p : projections) {
-            InventoryByLocationResponse locationResponse = responseMap.computeIfAbsent(p.getLocationId(), id ->
+            String locationGroupKey = buildLocationGroupKey(p);
+            InventoryByLocationResponse locationResponse = responseMap.computeIfAbsent(locationGroupKey, id ->
                 InventoryByLocationResponse.builder()
                     .locationId(p.getLocationId())
                     .locationCode(p.getLocationCode())
-                    .locationName(p.getLocationName())
+                    .locationName(p.getLocationName() != null ? p.getLocationName() : "Unassigned")
                     .warehouseId(p.getWarehouseId())
                     .warehouseName(p.getWarehouseName())
                     .items(new ArrayList<>())
@@ -191,7 +192,7 @@ public class InventoryServiceImpl implements InventoryService {
         log.info("Checking inventory availability for request: {}", request);
 
         // 1. Validate product
-        Products product = productRepository.findById(request.getProductId())
+        productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new NotFoundException(PROD_001));
 
         // 2. Validate warehouse (optional)
@@ -206,6 +207,11 @@ public class InventoryServiceImpl implements InventoryService {
         if (request.getLocationId() != null) {
             location = locationRepository.findById(request.getLocationId())
                     .orElseThrow(() -> new NotFoundException(ErrorCode.LOC_001));
+        }
+
+        if (warehouse != null && location != null
+                && !warehouse.getId().equals(location.getWarehouseId())) {
+            throw new BadRequestException(ErrorCode.COM_001);
         }
 
         // 4. Aggregate inventory
@@ -223,5 +229,10 @@ public class InventoryServiceImpl implements InventoryService {
                 availableQuantity,
                 isAvailable
         );
+    }
+
+    private String buildLocationGroupKey(InventoryLocationProjection projection) {
+        return projection.getWarehouseId() + ":" +
+                (projection.getLocationId() != null ? projection.getLocationId() : "UNASSIGNED");
     }
 }

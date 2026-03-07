@@ -236,4 +236,34 @@ class InventoryServiceImplTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "LOC_001");
     }
+
+    @Test
+    @DisplayName("checkAvailability_shouldThrowBadRequest_WhenLocationDoesNotBelongToWarehouse")
+    void checkAvailability_shouldThrowBadRequest_WhenLocationDoesNotBelongToWarehouse() {
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        String locationId = "loc-1";
+
+        CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .locationId(locationId)
+                .quantity(BigDecimal.ONE)
+                .build();
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setId(warehouseId);
+
+        Locations location = new Locations();
+        location.setId(locationId);
+        location.setWarehouseId("wh-2");
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(new Products()));
+        when(wareHouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
+        when(locationRepository.findById(locationId)).thenReturn(Optional.of(location));
+
+        assertThatThrownBy(() -> inventoryService.checkAvailability(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
 }

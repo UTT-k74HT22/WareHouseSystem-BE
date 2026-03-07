@@ -156,6 +156,7 @@ public class InventoryMapper {
                 .requestedQuantity(request.getQuantity())
 
                 .availableQuantity(available)
+                .isAvailable(isAvailable)
                 .message(message)
                 .build();
     }

@@ -116,7 +116,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                     i.reserved_quantity AS reservedQuantity
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id
-                JOIN locations l ON l.id = i.location_id
+                LEFT JOIN locations l ON l.id = i.location_id
                 JOIN warehouses w ON w.id = i.warehouse_id
                 LEFT JOIN batches b ON b.id = i.batch_id
                 WHERE (:productId IS NULL OR p.id = :productId)
