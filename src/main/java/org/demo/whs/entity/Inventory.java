@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 
 import java.math.BigDecimal;
@@ -46,13 +45,20 @@ import java.time.LocalDateTime;
         @SqlResultSetMapping(
                 name = "InventoryByLocationResponseMapping",
                 classes = @ConstructorResult(
-                        targetClass = InventoryByLocationResponse.class,
+                        targetClass = org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection.class,
                         columns = {
                                 @ColumnResult(name = "locationId", type = String.class),
+                                @ColumnResult(name = "locationCode", type = String.class),
                                 @ColumnResult(name = "locationName", type = String.class),
+                                @ColumnResult(name = "warehouseId", type = String.class),
+                                @ColumnResult(name = "warehouseName", type = String.class),
                                 @ColumnResult(name = "productId", type = String.class),
+                                @ColumnResult(name = "productSku", type = String.class),
                                 @ColumnResult(name = "productName", type = String.class),
-                                @ColumnResult(name = "totalQuantity", type = BigDecimal.class)
+                                @ColumnResult(name = "batchId", type = String.class),
+                                @ColumnResult(name = "batchNumber", type = String.class),
+                                @ColumnResult(name = "onHandQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "reservedQuantity", type = BigDecimal.class)
                         }
                 )
         ),

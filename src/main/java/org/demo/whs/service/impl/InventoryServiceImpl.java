@@ -11,8 +11,10 @@ import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -30,7 +32,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -131,7 +135,41 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(readOnly = true)
     public List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter) {
         log.info("Getting inventory grouped by location for product ID: {}", filter.getProductId());
-        return inventoryRepository.getInventoryByLocation(filter.getProductId());
+
+        List<InventoryLocationProjection> projections = inventoryRepository.getInventoryByLocation(filter.getProductId());
+
+        Map<String, InventoryByLocationResponse> responseMap = new LinkedHashMap<>();
+
+        for (InventoryLocationProjection p : projections) {
+            InventoryByLocationResponse locationResponse = responseMap.computeIfAbsent(p.getLocationId(), id ->
+                InventoryByLocationResponse.builder()
+                    .locationId(p.getLocationId())
+                    .locationCode(p.getLocationCode())
+                    .locationName(p.getLocationName())
+                    .warehouseId(p.getWarehouseId())
+                    .warehouseName(p.getWarehouseName())
+                    .items(new ArrayList<>())
+                    .build()
+            );
+
+            BigDecimal onHand = p.getOnHandQuantity() != null ? p.getOnHandQuantity() : BigDecimal.ZERO;
+            BigDecimal reserved = p.getReservedQuantity() != null ? p.getReservedQuantity() : BigDecimal.ZERO;
+
+            locationResponse.getItems().add(
+                LocationInventoryItemResponse.builder()
+                    .productId(p.getProductId())
+                    .productSku(p.getProductSku())
+                    .productName(p.getProductName())
+                    .batchId(p.getBatchId())
+                    .batchNumber(p.getBatchNumber())
+                    .onHandQuantity(onHand)
+                    .reservedQuantity(reserved)
+                    .availableQuantity(onHand.subtract(reserved))
+                    .build()
+            );
+        }
+
+        return new ArrayList<>(responseMap.values());
     }
 
     /* ----------PRIVATE METHOD--------------*/
@@ -171,12 +209,16 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         // 4. Aggregate inventory
-        CheckAvailabilityResponse response = inventoryRepository.getAvailability(
+        CheckAvailabilityResponse availability = inventoryRepository.getAvailability(
                 request.getProductId(),
                 request.getWarehouseId(),
                 request.getLocationId()
         );
 
-        return response;
+        return inventoryMapper.toCheckAvailabilityResponse(
+                request,
+                availability.getAvailableQuantity(),
+                availability.isAvailable()
+        );
     }
 }

@@ -5,7 +5,7 @@ import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.repository.custom.InventoryRepositoryCustom;
 import org.springframework.stereotype.Repository;
@@ -96,21 +96,29 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
      * Inventory grouped by location.
      */
     @Override
-    public List<InventoryByLocationResponse> getInventoryByLocation(String productId) {
+    public List<InventoryLocationProjection> getInventoryByLocation(String productId) {
 
         Query query = entityManager.createNativeQuery(
                 """
                 SELECT
                     l.id AS locationId,
+                    l.code AS locationCode,
                     l.name AS locationName,
+                    w.id AS warehouseId,
+                    w.name AS warehouseName,
                     p.id AS productId,
+                    p.sku AS productSku,
                     p.name AS productName,
-                    COALESCE(SUM(i.on_hand_quantity),0) AS totalQuantity
+                    b.id AS batchId,
+                    b.batch_number AS batchNumber,
+                    i.on_hand_quantity AS onHandQuantity,
+                    i.reserved_quantity AS reservedQuantity
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id
                 JOIN locations l ON l.id = i.location_id
+                JOIN warehouses w ON w.id = i.warehouse_id
+                LEFT JOIN batches b ON b.id = i.batch_id
                 WHERE p.id = :productId
-                GROUP BY l.id, l.name, p.id, p.name
                 """,
                 "InventoryByLocationResponseMapping"
         );

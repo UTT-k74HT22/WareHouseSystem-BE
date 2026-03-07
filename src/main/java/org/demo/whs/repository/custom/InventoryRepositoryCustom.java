@@ -1,7 +1,7 @@
 package org.demo.whs.repository.custom;
 
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 
 import java.util.List;
@@ -22,5 +22,5 @@ public interface InventoryRepositoryCustom {
             String locationId
     );
 
-    List<InventoryByLocationResponse> getInventoryByLocation(String productId);
+    List<InventoryLocationProjection> getInventoryByLocation(String productId);
 }
