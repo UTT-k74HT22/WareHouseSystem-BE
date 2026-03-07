@@ -6,18 +6,48 @@ import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class InventoryMapper {
+
+    /**
+     * Entity → Reserve Response
+     */
+    public InventoryReserveResponse toReserveResponse(
+            Inventory inventory,
+            String orderLineId,
+            String status
+    ) {
+        if (inventory == null) {
+            return null;
+        }
+
+        return InventoryReserveResponse.builder()
+                .inventoryId(inventory.getId())
+                .productId(inventory.getProductId())
+                .warehouseId(inventory.getWarehouseId())
+                .locationId(inventory.getLocationId())
+                .batchId(inventory.getBatchId())
+                .reservedQuantity(inventory.getReservedQuantity())
+                .onHandQuantity(inventory.getOnHandQuantity())
+                .availableQuantity(inventory.getAvailableQuantity())
+                .orderLineId(orderLineId)
+                .status(status)
+                .reservedAt(LocalDateTime.now())
+                .build();
+    }
 
     /**
      * Entity → Response

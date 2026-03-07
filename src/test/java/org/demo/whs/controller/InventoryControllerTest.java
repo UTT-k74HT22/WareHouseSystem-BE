@@ -3,8 +3,10 @@ package org.demo.whs.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
@@ -23,6 +25,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -248,6 +251,55 @@ class InventoryControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/inventories/check-availability")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when reservation is successful")
+    void shouldReturn200WhenReservationIsSuccessful() throws Exception {
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .quantity(new BigDecimal("10.00"))
+                .build();
+
+        InventoryReserveResponse mockResponse = InventoryReserveResponse.builder()
+                .inventoryId("inv-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .reservedQuantity(new BigDecimal("10.00"))
+                .status("RESERVED")
+                .build();
+
+        when(inventoryService.reserve(ArgumentMatchers.any(InventoryReserveRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/reserve")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.inventory_id").value("inv-1"))
+                .andExpect(jsonPath("$.data.status").value("RESERVED"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when reservation request is invalid")
+    void shouldReturn400WhenReservationRequestIsInvalid() throws Exception {
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                // productId and warehouseId are missing
+                .quantity(new BigDecimal("-5.00"))
+                .build();
+
+        mockMvc.perform(post("/api/v1/inventories/reserve")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

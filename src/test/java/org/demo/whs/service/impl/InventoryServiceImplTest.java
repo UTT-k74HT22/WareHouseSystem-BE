@@ -1,12 +1,16 @@
 package org.demo.whs.service.impl;
 
+import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.repository.BatchRepository;
@@ -30,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -265,5 +270,119 @@ class InventoryServiceImplTest {
         assertThatThrownBy(() -> inventoryService.checkAvailability(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    @DisplayName("reserve_shouldThrowBadRequest_WhenQuantityIsNegative")
+    void reserve_shouldThrowBadRequest_WhenQuantityIsNegative() {
+        // Arrange
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .quantity(new BigDecimal("-5.00"))
+                .build();
+
+        // Act & Assert
+        assertThatThrownBy(() -> inventoryService.reserve(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    @DisplayName("reserve_shouldSucceed_WhenStockIsEnough")
+    void reserve_shouldSucceed_WhenStockIsEnough() {
+        // Arrange
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        BigDecimal requestedQty = new BigDecimal("10.00");
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .quantity(requestedQty)
+                .build();
+
+        Inventory inventory = Inventory.builder()
+                .id("inv-1")
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .onHandQuantity(new BigDecimal("100.00"))
+                .reservedQuantity(new BigDecimal("20.00"))
+                .build();
+
+        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
+                .thenReturn(Optional.of(inventory));
+
+        InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
+                .inventoryId("inv-1")
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .reservedQuantity(new BigDecimal("30.00"))
+                .onHandQuantity(new BigDecimal("100.00"))
+                .availableQuantity(new BigDecimal("70.00"))
+                .status("RESERVED")
+                .build();
+
+        when(inventoryMapper.toReserveResponse(any(), any(), eq("RESERVED")))
+                .thenReturn(expectedResponse);
+
+        // Act
+        InventoryReserveResponse response = inventoryService.reserve(request);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getReservedQuantity()).isEqualByComparingTo("30.00");
+        assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("30.00");
+        verify(inventoryRepository).save(inventory);
+    }
+
+    @Test
+    @DisplayName("reserve_shouldThrowConflict_WhenStockIsNotEnough")
+    void reserve_shouldThrowConflict_WhenStockIsNotEnough() {
+        // Arrange
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        BigDecimal requestedQty = new BigDecimal("90.00");
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .quantity(requestedQty)
+                .build();
+
+        Inventory inventory = Inventory.builder()
+                .id("inv-1")
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .onHandQuantity(new BigDecimal("100.00"))
+                .reservedQuantity(new BigDecimal("20.00"))
+                .build();
+
+        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
+                .thenReturn(Optional.of(inventory));
+
+        // Act & Assert
+        assertThatThrownBy(() -> inventoryService.reserve(request))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INV_004");
+    }
+
+    @Test
+    @DisplayName("reserve_shouldThrowNotFound_WhenInventoryDoesNotExist")
+    void reserve_shouldThrowNotFound_WhenInventoryDoesNotExist() {
+        // Arrange
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .quantity(BigDecimal.TEN)
+                .build();
+
+        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> inventoryService.reserve(request))
+                .isInstanceOf(NotFoundException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INV_001");
     }
 }

@@ -39,6 +39,10 @@ public interface InventoryRepository extends
      * @param batchId     the ID of the batch (nullable)
      * @return an Optional containing the inventory record if found, or empty if not found
      */
+    /**
+     * Strict dimension matching with pessimistic write lock.
+     * Used for reservations, transfers, and adjustments to ensure row-level consistency.
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i
@@ -47,11 +51,11 @@ public interface InventoryRepository extends
         AND i.warehouseId = :warehouseId
         AND (
             (:locationId IS NULL AND i.locationId IS NULL)
-            OR i.locationId = :locationId
+            OR (i.locationId = :locationId)
         )
         AND (
             (:batchId IS NULL AND i.batchId IS NULL)
-            OR i.batchId = :batchId
+            OR (i.batchId = :batchId)
         )
     """)
     Optional<Inventory> findByDimensionForUpdate(

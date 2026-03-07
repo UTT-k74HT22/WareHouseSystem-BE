@@ -9,14 +9,17 @@ import org.demo.whs.entity.Products;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
@@ -33,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -229,6 +233,44 @@ public class InventoryServiceImpl implements InventoryService {
                 availableQuantity,
                 isAvailable
         );
+    }
+
+    @Override
+    @Transactional
+    public InventoryReserveResponse reserve(InventoryReserveRequest request) {
+        log.info("Reserving inventory for request: {}", request);
+
+        // 0. Validate quantity
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        // 1. Find EXACT inventory row with PESSIMISTIC lock
+        Inventory inventory = inventoryRepository.findByDimensionForUpdate(
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getLocationId(),
+                request.getBatchId()
+        ).orElseThrow(() -> new NotFoundException(ErrorCode.INV_001));
+
+        // 2. Business Validation: check available stock
+        BigDecimal availableQuantity = inventory.getAvailableQuantity();
+        if (availableQuantity.compareTo(request.getQuantity()) < 0) {
+            log.warn("Insufficient stock for reservation. Available: {}, Requested: {}", 
+                    availableQuantity, request.getQuantity());
+            throw new ConflictException(ErrorCode.INV_004);
+        }
+
+        // 3. Perform Reservation
+        inventory.setReservedQuantity(inventory.getReservedQuantity().add(request.getQuantity()));
+        inventory.setLastMovementAt(LocalDateTime.now());
+        
+        // 4. Save and flush
+        inventoryRepository.save(inventory);
+
+        log.info("Successfully reserved {} for inventory id: {}", request.getQuantity(), inventory.getId());
+
+        return inventoryMapper.toReserveResponse(inventory, request.getOrderLineId(), "RESERVED");
     }
 
     private String buildLocationGroupKey(InventoryLocationProjection projection) {
