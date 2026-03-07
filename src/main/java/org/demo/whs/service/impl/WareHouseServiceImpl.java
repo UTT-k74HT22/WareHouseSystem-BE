@@ -177,17 +177,21 @@ public class WareHouseServiceImpl implements WareHouseService {
 
         if (warehouse.getStatus() == WareHouseStatus.INACTIVE) {
             log.info("Warehouse {} already - skip delete", id);
-            return;
+            throw new BadRequestException(ErrorCode.WH_007);
         }
 
         long activeLocationCount = locationRepository.countByWarehouseIdAndStatus(
                 id,
-                LocationStatus.ACTIVE
+                List.of(
+                LocationStatus.ACTIVE,
+                LocationStatus.FULL,
+                LocationStatus.MAINTENANCE
+                )
         );
 
         if (activeLocationCount > 0) {
             log.warn("Warehouse {} has {} active locations", id, activeLocationCount);
-            throw  new BadRequestException(ErrorCode.WH_001);
+            throw  new BadRequestException(ErrorCode.WH_005);
         }
 
         boolean hasInventory =
@@ -195,7 +199,7 @@ public class WareHouseServiceImpl implements WareHouseService {
 
         if (hasInventory) {
             log.warn("Warehouse {} has inventory", id);
-            throw new BadRequestException(ErrorCode.WH_001);
+            throw new BadRequestException(ErrorCode.WH_006);
         }
 
         Account currentUser = getCurrentUser();
