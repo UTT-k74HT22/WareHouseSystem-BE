@@ -10,12 +10,12 @@ import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.WareHouseMapper;
-import org.demo.whs.repository.AccountRepository;
-import org.demo.whs.repository.UserProfileRepository;
-import org.demo.whs.repository.WareHouseRepository;
+import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.WareHouseService;
 import org.springframework.data.domain.Page;
@@ -38,7 +38,9 @@ public class WareHouseServiceImpl implements WareHouseService {
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
     private final UserProfileRepository userProfileRepository;
+    private final LocationRepository locationRepository;
     private final WareHouseMapper wareHouseMapper;
+    private final InventoryRepository inventoryRepository;
 
     /**
      * Creates a new warehouse based on the provided request.
@@ -163,6 +165,47 @@ public class WareHouseServiceImpl implements WareHouseService {
 
         AccountResponse manager = fetchSingleManager(warehouse.getManagerId());
         return wareHouseMapper.toResponse(warehouse, manager);
+    }
+
+    @Override
+    @Transactional
+    public void deleteWarehouse (String id) {
+        log.info("Deleting warehouse id ={}", id);
+
+        Warehouses warehouse = wareHouseRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+
+        if (warehouse.getStatus() == WareHouseStatus.INACTIVE) {
+            log.info("Warehouse {} already - skip delete", id);
+            return;
+        }
+
+        long activeLocationCount = locationRepository.countByWarehouseIdAndStatus(
+                id,
+                LocationStatus.ACTIVE
+        );
+
+        if (activeLocationCount > 0) {
+            log.warn("Warehouse {} has {} active locations", id, activeLocationCount);
+            throw  new BadRequestException(ErrorCode.WH_001);
+        }
+
+        boolean hasInventory =
+                inventoryRepository.existsActiveInventoryByWarehouseId(id);
+
+        if (hasInventory) {
+            log.warn("Warehouse {} has inventory", id);
+            throw new BadRequestException(ErrorCode.WH_001);
+        }
+
+        Account currentUser = getCurrentUser();
+        warehouse.setStatus(WareHouseStatus.INACTIVE);
+        warehouse.setUpdatedBy(currentUser.getId());
+        warehouse.setUpdatedAt(LocalDateTime.now());
+
+        wareHouseRepository.save(warehouse);
+
+        log.info("Warehouse {} delete successfully", id);
     }
 
     private Account getCurrentUser() {

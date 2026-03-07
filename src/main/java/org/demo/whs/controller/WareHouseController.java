@@ -119,4 +119,12 @@ public class WareHouseController {
         BaseResponse<WareHouseResponse> baseResponse = BaseResponse.success(response);
         return ResponseEntity.ok(baseResponse);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<BaseResponse<Void>> deleteWarehouse(@PathVariable String id) {
+        wareHouseService.deleteWarehouse(id);
+
+        return ResponseEntity.noContent().build();
+
+    }
 }

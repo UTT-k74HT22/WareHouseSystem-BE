@@ -61,4 +61,6 @@ public interface WareHouseService {
      * @return the response containing updated warehouse information
      */
     WareHouseResponse changeStatus(String id, ChangeStatusRequest request);
+
+    void deleteWarehouse (String id);
 }

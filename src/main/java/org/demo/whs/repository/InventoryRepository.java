@@ -66,4 +66,12 @@ public interface InventoryRepository extends
             @Param("locationId") String locationId,
             @Param("batchId") String batchId
     );
+
+    @Query("""
+        SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+        FROM Inventory i
+        WHERE i.warehouseId = :warehouseId
+            AND (i.onHandQuantity > 0 OR i.reservedQuantity > 0)
+        """)
+    boolean existsActiveInventoryByWarehouseId(@Param("warehouseId") String warehouseId);
 }
