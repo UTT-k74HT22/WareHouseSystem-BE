@@ -100,6 +100,9 @@ public enum ErrorCode {
     CUST_003("CUST_003", "Invalid customer status"),
     CUST_004("CUST_004", "Business partner is not a customer type"),
 
+    // Purchase order errors
+    PO_001("PO_001", "Purchase order not found"),
+
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
     COM_002("COM_002", "Internal server error - please contact support"),

@@ -30,7 +30,10 @@ public interface BusinessPartnersRepository extends JpaRepository<BusinessPartne
         FROM BusinessPartners bp
         WHERE bp.id = :id
           AND bp.status = org.demo.whs.entity.enums.BusinessPartnerStatus.ACTIVE
-          AND bp.type = org.demo.whs.entity.enums.BusinessPartnerType.SUPPLIER
+          AND bp.type IN (
+              org.demo.whs.entity.enums.BusinessPartnerType.SUPPLIER,
+              org.demo.whs.entity.enums.BusinessPartnerType.BOTH
+          )
     """)
     boolean existsActiveSupplierById(String id);
 }

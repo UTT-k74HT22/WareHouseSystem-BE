@@ -116,7 +116,15 @@ public class PurchaseOrdersController {
             throw new BadRequestException(ErrorCode.COM_008);
         }
 
-        PurchaseOrdersFilterRequest filter = PurchaseOrdersFilterRequest.builder()
+        PurchaseOrdersFilterRequest filter = buildRequest(purchaseOrderNumber, supplierId, warehouseId, status, orderDateFrom, orderDateTo, expectedDeliveryDateFrom, expectedDeliveryDateTo);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        PageResponse<PurchaseOrdersResponse> response = purchaseOrdersService.getAll(filter, pageable);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    private static PurchaseOrdersFilterRequest buildRequest(String purchaseOrderNumber, String supplierId, String warehouseId, String status, LocalDate orderDateFrom, LocalDate orderDateTo, LocalDate expectedDeliveryDateFrom, LocalDate expectedDeliveryDateTo) {
+        return PurchaseOrdersFilterRequest.builder()
                 .purchaseOrderNumber(purchaseOrderNumber)
                 .supplierId(supplierId)
                 .warehouseId(warehouseId)
@@ -126,10 +134,6 @@ public class PurchaseOrdersController {
                 .expectedDeliveryDateFrom(expectedDeliveryDateFrom)
                 .expectedDeliveryDateTo(expectedDeliveryDateTo)
                 .build();
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        PageResponse<PurchaseOrdersResponse> response = purchaseOrdersService.getAll(filter, pageable);
-        return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     /**
