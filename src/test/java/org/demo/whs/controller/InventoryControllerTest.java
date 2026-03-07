@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -141,7 +142,6 @@ class InventoryControllerTest {
                 .productName("Product 001")
                 .totalOnHandQuantity(new BigDecimal("100.00"))
                 .totalReservedQuantity(new BigDecimal("20.00"))
-                .totalOnHandQuantity(new BigDecimal("80.00"))
                 .warehouseCount(2L)
                 .locationCount(5L)
                 .build();
@@ -227,6 +227,7 @@ class InventoryControllerTest {
                 .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/inventories/check-availability")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -247,6 +248,7 @@ class InventoryControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/inventories/check-availability")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
