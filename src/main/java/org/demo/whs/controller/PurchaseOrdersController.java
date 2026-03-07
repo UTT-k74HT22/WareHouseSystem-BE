@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -49,15 +48,37 @@ public class PurchaseOrdersController {
 
     private final PurchaseOrdersService purchaseOrdersService;
 
+    /**
+     * Create a new purchase order draft.
+     *
+     * @param request the request containing the details of the purchase order to create
+     * @return the response containing the details of the created purchase order
+     */
     @Operation(summary = "Create purchase order draft")
     @PostMapping
-    public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> create(
-            @RequestBody @Valid PurchaseOrdersRequest request
-    ) {
+    public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> create(@RequestBody @Valid PurchaseOrdersRequest request) {
+        log.info("Create purchase order draft");
         PurchaseOrdersResponse response = purchaseOrdersService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.success(response));
     }
 
+    /**
+     * Get a paginated list of purchase orders with optional filtering and sorting.
+     *
+     * @param purchaseOrderNumber      optional filter by purchase order number
+     * @param supplierId               optional filter by supplier ID
+     * @param warehouseId              optional filter by warehouse ID
+     * @param status                   optional filter by purchase order status
+     * @param orderDateFrom            optional filter for order date range start
+     * @param orderDateTo              optional filter for order date range end
+     * @param expectedDeliveryDateFrom optional filter for expected delivery date range start
+     * @param expectedDeliveryDateTo   optional filter for expected delivery date range end
+     * @param page                     the page number to retrieve (default is 0)
+     * @param size                     the number of items per page (default is 10)
+     * @param sortBy                   the field to sort by (default is "updatedAt")
+     * @param direction                the sort direction, either ASC or DESC (default is DESC)
+     * @return a paginated response containing the list of purchase orders matching the filters
+     */
     @Operation(summary = "Get paginated purchase orders")
     @GetMapping
     public ResponseEntity<BaseResponse<PageResponse<PurchaseOrdersResponse>>> getAll(
@@ -72,8 +93,7 @@ public class PurchaseOrdersController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") Sort.Direction direction
-    ) {
+            @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
         List<String> allowedSortFields = List.of(
                 "createdAt",
                 "updatedAt",
@@ -112,33 +132,61 @@ public class PurchaseOrdersController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Get a purchase order by its unique identifier.
+     *
+     * @param id the unique identifier of the purchase order to retrieve
+     * @return the response containing the details of the retrieved purchase order
+     */
     @Operation(summary = "Get purchase order by id")
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> getById(@PathVariable String id) {
+        log.info("Get purchase order by id: {}", id);
         PurchaseOrdersResponse response = purchaseOrdersService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Update a purchase order draft by its unique identifier.
+     *
+     * @param id      the unique identifier of the purchase order to update
+     * @param request the request containing the updated details of the purchase order
+     * @return the response containing the details of the updated purchase order
+     */
     @Operation(summary = "Update purchase order draft")
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> update(
             @PathVariable String id,
-            @RequestBody @Valid UpdatePurchaseOrdersRequest request
-    ) {
+            @RequestBody @Valid UpdatePurchaseOrdersRequest request) {
+        log.info("Update purchase order draft with id: {}, request: {}", id, request);
         PurchaseOrdersResponse response = purchaseOrdersService.update(id, request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * Delete a purchase order draft by its unique identifier.
+     *
+     * @param id the unique identifier of the purchase order to delete
+     * @return a response indicating the success of the deletion operation
+     */
     @Operation(summary = "Delete purchase order draft")
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
+        log.info("Deleting purchase order with id: {}", id);
         purchaseOrdersService.delete(id);
         return ResponseEntity.ok(BaseResponse.success(null));
     }
 
+    /**
+     * Confirm a purchase order, changing its status from DRAFT to CONFIRMED.
+     *
+     * @param id the unique identifier of the purchase order to confirm
+     * @return the response containing the details of the confirmed purchase order
+     */
     @Operation(summary = "Confirm purchase order")
     @PutMapping("/{id}/confirm")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> confirm(@PathVariable String id) {
+        log.info("Confirming purchase order with id: {}", id);
         PurchaseOrdersResponse response = purchaseOrdersService.confirm(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
