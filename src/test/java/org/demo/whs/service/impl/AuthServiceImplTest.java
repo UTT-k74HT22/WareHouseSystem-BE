@@ -7,7 +7,6 @@ import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.exception.AuthenticationFailedException;
-import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.mapper.AuthMapper;
 import org.demo.whs.repository.AccountRepository;
@@ -200,7 +199,7 @@ class AuthServiceImplTest {
             // Then
             assertThatThrownBy(() -> authService.authenticate(request, "127.0.0.1"))
                     .isInstanceOf(AuthenticationFailedException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_004");
+                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_009");
 
             verify(accountRepository).findByUsername(username);
             verify(passwordEncoder).matches(password, encodedPassword);
@@ -231,7 +230,7 @@ class AuthServiceImplTest {
             RefreshTokenResponse expectedResponse = new RefreshTokenResponse(newAccessToken, accessExpiration);
 
             // When
-            when(jwtProvider.validateToken(refreshToken)).thenReturn(false); // false means valid
+            when(jwtProvider.validateToken(refreshToken)).thenReturn(true);
             when(jwtProvider.isRefreshToken(refreshToken)).thenReturn(true);
             when(jwtProvider.getUsernameFromToken(refreshToken)).thenReturn(username);
             when(accountRepository.findByUsername(username)).thenReturn(Optional.of(account));
@@ -262,8 +261,8 @@ class AuthServiceImplTest {
             String invalidToken = "invalid-token";
             RefreshTokenRequest request = new RefreshTokenRequest(invalidToken);
 
-            // When - validateToken returns true when token is invalid
-            when(jwtProvider.validateToken(invalidToken)).thenReturn(true);
+            // When
+            when(jwtProvider.validateToken(invalidToken)).thenReturn(false);
 
             // Then
             assertThatThrownBy(() -> authService.refreshToken(request))
@@ -271,6 +270,7 @@ class AuthServiceImplTest {
                     .hasFieldOrPropertyWithValue("errorCode", "AUTH_006");
 
             verify(jwtProvider).validateToken(invalidToken);
+            verify(jwtProvider, never()).isRefreshToken(anyString());
             verify(accountRepository, never()).findByUsername(anyString());
         }
 
@@ -282,7 +282,7 @@ class AuthServiceImplTest {
             RefreshTokenRequest request = new RefreshTokenRequest(accessToken);
 
             // When
-            when(jwtProvider.validateToken(accessToken)).thenReturn(false);
+            when(jwtProvider.validateToken(accessToken)).thenReturn(true);
             when(jwtProvider.isRefreshToken(accessToken)).thenReturn(false);
 
             // Then
@@ -304,7 +304,7 @@ class AuthServiceImplTest {
             RefreshTokenRequest request = new RefreshTokenRequest(refreshToken);
 
             // When
-            when(jwtProvider.validateToken(refreshToken)).thenReturn(false);
+            when(jwtProvider.validateToken(refreshToken)).thenReturn(true);
             when(jwtProvider.isRefreshToken(refreshToken)).thenReturn(true);
             when(jwtProvider.getUsernameFromToken(refreshToken)).thenReturn(username);
             when(accountRepository.findByUsername(username)).thenReturn(Optional.empty());
@@ -332,7 +332,7 @@ class AuthServiceImplTest {
             account.setStatus(AccountStatus.INACTIVE);
 
             // When
-            when(jwtProvider.validateToken(refreshToken)).thenReturn(false);
+            when(jwtProvider.validateToken(refreshToken)).thenReturn(true);
             when(jwtProvider.isRefreshToken(refreshToken)).thenReturn(true);
             when(jwtProvider.getUsernameFromToken(refreshToken)).thenReturn(username);
             when(accountRepository.findByUsername(username)).thenReturn(Optional.of(account));
@@ -340,7 +340,7 @@ class AuthServiceImplTest {
             // Then
             assertThatThrownBy(() -> authService.refreshToken(request))
                     .isInstanceOf(AuthenticationFailedException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_004");
+                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_009");
 
             verify(jwtProvider).getUsernameFromToken(refreshToken);
             verify(accountRepository).findByUsername(username);

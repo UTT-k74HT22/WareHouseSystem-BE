@@ -12,8 +12,9 @@
 | Date | 2026-03-04 |
 | Status | Proposed for implementation |
 | Author | BA + Backend Review |
-| Related Jira | WHS-19, WHS-20, WHS-21..24, WHS-25 |
+| Related Jira | WHS-19, WHS-20, WHS-21..24, WHS-25, WHS-87 |
 | Related GitHub | issue #49 |
+| Related Review Note | `BA_STOCK_MOVEMENT_AUDIT_DECISION.md` |
 
 ---
 
@@ -484,6 +485,7 @@ This redesign impacts these Jira tasks directly:
 4. `WHS-23` approve adjustment - include atomic inventory + movement side effects.
 5. `WHS-24` reject adjustment - include strict transition and no inventory side effects.
 6. `WHS-25` transfer parent - include source/destination consistency constraints.
+7. `WHS-87` complete transfer - track atomic source/destination mutation, movement audit, and deadlock-safe locking review for `PUT /api/v1/stock-transfers/{id}/complete`.
 
 Recommended additional task:
 

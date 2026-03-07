@@ -27,11 +27,8 @@ public class StockAdjustmentsResponse {
     private StockAdjustmentsStatus status;
     private String notes;
     private Boolean requiresApproval;
-    private String approvedBy;
     private LocalDateTime approvedAt;
     private String rejectionReason;
-    private String createdBy;
     private LocalDateTime createdAt;
-    private String updatedBy;
     private LocalDateTime updatedAt;
 }

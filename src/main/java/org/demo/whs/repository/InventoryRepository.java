@@ -30,6 +30,15 @@ public interface InventoryRepository extends
     /**
      * Lock inventory row by its dimensional keys.
      */
+    /**
+     * Retrieves an inventory record by its dimensions with a pessimistic write lock to prevent concurrent modifications.
+     *
+     * @param productId   the ID of the product
+     * @param warehouseId the ID of the warehouse
+     * @param locationId  the ID of the location (nullable)
+     * @param batchId     the ID of the batch (nullable)
+     * @return an Optional containing the inventory record if found, or empty if not found
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i

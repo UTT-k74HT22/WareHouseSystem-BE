@@ -41,7 +41,8 @@ public class StockAdjustmentsController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> createStockAdjustment(
             @RequestBody @Valid StockAdjustmentsRequest request) {
-        log.info("Attempting to create stock adjustment with details: {}", request);
+        log.info("Attempting to create stock adjustment. inventoryId={}, reason={}",
+                request.getInventoryId(), request.getReason());
         StockAdjustmentsResponse response = stockAdjustmentsService.createAdjustment(request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
@@ -116,8 +117,9 @@ public class StockAdjustmentsController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> approveStockAdjustment(
             @PathVariable String id,
-            @RequestBody @Valid ApproveStockAdjustmentRequest request) {
-        log.info("Attempting to approve stock adjustment with ID: {} and approval note: {}", id, request.getApprovalNote());
+            @RequestBody(required = false) @Valid ApproveStockAdjustmentRequest request) {
+        log.info("Attempting to approve stock adjustment with ID: {} and approval note present: {}", id,
+                request != null && request.getApprovalNote() != null && !request.getApprovalNote().isBlank());
         StockAdjustmentsResponse response = stockAdjustmentsService.approve(id, request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
@@ -134,7 +136,8 @@ public class StockAdjustmentsController {
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> rejectStockAdjustment(
             @PathVariable String id,
             @RequestBody @Valid RejectStockAdjustmentRequest request) {
-        log.info("Attempting to reject stock adjustment with ID: {} and rejection note: {}", id, request.getRejectionReason());
+        log.info("Attempting to reject stock adjustment with ID: {} and rejection reason present: {}",
+                id, request.getRejectionReason() != null && !request.getRejectionReason().isBlank());
         StockAdjustmentsResponse response = stockAdjustmentsService.reject(id, request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }

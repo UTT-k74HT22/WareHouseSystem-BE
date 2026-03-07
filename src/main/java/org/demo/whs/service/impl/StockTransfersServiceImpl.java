@@ -28,6 +28,7 @@ import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockTransfersService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -94,7 +95,11 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     public StockTransfersResponse complete(String id) {
         log.info("Attempting to complete stock transfer with ID: {}", id);
 
+        //Step 1: Check current user and permissions
         String actorId = getCurrentActorId();
+        LocalDateTime now = LocalDateTime.now();
+
+        //Step 2: Load transfer và kiểm tra trạng thái (chỉ cho phép complete nếu đang ở trạng thái DRAFT)
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
@@ -102,47 +107,68 @@ public class StockTransfersServiceImpl implements StockTransfersService {
             throw new BadRequestException("Only draft transfer can be completed", ErrorCode.STF_002);
         }
 
-        Inventory sourceInventory = inventoryRepository.findByDimensionForUpdate(
-                transfer.getProductId(),
-                transfer.getWarehouseId(),
-                transfer.getFromLocationId(),
-                transfer.getBatchId()
-        ).orElseThrow(() -> new NotFoundException("Source inventory not found", ErrorCode.INV_001));
-
-        Inventory destinationInventory = inventoryRepository.findByDimensionForUpdate(
-                transfer.getProductId(),
-                transfer.getWarehouseId(),
-                transfer.getToLocationId(),
-                transfer.getBatchId()
-        ).orElseGet(() -> createDestinationInventory(transfer, actorId));
-
+        //Step 3: Validate quantity
         BigDecimal quantity = transfer.getQuantity();
-        BigDecimal availableSource = sourceInventory.getOnHandQuantity().subtract(sourceInventory.getReservedQuantity());
-        if (availableSource.compareTo(quantity) < 0) {
-            throw new BadRequestException("Insufficient available stock at source location", ErrorCode.INV_004);
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Quantity must be greater than 0", ErrorCode.STF_003);
         }
 
-        BigDecimal sourceBefore = sourceInventory.getOnHandQuantity();
-        BigDecimal sourceAfter = sourceBefore.subtract(quantity);
-        BigDecimal destinationBefore = destinationInventory.getOnHandQuantity();
-        BigDecimal destinationAfter = destinationBefore.add(quantity);
+        //Step 4: Lock inventory theo thứ tự cố định để tránh deadlock
+        String fromLocationId = transfer.getFromLocationId();
+        String toLocationId = transfer.getToLocationId();
+        boolean lockFromFirst = buildInventoryLockKey(transfer, fromLocationId)
+                .compareTo(buildInventoryLockKey(transfer, toLocationId)) <= 0;
 
+        String firstLocationId = lockFromFirst ? fromLocationId : toLocationId;
+        String secondLocationId = lockFromFirst ? toLocationId : fromLocationId;
+
+        Inventory firstInv = findInventoryForUpdate(transfer, firstLocationId).orElse(null);
+        Inventory secondInv = findInventoryForUpdate(transfer, secondLocationId).orElse(null);
+
+        Inventory sourceInventory = lockFromFirst ? firstInv : secondInv; //nguồn tồn kho
+        Inventory destinationInventory = lockFromFirst ? secondInv : firstInv; // kho đích
+
+        if (sourceInventory == null) {
+            throw new NotFoundException("Source inventory not found", ErrorCode.INV_001);
+        }
+
+        // Step 5: Nếu kho đích chưa có tồn kho thì tạo mới (với onHand=0) để đảm bảo tính nhất quán
+        if (destinationInventory == null) {
+            destinationInventory = createOrReloadDestinationInventory(transfer, actorId);
+        }
+
+        // Step 6: Kiểm tra số lượng hàng có sẵn tại nguồn (hàng có sẵn đã được đặt trước).
+        BigDecimal onHand = defaultZero(sourceInventory.getOnHandQuantity()); // tồn kho thực tế
+        BigDecimal reserved = defaultZero(sourceInventory.getReservedQuantity()); // đã đặt trước
+        BigDecimal available = onHand.subtract(reserved); // hàng có sẵn để chuyển
+
+        if (available.compareTo(quantity) < 0) {
+            throw new BadRequestException("Insufficient available stock in source inventory", ErrorCode.INV_004);
+        }
+
+        // Step 7: Tính sự chênh lệch tồn kho và cập nhật cả 2 bên (nguồn trừ đi, đích cộng vào)
+        BigDecimal sourceBefore = onHand; // số lượng hàng thực tế tại nguồn trước khi chuyển
+        BigDecimal sourceAfter = sourceBefore.subtract(quantity); // số lượng hàng thực tế tại nguồn sau khi chuyển
+        // Kiểm tra lại số lượng hàng có sẵn sau khi trừ đi lượng chuyển để đảm bảo không bị âm do các giao dịch khác đã cập nhật trước đó
+        if (sourceAfter.compareTo(reserved) < 0) {
+            throw new BadRequestException("Insufficient available stock in source inventory after re-checking", ErrorCode.INV_004);
+        }
+        BigDecimal destinationBefore = defaultZero(destinationInventory.getOnHandQuantity()); // số lượng hàng thực tế tại đích trước khi chuyển
+        BigDecimal destinationAfter = destinationBefore.add(quantity); // số lượng hàng thực tế tại đích sau khi chuyển
+
+        // Step 8: Cập nhật tồn kho và tạo bản ghi chuyển kho
         sourceInventory.setOnHandQuantity(sourceAfter);
-        sourceInventory.setLastMovementAt(LocalDateTime.now());
+        sourceInventory.setLastMovementAt(now);
         sourceInventory.setUpdatedBy(actorId);
 
         destinationInventory.setOnHandQuantity(destinationAfter);
-        destinationInventory.setLastMovementAt(LocalDateTime.now());
+        destinationInventory.setLastMovementAt(now);
         destinationInventory.setUpdatedBy(actorId);
 
         inventoryRepository.save(sourceInventory);
         inventoryRepository.save(destinationInventory);
 
-        transfer.setStatus(StockTransfersStatus.COMPLETED);
-        transfer.setCompletedAt(LocalDateTime.now());
-        transfer.setUpdatedBy(actorId);
-        StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
-
+        // Step 9: Tạo bản ghi lịch sử chuyển kho
         StockMovements transferOutMovement = stockMovementsMapper.toEntity(
                 StockMovementsType.TRANSFER_OUT,
                 transfer.getProductId(),
@@ -153,11 +179,12 @@ public class StockTransfersServiceImpl implements StockTransfersService {
                 sourceBefore,
                 sourceAfter,
                 ReferenceType.STOCK_TRANSFER,
-                savedTransfer.getId(),
-                savedTransfer.getTransferNumber(),
+                transfer.getId(),
+                transfer.getTransferNumber(),
                 transfer.getNotes(),
                 actorId
         );
+
         StockMovements transferInMovement = stockMovementsMapper.toEntity(
                 StockMovementsType.TRANSFER_IN,
                 transfer.getProductId(),
@@ -168,14 +195,22 @@ public class StockTransfersServiceImpl implements StockTransfersService {
                 destinationBefore,
                 destinationAfter,
                 ReferenceType.STOCK_TRANSFER,
-                savedTransfer.getId(),
-                savedTransfer.getTransferNumber(),
+                transfer.getId(),
+                transfer.getTransferNumber(),
                 transfer.getNotes(),
                 actorId
         );
         stockMovementsRepository.save(transferOutMovement);
         stockMovementsRepository.save(transferInMovement);
 
+        //Step 10: Update transfer status
+        transfer.setStatus(StockTransfersStatus.COMPLETED);
+        transfer.setCompletedAt(now);
+        transfer.setUpdatedBy(actorId);
+
+        StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
+
+        //Step 11: Return response
         return stockTransfersMapper.toResponse(savedTransfer);
     }
 
@@ -242,6 +277,29 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         return inventory;
     }
 
+    private java.util.Optional<Inventory> findInventoryForUpdate(StockTransfers transfer, String locationId) {
+        return inventoryRepository.findByDimensionForUpdate(
+                transfer.getProductId(),
+                transfer.getWarehouseId(),
+                locationId,
+                transfer.getBatchId()
+        );
+    }
+
+    private Inventory createOrReloadDestinationInventory(StockTransfers transfer, String actorId) {
+        try {
+            Inventory newInv = createDestinationInventory(transfer, actorId);
+            return inventoryRepository.saveAndFlush(newInv);
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Destination inventory already created concurrently for transferId={}", transfer.getId());
+            return findInventoryForUpdate(transfer, transfer.getToLocationId())
+                    .orElseThrow(() -> new NotFoundException(
+                            "Destination inventory not found after concurrent creation",
+                            ErrorCode.INV_001
+                    ));
+        }
+    }
+
     private Pageable buildPageable(Integer page, Integer size) {
         int targetPage = page == null ? 0 : page;
         int targetSize = size == null ? 10 : size;
@@ -273,4 +331,20 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         throw new BadRequestException("Unable to generate unique transfer number", ErrorCode.STF_002);
     }
 
+    private BigDecimal defaultZero(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
+    }
+
+    private String buildInventoryLockKey(StockTransfers transfer, String locationId) {
+        return String.join("|",
+                normalizeKeyPart(transfer.getProductId()),
+                normalizeKeyPart(transfer.getWarehouseId()),
+                normalizeKeyPart(locationId),
+                normalizeKeyPart(transfer.getBatchId())
+        );
+    }
+
+    private String normalizeKeyPart(String value) {
+        return value == null ? "" : value;
+    }
 }

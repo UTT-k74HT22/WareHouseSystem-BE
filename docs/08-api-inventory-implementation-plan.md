@@ -1,19 +1,20 @@
 # API Inventory Implementation Plan (Jira-driven)
 
-Updated: 2026-03-02
+Updated: 2026-03-06
 
 ## Scope baseline
 - Source of truth reviewed: `docs/API_INVENTORY_COMPREHENSIVE.md`
 - Codebase check completed against current controllers in `src/main/java/org/demo/whs/controller`
 - Existing implemented endpoints were excluded from new task creation (for example: `GET/POST /api/v1/batches`, `GET /api/v1/batches/{id}`)
 - Existing Jira tasks were reused, no duplicate tasks created for modules already planned (`Category`, `Inventory`, `Stock Adjustments`, `Stock Transfers`)
+- Missing Jira coverage for stock transfer completion was corrected on `2026-03-06` by adding `WHS-87`
 
 ## Module task map
 - Auth remaining: parent `WHS-28`, subtasks `WHS-29`, `WHS-30`
 - Category: parent `WHS-18`, subtasks `WHS-5` .. `WHS-9`
 - Inventory: parent `WHS-19`, subtasks `WHS-10` .. `WHS-17`
 - Stock Adjustments: parent `WHS-20`, subtasks `WHS-21` .. `WHS-24`
-- Stock Transfers: parent `WHS-25`, subtasks `WHS-26`, `WHS-27`
+- Stock Transfers: parent `WHS-25`, subtasks `WHS-26`, `WHS-27`, `WHS-87`
 - Warehouse remaining: parent `WHS-31`, subtask `WHS-36`
 - Location remaining: parent `WHS-32`, subtask `WHS-37`
 - Product remaining: parent `WHS-33`, subtasks `WHS-38`, `WHS-39`

@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 05/03/2026 — Đồng bộ theo PR #50 (WHS-70) + Jira sync  
-> **Phiên bản:** 1.3  
+> **Cập nhật lần cuối:** 07/03/2026 — Đồng bộ lại trạng thái Inventory sau review code/Jira/PR  
+> **Phiên bản:** 1.4  
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -19,9 +19,9 @@
 | 6 | **Business Partner** | 8 | 6 | 2 | 75% |
 | 7 | **Category** | 5 | 5 | 0 | ✅ 100% |
 | 8 | **Batch** | 10 | 3 | 7 | 30% |
-| 9 | **Inventory** | 8 | 1 | 7 | 13% |
+| 9 | **Inventory** | 8 | 3 | 5 | 38% |
 | 10 | **Stock Adjustments** | 4 | 4 | 0 | ✅ 100% |
-| 11 | **Stock Transfers** | 2 | 2 | 0 | ✅ 100% |
+| 11 | **Stock Transfers** | 3 | 3 | 0 | 100% |
 | 12 | **Purchase Orders** | 6 | 0 | 6 | 🔴 0% |
 | 13 | **Purchase Order Lines** | 3 | 0 | 3 | 🔴 0% |
 | 14 | **Inbound Receipts** | 7 | 0 | 7 | 🔴 0% |
@@ -35,7 +35,7 @@
 | 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **159** | **78** | **81** | **~49%** |
+| | **TỔNG CỘNG** | **160** | **80** | **80** | **50%** |
 
 ---
 
@@ -50,7 +50,7 @@ UOM                ██████████ 100% ✅
 Business Partner   ████████░░ 75%
 Category           ██████████ 100% ✅
 Batch              ███░░░░░░░ 30%
-Inventory          █░░░░░░░░░ 13%
+Inventory          ████░░░░░░ 38%
 Stock Adjustments  ██████████ 100% ✅
 Stock Transfers    ██████████ 100% ✅
 Purchase Orders    ░░░░░░░░░░ 0%  🔴
@@ -70,10 +70,12 @@ Storage            ██████████ 100% ✅
 
 ---
 
-## 🔄 Đồng Bộ Jira/GitHub (05/03/2026)
+## 🔄 Đồng Bộ Jira/GitHub (06/03/2026)
 
 - `WHS-70` đã `Done`; PR `#50` đã merge vào `develop` lúc `2026-03-04 15:00:05 UTC` (`22:00:05 ICT`).
 - Đã cập nhật `Done` cho cụm task liên quan được gộp bởi PR `#50`: `WHS-21`, `WHS-22`, `WHS-23`, `WHS-24`, `WHS-25`, `WHS-26`, `WHS-27`.
+- Đã bổ sung `WHS-87` (`To Do`) ngày `06/03/2026` để track riêng `PUT /api/v1/stock-transfers/{id}/complete`, do đây là API stock-changing quan trọng nhưng trước đó chưa có subtask Jira tương ứng dưới `WHS-25`.
+- Review ngày `07/03/2026` xác nhận `GET /api/v1/inventories/summary/{productId}` và `GET /api/v1/inventories/by-location` đã có trên `develop`; `WHS-13` vẫn đang ở trạng thái `IN REVIEW` qua PR `#74`, chưa tính là Done.
 - Snapshot re-check cuối cùng (09:04 ICT, 05/03/2026): `WHS-71..WHS-81` đã `Done` (PR đã merge), chỉ còn `WHS-82` ở `IN REVIEW` do PR `#70` còn `Open`.
 - `WHS-51` vẫn `In Progress`; `WHS-64`, `WHS-66` vẫn `To Do` do chưa đủ endpoint theo AC (đặc biệt `by-product`, `by-batch`, traceability/analytics).
 
@@ -271,8 +273,8 @@ Storage            ██████████ 100% ✅
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
 | 1 | `GET` | `/api/v1/inventories` | Danh sách tồn kho (filters) | ✅ Done |
-| 2 | `GET` | `/api/v1/inventories/summary/{productId}` | Tổng hợp tồn kho theo sản phẩm | ❌ Not Done |
-| 3 | `GET` | `/api/v1/inventories/by-location` | Tồn kho nhóm theo vị trí | ❌ Not Done |
+| 2 | `GET` | `/api/v1/inventories/summary/{productId}` | Tổng hợp tồn kho theo sản phẩm | ✅ Done |
+| 3 | `GET` | `/api/v1/inventories/by-location` | Tồn kho nhóm theo vị trí | ✅ Done |
 
 ### 🟣 Advanced APIs
 
@@ -284,7 +286,11 @@ Storage            ██████████ 100% ✅
 | 7 | `POST` | `/api/v1/inventories/increase` | Tăng tồn kho (từ inbound) | ❌ Not Done |
 | 8 | `POST` | `/api/v1/inventories/decrease` | Giảm tồn kho (từ outbound) | ❌ Not Done |
 
-> 🟡 **Đã có 1 endpoint cốt lõi** (`GET /api/v1/inventories`); các API summary/reservation/increase/decrease vẫn chưa triển khai.
+> 🟡 **Đã có 3 endpoint read-side** (`GET /api/v1/inventories`, `GET /api/v1/inventories/summary/{productId}`, `GET /api/v1/inventories/by-location`).
+> 
+> ⚠️ `POST /api/v1/inventories/check-availability` đang ở trạng thái `IN REVIEW` qua PR `#74`, chưa merge vào `develop`.
+> 
+> 🔴 Các stock utility APIs còn thiếu: `reserve`, `unreserve`, `increase`, `decrease`.
 
 ---
 
@@ -317,9 +323,10 @@ Storage            ██████████ 100% ✅
 |---|--------|----------|--------|--------|
 | 1 | `POST` | `/api/v1/stock-transfers` | Tạo chuyển kho nội bộ | ✅ Done |
 | 2 | `GET` | `/api/v1/stock-transfers` | Danh sách chuyển kho | ✅ Done |
+| 3 | `PUT` | `/api/v1/stock-transfers/{id}/complete` | Hoàn tất phiếu chuyển kho | ✅ Done |
 
-> ✅ **Đã hoàn thành theo Jira:** `WHS-25`, `WHS-26`, `WHS-27` (sync 05/03/2026).  
-> ℹ️ Có thêm endpoint đã triển khai trong code: `GET /api/v1/stock-transfers/{id}`, `PUT /api/v1/stock-transfers/{id}/complete`, `PUT /api/v1/stock-transfers/{id}/cancel`.
+> ℹ️ Jira scope của parent `WHS-25` hiện gồm: `WHS-26`, `WHS-27`, `WHS-87`.  
+> ℹ️ `GET /api/v1/stock-transfers/{id}` và `PUT /api/v1/stock-transfers/{id}/cancel` đã có trong code nhưng chưa được tách thành subtask Jira riêng.
 
 ---
 
@@ -649,7 +656,7 @@ Storage            ██████████ 100% ✅
 ### Phase 3 — Inventory Core
 | Ưu tiên | Task | Effort |
 |---------|------|--------|
-| 🟡 P1 | Inventory summary + by-location — 2 APIs còn lại | 2 ngày |
+| ✅ Done | ~~Inventory summary + by-location — 2 read-side APIs~~ | — |
 | 🔴 P0 | check-availability, reserve, unreserve — 3 APIs | 3 ngày |
 | 🟡 P1 | increase, decrease — 2 APIs (internal service) | 2 ngày |
 | ✅ Done | ~~Stock Adjustments CRUD + approve/reject — 4 APIs~~ | — |
@@ -691,9 +698,9 @@ Storage            ██████████ 100% ✅
 
 | Metric | Value |
 |--------|-------|
-| **Tổng API thiết kế** | 159 |
-| **Đã triển khai** | 78 (~49%) |
-| **Chưa triển khai** | 81 (~51%) |
+| **Tổng API thiết kế** | 160 |
+| **Đã triển khai** | 80 (50%) |
+| **Chưa triển khai** | 80 (50%) |
 | **Module hoàn thành 100%** | UOM, Email, Storage, Employee, Category, **Stock Adjustments, Stock Transfers** |
 | **Module 0%** | PO, PO Lines, Inbound Receipts, IR Lines, SO, SO Lines, Outbound Shipments, OS Lines, Reporting |
 | **Entities đã có (DB migration)** | ✅ Tất cả 30 entities đã có migration |

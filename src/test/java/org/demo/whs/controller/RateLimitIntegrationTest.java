@@ -1,12 +1,14 @@
 package org.demo.whs.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.helpers.producer.EmailProducerService;
 import org.demo.whs.service.AuthService;
 import org.demo.whs.entity.dto.RateLimitDTO;
 import org.demo.whs.service.RateLimitService;
+import org.demo.whs.utils.annotation.RateLimit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -215,6 +217,10 @@ class RateLimitIntegrationTest {
     void testRateLimit_CustomMessage() throws Exception {
         // Given
         LoginRequest loginRequest = new LoginRequest("testuser", "password123");
+        String expectedMessage = AuthController.class
+                .getMethod("login", LoginRequest.class, HttpServletRequest.class)
+                .getAnnotation(RateLimit.class)
+                .message();
 
         RateLimitDTO exceededInfo = new RateLimitDTO(false, 0, 5, System.currentTimeMillis() / 1000 + 300, 300L);
 
@@ -225,7 +231,7 @@ class RateLimitIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(jsonPath("$.message").value("Too many login attempts. Please try again after 5 minutes."));
+                .andExpect(jsonPath("$.message").value(expectedMessage));
     }
 }
 
