@@ -1,5 +1,6 @@
 package org.demo.whs.repository.custom;
 
+import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -22,5 +23,5 @@ public interface InventoryRepositoryCustom {
             String locationId
     );
 
-    List<InventoryLocationProjection> getInventoryByLocation(String productId);
+    List<InventoryLocationProjection> getInventoryByLocation(InventoryFilterRequest filter);
 }

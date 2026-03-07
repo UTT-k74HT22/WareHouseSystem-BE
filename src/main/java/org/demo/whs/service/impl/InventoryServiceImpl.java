@@ -134,9 +134,9 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter) {
-        log.info("Getting inventory grouped by location for product ID: {}", filter.getProductId());
+        log.info("Getting inventory grouped by location for filters: {}", filter);
 
-        List<InventoryLocationProjection> projections = inventoryRepository.getInventoryByLocation(filter.getProductId());
+        List<InventoryLocationProjection> projections = inventoryRepository.getInventoryByLocation(filter);
 
         Map<String, InventoryByLocationResponse> responseMap = new LinkedHashMap<>();
 
@@ -215,10 +215,13 @@ public class InventoryServiceImpl implements InventoryService {
                 request.getLocationId()
         );
 
+        BigDecimal availableQuantity = availability.getAvailableQuantity();
+        boolean isAvailable = availableQuantity.compareTo(request.getQuantity()) >= 0;
+
         return inventoryMapper.toCheckAvailabilityResponse(
                 request,
-                availability.getAvailableQuantity(),
-                availability.isAvailable()
+                availableQuantity,
+                isAvailable
         );
     }
 }

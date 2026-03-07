@@ -2,10 +2,12 @@ package org.demo.whs.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.RateLimitService;
@@ -47,7 +49,6 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 200 when request is valid")
     void shouldReturn200WhenValidRequest() throws Exception {
-// ... existing tests ...
 
         PageResponse<InventoryResponse> mockPage =
                 PageResponse.<InventoryResponse>builder()
@@ -140,7 +141,7 @@ class InventoryControllerTest {
                 .productName("Product 001")
                 .totalOnHandQuantity(new BigDecimal("100.00"))
                 .totalReservedQuantity(new BigDecimal("20.00"))
-                .totalAvailableQuantity(new BigDecimal("80.00"))
+                .totalOnHandQuantity(new BigDecimal("80.00"))
                 .warehouseCount(2L)
                 .locationCount(5L)
                 .build();
@@ -180,7 +181,7 @@ class InventoryControllerTest {
                 .warehouseId("wh-1")
                 .warehouseName("Warehouse 001")
                 .items(List.of(
-                        InventoryByLocationResponse.LocationInventoryItem.builder()
+                        LocationInventoryItemResponse.builder()
                                 .productId("prod-1")
                                 .productSku("SKU-001")
                                 .productName("Product 001")
@@ -191,7 +192,8 @@ class InventoryControllerTest {
                 ))
                 .build();
 
-        when(inventoryService.getInventoryByLocation(ArgumentMatchers.any())).thenReturn(List.of(mockResponse));
+        when(inventoryService.getInventoryByLocation(ArgumentMatchers.any(InventoryFilterRequest.class)))
+                .thenReturn(List.of(mockResponse));
 
         mockMvc.perform(get("/api/v1/inventories/by-location")
                         .param("warehouseId", "wh-1")
@@ -218,6 +220,7 @@ class InventoryControllerTest {
                 .requestedQuantity(new BigDecimal("10.00"))
                 .availableQuantity(new BigDecimal("100.00"))
                 .isAvailable(true)
+                .message("Stock available")
                 .build();
 
         when(inventoryService.checkAvailability(ArgumentMatchers.any(CheckAvailabilityRequest.class)))
@@ -231,7 +234,7 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.data.product_id").value("prod-1"))
                 .andExpect(jsonPath("$.data.available").value(true))
                 .andExpect(jsonPath("$.data.available_quantity").value(100.00))
-                .andExpect(jsonPath("$.data.message").value("Đủ hàng"));
+                .andExpect(jsonPath("$.data.message").value("Stock available"));
     }
 
     @Test

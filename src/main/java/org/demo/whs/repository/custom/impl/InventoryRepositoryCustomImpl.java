@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -96,7 +97,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
      * Inventory grouped by location.
      */
     @Override
-    public List<InventoryLocationProjection> getInventoryByLocation(String productId) {
+    public List<InventoryLocationProjection> getInventoryByLocation(InventoryFilterRequest filter) {
 
         Query query = entityManager.createNativeQuery(
                 """
@@ -118,12 +119,16 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                 JOIN locations l ON l.id = i.location_id
                 JOIN warehouses w ON w.id = i.warehouse_id
                 LEFT JOIN batches b ON b.id = i.batch_id
-                WHERE p.id = :productId
+                WHERE (:productId IS NULL OR p.id = :productId)
+                AND (:warehouseId IS NULL OR w.id = :warehouseId)
+                AND (:locationId IS NULL OR l.id = :locationId)
                 """,
                 "InventoryByLocationResponseMapping"
         );
 
-        query.setParameter("productId", productId);
+        query.setParameter("productId", filter.getProductId());
+        query.setParameter("warehouseId", filter.getWarehouseId());
+        query.setParameter("locationId", filter.getLocationId());
 
         return query.getResultList();
     }
