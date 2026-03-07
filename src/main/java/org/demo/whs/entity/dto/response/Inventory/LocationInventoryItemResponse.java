@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Getter
 @Setter
@@ -13,14 +12,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class InventoryByLocationResponse {
+public class LocationInventoryItemResponse {
 
-    private String locationId;
-    private String locationCode;
-    private String locationName;
+    private String productId;
+    private String productSku;
+    private String productName;
 
-    private String warehouseId;
-    private String warehouseName;
+    private String batchId;
+    private String batchNumber;
 
-    private List<LocationInventoryItemResponse> items;
+    private BigDecimal onHandQuantity;
+    private BigDecimal reservedQuantity;
+    private BigDecimal availableQuantity;
 }
