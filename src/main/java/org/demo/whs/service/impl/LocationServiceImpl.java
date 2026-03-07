@@ -76,7 +76,7 @@ public class LocationServiceImpl implements LocationService {
         Warehouses warehouse = wareHouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> {
                     log.warn("Warehouse not found: {}", request.getWarehouseId());
-                    return new BadRequestException(ErrorCode.WH_001);
+                    return new BadRequestException(ErrorCode.WHS_001);
                 });
 
         if (warehouse.getStatus() != WareHouseStatus.ACTIVE) {
@@ -166,7 +166,7 @@ public class LocationServiceImpl implements LocationService {
         // Validate warehouse exists
         if (!wareHouseRepository.existsById(warehouseId)) {
             log.warn("Warehouse not found: {}", warehouseId);
-            throw new BadRequestException(ErrorCode.WH_001);
+            throw new BadRequestException(ErrorCode.WHS_001);
         }
 
         // Validate pagination parameters

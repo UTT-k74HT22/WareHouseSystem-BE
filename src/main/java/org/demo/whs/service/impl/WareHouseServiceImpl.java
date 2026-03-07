@@ -53,7 +53,7 @@ public class WareHouseServiceImpl implements WareHouseService {
                 request.getCode(), request.getName());
         if (wareHouseRepository.existsByCode(request.getCode())) {
             log.warn("Warehouse code already exists: {}", request.getCode());
-            throw new BadRequestException(ErrorCode.WH_004);
+            throw new BadRequestException(ErrorCode.WHS_004);
         }
         Warehouses warehouses = wareHouseMapper.toEntity(request);
         Account account = getCurrentUser();
@@ -98,7 +98,7 @@ public class WareHouseServiceImpl implements WareHouseService {
     public WareHouseResponse getWareHouseById(String id) {
         log.info("Retrieving warehouse with id={}", id);
         Warehouses warehouse = wareHouseRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WHS_001));
 
         AccountResponse manager = fetchSingleManager(warehouse.getManagerId());
         return wareHouseMapper.toResponse(warehouse, manager);
@@ -129,7 +129,7 @@ public class WareHouseServiceImpl implements WareHouseService {
     public WareHouseResponse updateWareHouse(String id, UpdateWarehouseRequest request) {
         log.info("Updating warehouse with id={}, name={}", id, request.getName());
         Warehouses warehouse = wareHouseRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WHS_001));
 
         wareHouseMapper.updateEntity(warehouse, request);
 
@@ -153,7 +153,7 @@ public class WareHouseServiceImpl implements WareHouseService {
     public WareHouseResponse changeStatus(String id, ChangeStatusRequest request) {
         log.info("Changing status of warehouse with code={}, name={}", id, request.getStatus());
         Warehouses warehouse = wareHouseRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.WH_001));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WHS_001));
 
         warehouse.setStatus(request.getStatus());
         warehouse.setUpdatedBy(getCurrentUser().getId());

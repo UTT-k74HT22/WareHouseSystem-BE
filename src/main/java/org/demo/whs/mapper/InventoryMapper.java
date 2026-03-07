@@ -9,10 +9,12 @@ import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
+import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class InventoryMapper {
@@ -64,10 +66,10 @@ public class InventoryMapper {
      */
     public List<InventoryResponse> toResponses(
             List<Inventory> inventories,
-            List<Products> products,
-            List<Warehouses> warehouses,
-            List<Locations> locations,
-            List<Batch> batches
+            Map<String, Products> productMap,
+            Map<String, Warehouses> warehouseMap,
+            Map<String, Locations> locationMap,
+            Map<String, Batch> batchMap
     ) {
 
         if (inventories == null || inventories.isEmpty()) {
@@ -77,25 +79,10 @@ public class InventoryMapper {
         return inventories.stream()
                 .map(inv -> {
 
-                    Products product = products.stream()
-                            .filter(p -> p.getId().equals(inv.getProductId()))
-                            .findFirst()
-                            .orElse(null);
-
-                    Warehouses warehouse = warehouses.stream()
-                            .filter(w -> w.getId().equals(inv.getWarehouseId()))
-                            .findFirst()
-                            .orElse(null);
-
-                    Locations location = locations.stream()
-                            .filter(l -> l.getId().equals(inv.getLocationId()))
-                            .findFirst()
-                            .orElse(null);
-
-                    Batch batch = batches.stream()
-                            .filter(b -> b.getId().equals(inv.getBatchId()))
-                            .findFirst()
-                            .orElse(null);
+                    Products product = productMap.get(inv.getProductId());
+                    Warehouses warehouse = warehouseMap.get(inv.getWarehouseId());
+                    Locations location = locationMap.get(inv.getLocationId());
+                    Batch batch = batchMap.get(inv.getBatchId());
 
                     return toResponse(inv, product, warehouse, location, batch);
 
@@ -106,13 +93,13 @@ public class InventoryMapper {
     /**
      * Inventory → Location item
      */
-    public InventoryByLocationResponse.LocationInventoryItem toLocationItem(
+    public LocationInventoryItemResponse toLocationItem(
             Inventory inventory,
             Products product,
             Batch batch
     ) {
 
-        return InventoryByLocationResponse.LocationInventoryItem.builder()
+        return LocationInventoryItemResponse.builder()
                 .productId(inventory.getProductId())
                 .productSku(product != null ? product.getSku() : null)
                 .productName(product != null ? product.getName() : null)
@@ -133,7 +120,7 @@ public class InventoryMapper {
     public InventoryByLocationResponse toLocationResponse(
             Locations location,
             Warehouses warehouse,
-            List<InventoryByLocationResponse.LocationInventoryItem> items
+            List<LocationInventoryItemResponse> items
     ) {
 
         return InventoryByLocationResponse.builder()
