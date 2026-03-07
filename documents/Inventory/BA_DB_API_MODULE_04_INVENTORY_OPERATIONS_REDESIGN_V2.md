@@ -14,6 +14,7 @@
 | Author | BA + Backend Review |
 | Related Jira | WHS-19, WHS-20, WHS-21..24, WHS-25, WHS-87 |
 | Related GitHub | issue #49 |
+| Related Review Note | `BA_STOCK_MOVEMENT_AUDIT_DECISION.md` |
 
 ---
 
