@@ -1,11 +1,15 @@
 package org.demo.whs.mapper;
 
-import lombok.RequiredArgsConstructor;
-import org.demo.whs.entity.*;
+import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Inventory;
+import org.demo.whs.entity.Locations;
+import org.demo.whs.entity.Products;
+import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
-import org.demo.whs.repository.projection.InventorySummaryProjection;
+import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -13,22 +17,22 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class InventoryMapper {
 
-    public InventoryResponse toResponse(Inventory inventory, 
-                                      Map<String, Products> productMap,
-                                      Map<String, Warehouses> warehouseMap,
-                                      Map<String, Locations> locationMap,
-                                      Map<String, Batch> batchMap) {
+    /**
+     * Entity → Response
+     */
+    public InventoryResponse toResponse(
+            Inventory inventory,
+            Products product,
+            Warehouses warehouse,
+            Locations location,
+            Batch batch
+    ) {
+
         if (inventory == null) {
             return null;
         }
-
-        Products product = productMap != null ? productMap.get(inventory.getProductId()) : null;
-        Warehouses warehouse = warehouseMap != null ? warehouseMap.get(inventory.getWarehouseId()) : null;
-        Locations location = locationMap != null ? locationMap.get(inventory.getLocationId()) : null;
-        Batch batch = batchMap != null ? batchMap.get(inventory.getBatchId()) : null;
 
         return InventoryResponse.builder()
                 .id(inventory.getId())
@@ -53,90 +57,107 @@ public class InventoryMapper {
                 .lastMovementAt(inventory.getLastMovementAt())
                 .createdAt(inventory.getCreatedAt())
                 .updatedAt(inventory.getUpdatedAt())
+
                 .build();
     }
 
-    public List<InventoryResponse> toResponses(List<Inventory> inventories,
-                                             Map<String, Products> productMap,
-                                             Map<String, Warehouses> warehouseMap,
-                                             Map<String, Locations> locationMap,
-                                             Map<String, Batch> batchMap) {
+    /**
+     * Entity list → Response list
+     */
+    public List<InventoryResponse> toResponses(
+            List<Inventory> inventories,
+            Map<String, Products> productMap,
+            Map<String, Warehouses> warehouseMap,
+            Map<String, Locations> locationMap,
+            Map<String, Batch> batchMap
+    ) {
+
         if (inventories == null || inventories.isEmpty()) {
             return List.of();
         }
 
         return inventories.stream()
-                .map(i -> toResponse(i, productMap, warehouseMap, locationMap, batchMap))
+                .map(inv -> {
+
+                    Products product = productMap.get(inv.getProductId());
+                    Warehouses warehouse = warehouseMap.get(inv.getWarehouseId());
+                    Locations location = locationMap.get(inv.getLocationId());
+                    Batch batch = batchMap.get(inv.getBatchId());
+
+                    return toResponse(inv, product, warehouse, location, batch);
+
+                })
                 .toList();
     }
-    public InventorySummaryResponse toSummaryResponse(InventorySummaryProjection projection) {
-        if (projection == null) {
-            return null;
-        }
 
-        BigDecimal onHand = projection.getTotalOnHandQuantity() != null
-                ? projection.getTotalOnHandQuantity()
-                : BigDecimal.ZERO;
+    /**
+     * Inventory → Location item
+     */
+    public LocationInventoryItemResponse toLocationItem(
+            Inventory inventory,
+            Products product,
+            Batch batch
+    ) {
 
-        BigDecimal reserved = projection.getTotalReservedQuantity() != null
-                ? projection.getTotalReservedQuantity()
-                : BigDecimal.ZERO;
+        return LocationInventoryItemResponse.builder()
+                .productId(inventory.getProductId())
+                .productSku(product != null ? product.getSku() : null)
+                .productName(product != null ? product.getName() : null)
 
-        return InventorySummaryResponse.builder()
-                .productId(projection.getProductId())
-                .productSku(projection.getProductSku())
-                .productName(projection.getProductName())
-                .totalOnHandQuantity(onHand)
-                .totalReservedQuantity(reserved)
-                .totalAvailableQuantity(onHand.subtract(reserved))
-                .warehouseCount(projection.getWarehouseCount())
-                .locationCount(projection.getLocationCount())
-                .build();
-    }
-    public InventoryByLocationResponse.LocationInventoryItem toLocationItem(
-            Inventory inv,
-            Map<String, Products> productMap,
-            Map<String, Batch> batchMap) {
-
-        Products prod = productMap.get(inv.getProductId());
-        Batch batch = inv.getBatchId() != null ? batchMap.get(inv.getBatchId()) : null;
-
-        return InventoryByLocationResponse.LocationInventoryItem.builder()
-                .productId(inv.getProductId())
-                .productSku(prod != null ? prod.getSku() : null)
-                .productName(prod != null ? prod.getName() : null)
-                .batchId(inv.getBatchId())
+                .batchId(inventory.getBatchId())
                 .batchNumber(batch != null ? batch.getBatchNumber() : null)
-                .onHandQuantity(inv.getOnHandQuantity())
-                .reservedQuantity(inv.getReservedQuantity())
-                .availableQuantity(inv.getAvailableQuantity())
+
+                .onHandQuantity(inventory.getOnHandQuantity())
+                .reservedQuantity(inventory.getReservedQuantity())
+                .availableQuantity(inventory.getAvailableQuantity())
+
                 .build();
     }
+
+    /**
+     * Build location response
+     */
     public InventoryByLocationResponse toLocationResponse(
-            String locationId,
-            List<Inventory> inventories,
-            Map<String, Products> productMap,
-            Map<String, Warehouses> warehouseMap,
-            Map<String, Locations> locationMap,
-            Map<String, Batch> batchMap) {
-
-        Locations loc = locationMap.get(locationId);
-
-        String warehouseId = inventories.get(0).getWarehouseId();
-        Warehouses wh = warehouseMap.get(warehouseId);
-
-        List<InventoryByLocationResponse.LocationInventoryItem> items =
-                inventories.stream()
-                        .map(inv -> toLocationItem(inv, productMap, batchMap))
-                        .toList();
+            Locations location,
+            Warehouses warehouse,
+            List<LocationInventoryItemResponse> items
+    ) {
 
         return InventoryByLocationResponse.builder()
-                .locationId("UNASSIGNED".equals(locationId) ? null : locationId)
-                .locationCode(loc != null ? loc.getCode() : "N/A")
-                .locationName(loc != null ? loc.getName() : "Unassigned")
-                .warehouseId(warehouseId)
-                .warehouseName(wh != null ? wh.getName() : "Unknown")
+                .locationId(location != null ? location.getId() : null)
+                .locationCode(location != null ? location.getCode() : null)
+                .locationName(location != null ? location.getName() : "Unassigned")
+
+                .warehouseId(warehouse != null ? warehouse.getId() : null)
+                .warehouseName(warehouse != null ? warehouse.getName() : "Unknown")
+
                 .items(items)
+
+                .build();
+    }
+
+    /**
+     * Check availability response
+     */
+    public CheckAvailabilityResponse toCheckAvailabilityResponse(
+            CheckAvailabilityRequest request,
+            BigDecimal available,
+            boolean isAvailable) {
+
+        String message = isAvailable
+                ? "Stock available"
+                : "Insufficient stock";
+
+        return CheckAvailabilityResponse.builder()
+                .productId(request.getProductId())
+                .warehouseId(request.getWarehouseId())
+                .locationId(request.getLocationId())
+
+                .requestedQuantity(request.getQuantity())
+
+                .availableQuantity(available)
+                .isAvailable(isAvailable)
+                .message(message)
                 .build();
     }
 }
