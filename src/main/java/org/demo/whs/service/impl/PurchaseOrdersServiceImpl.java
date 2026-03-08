@@ -113,15 +113,51 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
     @Override
     @Transactional
     public PurchaseOrdersResponse update(String id, UpdatePurchaseOrdersRequest request) {
-        log.warn("[SERVICE][PURCHASE_ORDERS][UPDATE] WHS-53 service implementation is pending, id={}", id);
-        throw new UnsupportedOperationException("WHS-53 update purchase order service is not implemented yet");
+        log.info("Update purchase order draft, id={}, request={}", id, request);
+
+        sanitizeUpdateRequest(request);
+
+        PurchaseOrders purchaseOrders = findByIdForMutation(id);
+        validateDraftStatus(purchaseOrders, "updated");
+
+        if (request.getSupplierId() != null) {
+            validateSupplier(request.getSupplierId());
+        }
+        if (request.getWarehouseId() != null) {
+            validateWarehouse(request.getWarehouseId());
+        }
+
+        validatePurchaseOrderDates(request.getOrderDate() != null ? request.getOrderDate() : purchaseOrders.getOrderDate(), request.getExpectedDeliveryDate() != null ? request.getExpectedDeliveryDate() : purchaseOrders.getExpectedDeliveryDate());
+        purchaseOrdersMapper.updateEntity(purchaseOrders, request);
+
+        if (request.getPaymentTerms() != null) {
+            purchaseOrders.setPaymentTerms(normalizeBlank(request.getPaymentTerms()));
+        }
+        if (request.getNotes() != null) {
+            purchaseOrders.setNotes(normalizeBlank(request.getNotes()));
+        }
+
+        applyAuditFields(purchaseOrders, getCurrentActorId(), false);
+
+        PurchaseOrders updatedPurchaseOrder = purchaseOrdersRepository.save(purchaseOrders);
+        log.info("Purchase order draft updated successfully, id={}, purchaseOrderNumber={}", updatedPurchaseOrder.getId(), updatedPurchaseOrder.getPurchaseOrderNumber());
+        return purchaseOrdersMapper.toResponse(updatedPurchaseOrder);
     }
 
     @Override
     @Transactional
     public void delete(String id) {
-        log.warn("[SERVICE][PURCHASE_ORDERS][DELETE] WHS-53 service implementation is pending, id={}", id);
-        throw new UnsupportedOperationException("WHS-53 delete purchase order service is not implemented yet");
+        log.info("Soft delete purchase order draft, id={}", id);
+
+        PurchaseOrders purchaseOrders = findByIdForMutation(id);
+        validateDraftStatus(purchaseOrders, "deleted");
+
+        purchaseOrders.setStatus(PurchaseOrdersStatus.CANCELLED);
+        applyAuditFields(purchaseOrders, getCurrentActorId(), false);
+
+        purchaseOrdersRepository.save(purchaseOrders);
+        log.info("Purchase order draft soft deleted successfully, id={}, purchaseOrderNumber={}", purchaseOrders.getId(), purchaseOrders.getPurchaseOrderNumber()
+        );
     }
 
     @Override
@@ -240,11 +276,26 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
     }
 
     private void sanitizeCreateRequest(PurchaseOrdersRequest request) {
-        request.setSupplierId(normalizeRequired(request.getSupplierId()));
-        request.setWarehouseId(normalizeRequired(request.getWarehouseId()));
-        request.setCurrency(normalizeRequired(request.getCurrency()));
+        request.setSupplierId(normalizeRequiredField(request.getSupplierId(), "supplierId"));
+        request.setWarehouseId(normalizeRequiredField(request.getWarehouseId(), "warehouseId"));
+        request.setCurrency(normalizeRequiredField(request.getCurrency(), "currency").toUpperCase());
         request.setPaymentTerms(normalizeBlank(request.getPaymentTerms()));
         request.setNotes(normalizeBlank(request.getNotes()));
+    }
+
+    private void sanitizeUpdateRequest(UpdatePurchaseOrdersRequest request) {
+        request.setSupplierId(normalizeOptionalRequiredField(request.getSupplierId(), "supplierId"));
+        request.setWarehouseId(normalizeOptionalRequiredField(request.getWarehouseId(), "warehouseId"));
+
+        String currency = normalizeOptionalRequiredField(request.getCurrency(), "currency");
+        request.setCurrency(currency == null ? null : currency.toUpperCase());
+
+        if (request.getPaymentTerms() != null) {
+            request.setPaymentTerms(request.getPaymentTerms().trim());
+        }
+        if (request.getNotes() != null) {
+            request.setNotes(request.getNotes().trim());
+        }
     }
 
     private String resolvePaymentTerms(String requestedPaymentTerms, String supplierPaymentTerms) {
@@ -255,8 +306,39 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
         return normalizeBlank(supplierPaymentTerms);
     }
 
-    private String normalizeRequired(String value) {
-        return value == null ? null : value.trim();
+    private PurchaseOrders findByIdForMutation(String id) {
+        return purchaseOrdersRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Purchase order not found", ErrorCode.PO_001));
+    }
+
+    private void validateDraftStatus(PurchaseOrders purchaseOrders, String operation) {
+        if (purchaseOrders.getStatus() != PurchaseOrdersStatus.DRAFT) {
+            throw new BadRequestException(
+                    String.format("Only draft purchase orders can be %s", operation),
+                    ErrorCode.COM_001
+            );
+        }
+    }
+
+    private String normalizeRequiredField(String value, String fieldName) {
+        String normalized = normalizeOptionalRequiredField(value, fieldName);
+        if (normalized == null) {
+            throw new BadRequestException(fieldName + " is required", ErrorCode.COM_001);
+        }
+        return normalized;
+    }
+
+    private String normalizeOptionalRequiredField(String value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            throw new BadRequestException(fieldName + " must not be blank", ErrorCode.COM_001);
+        }
+
+        return normalized;
     }
 
     private String normalizeBlank(String value) {

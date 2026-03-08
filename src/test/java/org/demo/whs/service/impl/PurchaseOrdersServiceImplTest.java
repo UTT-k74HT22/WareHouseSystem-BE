@@ -6,6 +6,7 @@ import org.demo.whs.entity.PurchaseOrders;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.PurchaseOrders.PurchaseOrdersFilterRequest;
 import org.demo.whs.entity.dto.request.PurchaseOrders.PurchaseOrdersRequest;
+import org.demo.whs.entity.dto.request.PurchaseOrders.UpdatePurchaseOrdersRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
 import org.demo.whs.entity.enums.AccountStatus;
@@ -247,6 +248,95 @@ class PurchaseOrdersServiceImplTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Purchase order not found")
                 .hasFieldOrPropertyWithValue("errorCode", "PO_001");
+    }
+
+    @Test
+    @DisplayName("should_UpdateDraftPurchaseOrder_When_RequestIsValid")
+    void should_UpdateDraftPurchaseOrder_When_RequestIsValid() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.DRAFT);
+        existingPurchaseOrder.setNotes("Legacy note");
+
+        UpdatePurchaseOrdersRequest request = UpdatePurchaseOrdersRequest.builder()
+                .supplierId("  sup-002  ")
+                .warehouseId(" wh-002 ")
+                .orderDate(LocalDate.of(2026, 3, 8))
+                .expectedDeliveryDate(LocalDate.of(2026, 3, 12))
+                .currency("EUR")
+                .paymentTerms("  NET 15  ")
+                .notes("   ")
+                .build();
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+        when(businessPartnersRepository.findById("sup-002"))
+                .thenReturn(Optional.of(buildSupplier("sup-002", BusinessPartnerType.SUPPLIER, BusinessPartnerStatus.ACTIVE, "NET 45")));
+        when(wareHouseRepository.findById("wh-002"))
+                .thenReturn(Optional.of(buildWarehouse("wh-002", WareHouseStatus.ACTIVE)));
+        when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PurchaseOrdersResponse response = service.update("po-001", request);
+
+        assertThat(existingPurchaseOrder.getSupplierId()).isEqualTo("sup-002");
+        assertThat(existingPurchaseOrder.getWarehouseId()).isEqualTo("wh-002");
+        assertThat(existingPurchaseOrder.getOrderDate()).isEqualTo(LocalDate.of(2026, 3, 8));
+        assertThat(existingPurchaseOrder.getExpectedDeliveryDate()).isEqualTo(LocalDate.of(2026, 3, 12));
+        assertThat(existingPurchaseOrder.getCurrency()).isEqualTo(CurrencyType.EUR);
+        assertThat(existingPurchaseOrder.getPaymentTerms()).isEqualTo("NET 15");
+        assertThat(existingPurchaseOrder.getNotes()).isNull();
+        assertThat(existingPurchaseOrder.getUpdatedBy()).isEqualTo(ACTOR_ID);
+        assertThat(existingPurchaseOrder.getStatus()).isEqualTo(PurchaseOrdersStatus.DRAFT);
+
+        assertThat(response.getId()).isEqualTo("po-001");
+        assertThat(response.getCurrency()).isEqualTo(CurrencyType.EUR.name());
+        assertThat(response.getPaymentTerms()).isEqualTo("NET 15");
+        assertThat(response.getNotes()).isNull();
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_UpdatePurchaseOrderIsNotDraft")
+    void should_ThrowBadRequest_When_UpdatePurchaseOrderIsNotDraft() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.CONFIRMED);
+        UpdatePurchaseOrdersRequest request = UpdatePurchaseOrdersRequest.builder()
+                .notes("Cannot update")
+                .build();
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+
+        assertThatThrownBy(() -> service.update("po-001", request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Only draft purchase orders can be updated")
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+        verify(purchaseOrdersRepository, never()).save(any(PurchaseOrders.class));
+    }
+
+    @Test
+    @DisplayName("should_SoftDeletePurchaseOrder_When_StatusIsDraft")
+    void should_SoftDeletePurchaseOrder_When_StatusIsDraft() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.DRAFT);
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+        when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.delete("po-001");
+
+        assertThat(existingPurchaseOrder.getStatus()).isEqualTo(PurchaseOrdersStatus.CANCELLED);
+        assertThat(existingPurchaseOrder.getUpdatedBy()).isEqualTo(ACTOR_ID);
+        verify(purchaseOrdersRepository).save(existingPurchaseOrder);
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_DeletePurchaseOrderIsNotDraft")
+    void should_ThrowBadRequest_When_DeletePurchaseOrderIsNotDraft() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.COMPLETED);
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+
+        assertThatThrownBy(() -> service.delete("po-001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Only draft purchase orders can be deleted")
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+        verify(purchaseOrdersRepository, never()).save(any(PurchaseOrders.class));
     }
 
     @Test
