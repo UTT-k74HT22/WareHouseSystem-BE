@@ -1,12 +1,7 @@
 package org.demo.whs.mapper;
 
-import org.demo.whs.entity.Batch;
-import org.demo.whs.entity.Inventory;
-import org.demo.whs.entity.Locations;
-import org.demo.whs.entity.Products;
-import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
@@ -48,6 +43,33 @@ public class InventoryMapper {
                 .reservedAt(LocalDateTime.now())
                 .build();
     }
+
+    /**
+     * Reservation Entity → Reserve Response
+     */
+    public InventoryReserveResponse toReserveResponse(
+            InventoryReservation reservation,
+            Inventory inventory
+    ) {
+        if (reservation == null) {
+            return null;
+        }
+
+        return InventoryReserveResponse.builder()
+                .inventoryId(reservation.getInventoryId())
+                .productId(reservation.getProductId())
+                .warehouseId(reservation.getWarehouseId())
+                .locationId(reservation.getLocationId())
+                .batchId(reservation.getBatchId())
+                .reservedQuantity(reservation.getQuantity())
+                .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
+                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
+                .orderLineId(reservation.getOrderLineId())
+                .status(reservation.getStatus().name())
+                .reservedAt(reservation.getCreatedAt())
+                .build();
+    }
+
 
     /**
      * Entity → Response

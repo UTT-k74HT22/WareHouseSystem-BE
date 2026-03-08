@@ -87,4 +87,27 @@ public interface InventoryRepository extends
             @Param("locationId") String locationId,
             @Param("batchId") String batchId
     );
-}
+
+    /**
+     * Optimized: Find the single best inventory row that can fulfill the entire requested quantity.
+     * This avoids scanning all rows in the application layer and uses DB-level filtering.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(value = """
+        SELECT * FROM inventory i
+        WHERE i.product_id = :productId
+        AND i.warehouse_id = :warehouseId
+        AND (:locationId IS NULL OR i.location_id = :locationId)
+        AND (:batchId IS NULL OR i.batch_id = :batchId)
+        AND (i.on_hand_quantity - i.reserved_quantity) >= :requestedQuantity
+        ORDER BY (i.on_hand_quantity - i.reserved_quantity) DESC
+        LIMIT 1
+    """, nativeQuery = true)
+    Optional<Inventory> findBestSuitableForUpdate(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId,
+            @Param("requestedQuantity") java.math.BigDecimal requestedQuantity
+    );
+    }

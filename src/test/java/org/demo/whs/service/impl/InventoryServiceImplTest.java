@@ -1,6 +1,7 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Inventory;
+import org.demo.whs.entity.InventoryReservation;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.Warehouses;
@@ -9,12 +10,14 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
+import org.demo.whs.entity.enums.InventoryReservationStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.repository.InventoryRepository;
+import org.demo.whs.repository.InventoryReservationRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.WareHouseRepository;
@@ -34,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +47,9 @@ class InventoryServiceImplTest {
 
     @Mock
     private InventoryRepository inventoryRepository;
+
+    @Mock
+    private InventoryReservationRepository inventoryReservationRepository;
 
     @Mock
     private InventoryMapper inventoryMapper;
@@ -294,10 +301,12 @@ class InventoryServiceImplTest {
         // Arrange
         String productId = "prod-1";
         String warehouseId = "wh-1";
+        String orderLineId = "OL-1";
         BigDecimal requestedQty = new BigDecimal("10.00");
         InventoryReserveRequest request = InventoryReserveRequest.builder()
                 .productId(productId)
                 .warehouseId(warehouseId)
+                .orderLineId(orderLineId)
                 .quantity(requestedQty)
                 .build();
 
@@ -309,20 +318,22 @@ class InventoryServiceImplTest {
                 .reservedQuantity(new BigDecimal("20.00"))
                 .build();
 
-        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
-                .thenReturn(java.util.List.of(inventory));
+        // No existing reservation
+        when(inventoryReservationRepository.findByOrderLineId(orderLineId)).thenReturn(Optional.empty());
+
+        // Find best row
+        when(inventoryRepository.findBestSuitableForUpdate(productId, warehouseId, null, null, requestedQty))
+                .thenReturn(Optional.of(inventory));
 
         InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
                 .inventoryId("inv-1")
                 .productId(productId)
                 .warehouseId(warehouseId)
-                .reservedQuantity(new BigDecimal("30.00"))
-                .onHandQuantity(new BigDecimal("100.00"))
-                .availableQuantity(new BigDecimal("70.00"))
+                .reservedQuantity(requestedQty)
                 .status("RESERVED")
                 .build();
 
-        when(inventoryMapper.toReserveResponse(any(), any(), eq("RESERVED")))
+        when(inventoryMapper.toReserveResponse(any(InventoryReservation.class), any(Inventory.class)))
                 .thenReturn(expectedResponse);
 
         // Act
@@ -330,14 +341,55 @@ class InventoryServiceImplTest {
 
         // Assert
         assertThat(response).isNotNull();
-        assertThat(response.getReservedQuantity()).isEqualByComparingTo("30.00");
         assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("30.00");
         verify(inventoryRepository).save(inventory);
+        verify(inventoryReservationRepository).saveAndFlush(any(InventoryReservation.class));
     }
 
     @Test
-    @DisplayName("reserve_shouldThrowConflict_WhenStockIsNotEnough")
-    void reserve_shouldThrowConflict_WhenStockIsNotEnough() {
+    @DisplayName("reserve_shouldReturnExisting_WhenLineIsAlreadyReserved")
+    void reserve_shouldReturnExisting_WhenLineIsAlreadyReserved() {
+        // Arrange
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        String orderLineId = "OL-1";
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .orderLineId(orderLineId)
+                .quantity(new BigDecimal("10.00"))
+                .build();
+
+        InventoryReservation existingRes = InventoryReservation.builder()
+                .id("res-1")
+                .inventoryId("inv-1")
+                .orderLineId(orderLineId)
+                .status(InventoryReservationStatus.RESERVED)
+                .build();
+
+        Inventory inventory = Inventory.builder().id("inv-1").build();
+
+        when(inventoryReservationRepository.findByOrderLineId(orderLineId)).thenReturn(Optional.of(existingRes));
+        when(inventoryRepository.findById("inv-1")).thenReturn(Optional.of(inventory));
+        
+        InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
+                .inventoryId("inv-1")
+                .status("RESERVED")
+                .build();
+
+        when(inventoryMapper.toReserveResponse(existingRes, inventory)).thenReturn(expectedResponse);
+
+        // Act
+        InventoryReserveResponse response = inventoryService.reserve(request);
+
+        // Assert
+        assertThat(response.getInventoryId()).isEqualTo("inv-1");
+        verify(inventoryRepository, never()).findBestSuitableForUpdate(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("reserve_shouldThrowConflict_WhenNoSingleRowHasEnoughStock")
+    void reserve_shouldThrowConflict_WhenNoSingleRowHasEnoughStock() {
         // Arrange
         String productId = "prod-1";
         String warehouseId = "wh-1";
@@ -348,16 +400,9 @@ class InventoryServiceImplTest {
                 .quantity(requestedQty)
                 .build();
 
-        Inventory inventory = Inventory.builder()
-                .id("inv-1")
-                .productId(productId)
-                .warehouseId(warehouseId)
-                .onHandQuantity(new BigDecimal("100.00"))
-                .reservedQuantity(new BigDecimal("20.00"))
-                .build();
-
-        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
-                .thenReturn(java.util.List.of(inventory));
+        // Removed unnecessary stub for findByOrderLineId
+        when(inventoryRepository.findBestSuitableForUpdate(productId, warehouseId, null, null, requestedQty))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> inventoryService.reserve(request))
@@ -371,56 +416,20 @@ class InventoryServiceImplTest {
         // Arrange
         String productId = "prod-1";
         String warehouseId = "wh-1";
-        InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .productId(productId)
-                .warehouseId(warehouseId)
-                .quantity(BigDecimal.TEN)
-                .build();
-
-        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
-                .thenReturn(java.util.List.of());
-
-        // Act & Assert
-        assertThatThrownBy(() -> inventoryService.reserve(request))
-                .isInstanceOf(NotFoundException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "INV_001");
-    }
-
-    @Test
-    @DisplayName("reserve_shouldPickBestRow_WhenMultipleRowsAvailable")
-    void reserve_shouldPickBestRow_WhenMultipleRowsAvailable() {
-        // Arrange
-        String productId = "prod-1";
-        String warehouseId = "wh-1";
-        BigDecimal requestedQty = new BigDecimal("30.00");
+        BigDecimal requestedQty = new BigDecimal("10.00");
         InventoryReserveRequest request = InventoryReserveRequest.builder()
                 .productId(productId)
                 .warehouseId(warehouseId)
                 .quantity(requestedQty)
                 .build();
 
-        Inventory inv1 = Inventory.builder().id("inv-1").onHandQuantity(new BigDecimal("20.00")).reservedQuantity(BigDecimal.ZERO).build();
-        Inventory inv2 = Inventory.builder().id("inv-2").onHandQuantity(new BigDecimal("50.00")).reservedQuantity(BigDecimal.ZERO).build();
+        // Removed unnecessary stub for findByOrderLineId
+        when(inventoryRepository.findBestSuitableForUpdate(productId, warehouseId, null, null, requestedQty))
+                .thenReturn(Optional.empty());
 
-        // Query returns them ordered by availability DESC
-        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
-                .thenReturn(java.util.List.of(inv2, inv1));
-
-        InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
-                .inventoryId("inv-2")
-                .reservedQuantity(new BigDecimal("30.00"))
-                .status("RESERVED")
-                .build();
-
-        when(inventoryMapper.toReserveResponse(eq(inv2), any(), eq("RESERVED")))
-                .thenReturn(expectedResponse);
-
-        // Act
-        InventoryReserveResponse response = inventoryService.reserve(request);
-
-        // Assert
-        assertThat(response.getInventoryId()).isEqualTo("inv-2");
-        assertThat(inv2.getReservedQuantity()).isEqualByComparingTo("30.00");
-        verify(inventoryRepository).save(inv2);
+        // Act & Assert
+        assertThatThrownBy(() -> inventoryService.reserve(request))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INV_004"); 
     }
 }
