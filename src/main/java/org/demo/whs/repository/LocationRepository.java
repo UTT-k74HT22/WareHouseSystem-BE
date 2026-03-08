@@ -93,7 +93,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @param statuses list of blocking statuses
      * @return count of locations
      */
-    long countByWarehouseIdAndStatus(String warehouseId, Iterable<LocationStatus> statuses);
+    long countByWarehouseIdAndStatusNot(String warehouseId, LocationStatus statuses);
 
     /**
      * Counts all locations for a specific warehouse.

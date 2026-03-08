@@ -180,13 +180,9 @@ public class WareHouseServiceImpl implements WareHouseService {
             throw new BadRequestException(ErrorCode.WH_007);
         }
 
-        long activeLocationCount = locationRepository.countByWarehouseIdAndStatus(
+        long activeLocationCount = locationRepository.countByWarehouseIdAndStatusNot(
                 id,
-                List.of(
-                LocationStatus.ACTIVE,
-                LocationStatus.FULL,
-                LocationStatus.MAINTENANCE
-                )
+                LocationStatus.INACTIVE
         );
 
         if (activeLocationCount > 0) {
