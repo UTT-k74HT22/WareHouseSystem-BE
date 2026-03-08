@@ -27,23 +27,6 @@ public interface InventoryRepository extends
         WHERE i.id = :id
     """)
     Optional<Inventory> findByIdForUpdate(@Param("id") String id);
-
-    /**
-     * Lock inventory row by its dimensional keys.
-     */
-    /**
-     * Retrieves an inventory record by its dimensions with a pessimistic write lock to prevent concurrent modifications.
-     *
-     * @param productId   the ID of the product
-     * @param warehouseId the ID of the warehouse
-     * @param locationId  the ID of the location (nullable)
-     * @param batchId     the ID of the batch (nullable)
-     * @return an Optional containing the inventory record if found, or empty if not found
-     */
-    /**
-     * Strict dimension matching with pessimistic write lock.
-     * Used for reservations, transfers, and adjustments to ensure row-level consistency.
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i
@@ -91,8 +74,8 @@ public interface InventoryRepository extends
     /**
      * Optimized: Find the single best inventory row that can fulfill the entire requested quantity.
      * This avoids scanning all rows in the application layer and uses DB-level filtering.
+     * Note: @Lock is not supported for native queries, so we use "FOR UPDATE" in SQL.
      */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(value = """
         SELECT * FROM inventory i
         WHERE i.product_id = :productId
@@ -102,6 +85,7 @@ public interface InventoryRepository extends
         AND (i.on_hand_quantity - i.reserved_quantity) >= :requestedQuantity
         ORDER BY (i.on_hand_quantity - i.reserved_quantity) DESC
         LIMIT 1
+        FOR UPDATE
     """, nativeQuery = true)
     Optional<Inventory> findBestSuitableForUpdate(
             @Param("productId") String productId,
