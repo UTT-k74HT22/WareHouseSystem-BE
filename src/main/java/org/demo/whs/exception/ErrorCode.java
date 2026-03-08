@@ -36,6 +36,11 @@ public enum ErrorCode {
     OTP_006("OTP_006", "Invalid or expired OTP"),
 
     // Ware House errors
+    WHS_001("WHS_001", "Warehouse not found"),
+    WHS_002("WHS_002", "Insufficient stock in warehouse"),
+    WHS_003("WHS_003", "Invalid warehouse operation"),
+    WHS_004("WHS_004", "Warehouse code already exists"),
+
     WH_001("WHS_001", "Warehouse not found"),
     WH_002("WHS_002", "Insufficient stock in warehouse"),
     WH_003("WHS_003", "Invalid warehouse operation"),
