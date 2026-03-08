@@ -90,6 +90,8 @@ Each module follows this consistent structure:
 ### Inbound Operations (Module 5)
 - **BA**: `/documents/Inbound/BA_MODULE_05_INBOUND_OPERATIONS.md`
 - **DB**: `/documents/Inbound/DB_MODULE_05_INBOUND.md`
+- **Review**: `/documents/Inbound/INBOUND_MODULE_REVIEW_AND_PLAN_20260307.md`
+- **Roadmap**: `/documents/Inbound/INBOUND_IMPLEMENTATION_ROADMAP_20260309.md` 🆕
 
 **Key Features:**
 - Purchase order management
@@ -130,6 +132,7 @@ Module 2: Master Data (Warehouses, Products, etc.)
 
 ### Module 6: Outbound Operations
 - **BA**: `/documents/Outbound/BA_MODULE_06_OUTBOUND_OPERATIONS.md`
+- **BA V2**: `/documents/Outbound/BA_MODULE_06_OUTBOUND_OPERATIONS_V2.md` 🆕
 - **DB**: `/documents/Outbound/DB_MODULE_06_OUTBOUND.md`
 
 **Key Features:**
