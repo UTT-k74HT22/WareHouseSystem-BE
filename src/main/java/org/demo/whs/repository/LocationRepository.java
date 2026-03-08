@@ -86,13 +86,14 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
     );
 
     /**
-     * Counts locations by warehouse ID and status.
+     * Counts locations by warehouse ID with multiple statuses.
+     * Used to validate warehouse deletion.
      *
      * @param warehouseId the warehouse ID
-     * @param status      the location status
+     * @param statuses list of blocking statuses
      * @return count of locations
      */
-    long countByWarehouseIdAndStatus(String warehouseId, LocationStatus status);
+    long countByWarehouseIdAndStatusNot(String warehouseId, LocationStatus statuses);
 
     /**
      * Counts all locations for a specific warehouse.

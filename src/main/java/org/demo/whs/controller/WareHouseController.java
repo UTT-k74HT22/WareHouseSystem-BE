@@ -11,6 +11,8 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.service.WareHouseService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authorization.method.AuthorizeReturnObject;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -118,5 +120,14 @@ public class WareHouseController {
         WareHouseResponse response = wareHouseService.changeStatus(id, request);
         BaseResponse<WareHouseResponse> baseResponse = BaseResponse.success(response);
         return ResponseEntity.ok(baseResponse);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BaseResponse<Void>> deleteWarehouse(@PathVariable String id) {
+        wareHouseService.deleteWarehouse(id);
+
+        return ResponseEntity.noContent().build();
+
     }
 }
