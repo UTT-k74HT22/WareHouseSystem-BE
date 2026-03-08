@@ -1,10 +1,11 @@
 package org.demo.whs.entity.dto.request.BusinessPartner;
 
-import lombok.Data;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.demo.whs.entity.enums.BusinessPartnerStatus;
 import org.demo.whs.entity.enums.BusinessPartnerType;
 
-@Data
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SearchBusinessPartnerRequest {
 
     private String code;
