@@ -4,9 +4,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
+import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.BaseResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.BusinessPartnerStatus;
+import org.demo.whs.entity.enums.BusinessPartnerType;
 import org.demo.whs.service.BusinessPartnerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -134,5 +138,25 @@ public class BusinessPartnerController {
                 response.getId(), response.getStatus());
 
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @GetMapping("/search")
+            public PageResponse<BusinessPartnerResponse> search(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) BusinessPartnerType type,
+            @RequestParam(required = false) BusinessPartnerStatus status,
+
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size
+            ) {
+
+        SearchBusinessPartnerRequest request = new SearchBusinessPartnerRequest();
+        request.setCode(code);
+        request.setName(name);
+        request.setType(type);
+        request.setStatus(status);
+
+        return businessPartnerService.searchBusinessPartners(request, page, size);
     }
 }
