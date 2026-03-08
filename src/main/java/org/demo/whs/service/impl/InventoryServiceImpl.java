@@ -245,21 +245,28 @@ public class InventoryServiceImpl implements InventoryService {
             throw new BadRequestException(ErrorCode.COM_001);
         }
 
-        // 1. Find EXACT inventory row with PESSIMISTIC lock
-        Inventory inventory = inventoryRepository.findByDimensionForUpdate(
+        // 1. Find suitable inventory rows with PESSIMISTIC lock
+        // Allocation Strategy: If dimension (location/batch) is not provided, we look for all available rows.
+        List<Inventory> suitableInventories = inventoryRepository.findAllSuitableForUpdate(
                 request.getProductId(),
                 request.getWarehouseId(),
                 request.getLocationId(),
                 request.getBatchId()
-        ).orElseThrow(() -> new NotFoundException(ErrorCode.INV_001));
+        );
 
-        // 2. Business Validation: check available stock
-        BigDecimal availableQuantity = inventory.getAvailableQuantity();
-        if (availableQuantity.compareTo(request.getQuantity()) < 0) {
-            log.warn("Insufficient stock for reservation. Available: {}, Requested: {}", 
-                    availableQuantity, request.getQuantity());
-            throw new ConflictException(ErrorCode.INV_004);
+        if (suitableInventories.isEmpty()) {
+            throw new NotFoundException(ErrorCode.INV_001);
         }
+
+        // 2. Business Validation: pick the first row that has enough available stock
+        // Since we ordered by available quantity DESC in the query, the first row is the best candidate.
+        Inventory inventory = suitableInventories.stream()
+                .filter(i -> i.getAvailableQuantity().compareTo(request.getQuantity()) >= 0)
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.warn("Insufficient stock for reservation in any single suitable row. Requested: {}", request.getQuantity());
+                    return new ConflictException(ErrorCode.INV_004);
+                });
 
         // 3. Perform Reservation
         inventory.setReservedQuantity(inventory.getReservedQuantity().add(request.getQuantity()));
@@ -268,7 +275,8 @@ public class InventoryServiceImpl implements InventoryService {
         // 4. Save and flush
         inventoryRepository.save(inventory);
 
-        log.info("Successfully reserved {} for inventory id: {}", request.getQuantity(), inventory.getId());
+        log.info("Successfully reserved {} for inventory id: {} at location: {}, batch: {}", 
+                request.getQuantity(), inventory.getId(), inventory.getLocationId(), inventory.getBatchId());
 
         return inventoryMapper.toReserveResponse(inventory, request.getOrderLineId(), "RESERVED");
     }

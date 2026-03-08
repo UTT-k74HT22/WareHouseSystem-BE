@@ -309,8 +309,8 @@ class InventoryServiceImplTest {
                 .reservedQuantity(new BigDecimal("20.00"))
                 .build();
 
-        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
-                .thenReturn(Optional.of(inventory));
+        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
+                .thenReturn(java.util.List.of(inventory));
 
         InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
                 .inventoryId("inv-1")
@@ -356,8 +356,8 @@ class InventoryServiceImplTest {
                 .reservedQuantity(new BigDecimal("20.00"))
                 .build();
 
-        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
-                .thenReturn(Optional.of(inventory));
+        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
+                .thenReturn(java.util.List.of(inventory));
 
         // Act & Assert
         assertThatThrownBy(() -> inventoryService.reserve(request))
@@ -377,12 +377,50 @@ class InventoryServiceImplTest {
                 .quantity(BigDecimal.TEN)
                 .build();
 
-        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
-                .thenReturn(Optional.empty());
+        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
+                .thenReturn(java.util.List.of());
 
         // Act & Assert
         assertThatThrownBy(() -> inventoryService.reserve(request))
                 .isInstanceOf(NotFoundException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "INV_001");
+    }
+
+    @Test
+    @DisplayName("reserve_shouldPickBestRow_WhenMultipleRowsAvailable")
+    void reserve_shouldPickBestRow_WhenMultipleRowsAvailable() {
+        // Arrange
+        String productId = "prod-1";
+        String warehouseId = "wh-1";
+        BigDecimal requestedQty = new BigDecimal("30.00");
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .quantity(requestedQty)
+                .build();
+
+        Inventory inv1 = Inventory.builder().id("inv-1").onHandQuantity(new BigDecimal("20.00")).reservedQuantity(BigDecimal.ZERO).build();
+        Inventory inv2 = Inventory.builder().id("inv-2").onHandQuantity(new BigDecimal("50.00")).reservedQuantity(BigDecimal.ZERO).build();
+
+        // Query returns them ordered by availability DESC
+        when(inventoryRepository.findAllSuitableForUpdate(productId, warehouseId, null, null))
+                .thenReturn(java.util.List.of(inv2, inv1));
+
+        InventoryReserveResponse expectedResponse = InventoryReserveResponse.builder()
+                .inventoryId("inv-2")
+                .reservedQuantity(new BigDecimal("30.00"))
+                .status("RESERVED")
+                .build();
+
+        when(inventoryMapper.toReserveResponse(eq(inv2), any(), eq("RESERVED")))
+                .thenReturn(expectedResponse);
+
+        // Act
+        InventoryReserveResponse response = inventoryService.reserve(request);
+
+        // Assert
+        assertThat(response.getInventoryId()).isEqualTo("inv-2");
+        assertThat(inv2.getReservedQuantity()).isEqualByComparingTo("30.00");
+        verify(inventoryRepository).save(inv2);
     }
 }

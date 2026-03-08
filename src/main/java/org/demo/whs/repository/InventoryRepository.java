@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends
@@ -59,6 +60,28 @@ public interface InventoryRepository extends
         )
     """)
     Optional<Inventory> findByDimensionForUpdate(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId
+    );
+
+    /**
+     * Find all inventory records matching non-null dimensions with pessimistic write lock.
+     * If a dimension is null, it is not used as a filter.
+     * Results are ordered by available quantity descending to pick the best candidate.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT i
+        FROM Inventory i
+        WHERE i.productId = :productId
+        AND i.warehouseId = :warehouseId
+        AND (:locationId IS NULL OR i.locationId = :locationId)
+        AND (:batchId IS NULL OR i.batchId = :batchId)
+        ORDER BY (i.onHandQuantity - i.reservedQuantity) DESC
+    """)
+    List<Inventory> findAllSuitableForUpdate(
             @Param("productId") String productId,
             @Param("warehouseId") String warehouseId,
             @Param("locationId") String locationId,
