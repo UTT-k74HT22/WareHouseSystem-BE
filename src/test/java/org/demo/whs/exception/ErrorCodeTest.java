@@ -4,7 +4,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Set;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,13 +14,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("All error code values should be unique")
-    void should_HaveUniqueCodeValues_When_EnumeratingAllErrorCodes() {
-        Set<String> uniqueCodes = Arrays.stream(ErrorCode.values())
-                .map(ErrorCode::getCode)
-                .collect(Collectors.toSet());
+    @DisplayName("Only warehouse alias entries should share the same raw code value")
+    void should_AllowOnlyExpectedWarehouseAliases_When_EnumeratingAllErrorCodes() {
+        Map<String, List<String>> namesByCode = Arrays.stream(ErrorCode.values())
+                .collect(Collectors.groupingBy(
+                        ErrorCode::getCode,
+                        Collectors.mapping(ErrorCode::name, Collectors.toList())
+                ));
 
-        assertThat(uniqueCodes).hasSameSizeAs(ErrorCode.values());
+        Map<String, List<String>> duplicateNamesByCode = namesByCode.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        assertThat(duplicateNamesByCode).containsExactlyInAnyOrderEntriesOf(Map.of(
+                "WHS_001", List.of("WHS_001", "WH_001"),
+                "WHS_002", List.of("WHS_002", "WH_002"),
+                "WHS_003", List.of("WHS_003", "WH_003"),
+                "WHS_004", List.of("WHS_004", "WH_004")
+        ));
     }
 
     @Test

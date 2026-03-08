@@ -27,6 +27,7 @@ Không nằm trong scope:
 - chỉnh line
 - receipt creation
 - inventory update
+- notification/report integration
 
 ## 3. Locked Business Rules
 
@@ -104,3 +105,9 @@ Response dùng chung `PurchaseOrdersResponse`, trong đó sau confirm cần ph�
 - `status = CONFIRMED`
 - `confirmed_at != null`
 - `confirmed_by != null`
+
+## 9. Deferred Integration Note
+
+- Rule notify warehouse sau khi confirm PO vẫn được giữ ở mức business requirement.
+- Tuy nhiên integration thực tế với module `notify/report` được defer sang phase triển khai module đó.
+- Scope `WHS-54` hiện tại chỉ chốt đúng transition, validation và audit fields cho Purchase Order.

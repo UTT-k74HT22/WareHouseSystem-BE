@@ -2,6 +2,7 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.BusinessPartners;
+import org.demo.whs.entity.PurchaseOrderLines;
 import org.demo.whs.entity.PurchaseOrders;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.PurchaseOrders.PurchaseOrdersFilterRequest;
@@ -340,6 +341,94 @@ class PurchaseOrdersServiceImplTest {
     }
 
     @Test
+    @DisplayName("should_ConfirmPurchaseOrder_When_DraftHasValidLines")
+    void should_ConfirmPurchaseOrder_When_DraftHasValidLines() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.DRAFT);
+        existingPurchaseOrder.setConfirmedAt(null);
+        existingPurchaseOrder.setConfirmedBy(null);
+        existingPurchaseOrder.setTaxAmount(new BigDecimal("10.00"));
+
+        List<PurchaseOrderLines> purchaseOrderLines = List.of(
+                buildPurchaseOrderLine("line-001", "po-001", 1, "5.00", "0.00", "10.00", "50.00"),
+                buildPurchaseOrderLine("line-002", "po-001", 2, "3.00", "0.00", "25.00", "75.00")
+        );
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+        when(purchaseOrderLinesRepository.findByPurchaseOrderIdOrderByLineNumberAsc("po-001")).thenReturn(purchaseOrderLines);
+        when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PurchaseOrdersResponse response = service.confirm("po-001");
+
+        assertThat(existingPurchaseOrder.getStatus()).isEqualTo(PurchaseOrdersStatus.CONFIRMED);
+        assertThat(existingPurchaseOrder.getConfirmedBy()).isEqualTo(ACTOR_ID);
+        assertThat(existingPurchaseOrder.getConfirmedAt()).isNotNull();
+        assertThat(existingPurchaseOrder.getUpdatedBy()).isEqualTo(ACTOR_ID);
+        assertThat(existingPurchaseOrder.getSubTotal()).isEqualByComparingTo("125.00");
+        assertThat(existingPurchaseOrder.getTaxAmount()).isEqualByComparingTo("10.00");
+        assertThat(existingPurchaseOrder.getTotalAmount()).isEqualByComparingTo("135.00");
+
+        assertThat(response.getStatus()).isEqualTo(PurchaseOrdersStatus.CONFIRMED.name());
+        assertThat(response.getConfirmedBy()).isEqualTo(ACTOR_ID);
+        assertThat(response.getConfirmedAt()).isNotNull();
+        assertThat(response.getSubTotal()).isEqualByComparingTo("125.00");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("135.00");
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_ConfirmPurchaseOrderIsNotDraft")
+    void should_ThrowBadRequest_When_ConfirmPurchaseOrderIsNotDraft() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.CONFIRMED);
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+
+        assertThatThrownBy(() -> service.confirm("po-001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Only draft purchase orders can be confirmed")
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+        verify(purchaseOrderLinesRepository, never()).findByPurchaseOrderIdOrderByLineNumberAsc(anyString());
+        verify(purchaseOrdersRepository, never()).save(any(PurchaseOrders.class));
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_ConfirmPurchaseOrderHasNoLines")
+    void should_ThrowBadRequest_When_ConfirmPurchaseOrderHasNoLines() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.DRAFT);
+        existingPurchaseOrder.setConfirmedAt(null);
+        existingPurchaseOrder.setConfirmedBy(null);
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+        when(purchaseOrderLinesRepository.findByPurchaseOrderIdOrderByLineNumberAsc("po-001")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.confirm("po-001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("must have at least one line item")
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+        verify(purchaseOrdersRepository, never()).save(any(PurchaseOrders.class));
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_ConfirmPurchaseOrderHasInvalidLineData")
+    void should_ThrowBadRequest_When_ConfirmPurchaseOrderHasInvalidLineData() {
+        PurchaseOrders existingPurchaseOrder = buildPurchaseOrder("po-001", "PO-20260307101010123-ABC123", PurchaseOrdersStatus.DRAFT);
+        existingPurchaseOrder.setConfirmedAt(null);
+        existingPurchaseOrder.setConfirmedBy(null);
+
+        PurchaseOrderLines invalidLine = buildPurchaseOrderLine("line-001", "po-001", 1, "5.00", "0.00", "10.00", "49.99");
+
+        when(purchaseOrdersRepository.findByIdForUpdate("po-001")).thenReturn(Optional.of(existingPurchaseOrder));
+        when(purchaseOrderLinesRepository.findByPurchaseOrderIdOrderByLineNumberAsc("po-001")).thenReturn(List.of(invalidLine));
+
+        assertThatThrownBy(() -> service.confirm("po-001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("invalid line total")
+                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+
+        verify(purchaseOrdersRepository, never()).save(any(PurchaseOrders.class));
+    }
+
+    @Test
     @DisplayName("should_ReturnFilteredPurchaseOrders_When_GetAllCalled")
     void should_ReturnFilteredPurchaseOrders_When_GetAllCalled() {
         PurchaseOrdersFilterRequest filter = PurchaseOrdersFilterRequest.builder()
@@ -443,5 +532,28 @@ class PurchaseOrdersServiceImplTest {
                 .build();
         warehouse.setId(id);
         return warehouse;
+    }
+
+    private PurchaseOrderLines buildPurchaseOrderLine(
+            String id,
+            String purchaseOrderId,
+            Integer lineNumber,
+            String quantityOrdered,
+            String quantityReceived,
+            String unitPrice,
+            String lineTotal
+    ) {
+        PurchaseOrderLines purchaseOrderLine = PurchaseOrderLines.builder()
+                .purchaseOrderId(purchaseOrderId)
+                .productId("prod-001")
+                .lineNumber(lineNumber)
+                .quantityOrdered(new BigDecimal(quantityOrdered))
+                .quantityReceived(new BigDecimal(quantityReceived))
+                .unitPrice(new BigDecimal(unitPrice))
+                .lineTotal(new BigDecimal(lineTotal))
+                .notes("Line " + lineNumber)
+                .build();
+        purchaseOrderLine.setId(id);
+        return purchaseOrderLine;
     }
 }
