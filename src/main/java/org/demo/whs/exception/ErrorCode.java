@@ -42,6 +42,7 @@ public enum ErrorCode {
     WHS_004("WHS_004", "Warehouse code already exists"),
 
     INV_001("INV_001", "Inventory not found"),
+    INV_002("INV_002", "Unreserve quantity exceeds reserved quantity"),
     INV_004("INV_004", "Insufficient available stock"),
 
     STA_001("STA_001", "Invalid stock adjustment request"),

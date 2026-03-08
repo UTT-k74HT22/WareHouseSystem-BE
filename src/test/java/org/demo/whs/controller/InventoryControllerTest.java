@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,6 +34,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -66,8 +74,8 @@ class InventoryControllerTest {
                         .build();
 
         when(inventoryService.getInventories(
-                ArgumentMatchers.any(),
-                ArgumentMatchers.any(PageRequest.class)
+                any(),
+                any(PageRequest.class)
         )).thenReturn(mockPage);
 
         mockMvc.perform(get("/api/v1/inventories")
@@ -84,6 +92,12 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when sort field invalid")
     void shouldReturn400WhenInvalidSortField() throws Exception {
+        // Since the validation is likely in the service or a dedicated validator, 
+        // we mock the service to throw if it's called with invalid parameters.
+        // Or if it's handled by Spring's parameter binding, it might fail earlier.
+        // Assuming it's in the service:
+        when(inventoryService.getInventories(any(), any(Pageable.class)))
+                .thenThrow(new BadRequestException(ErrorCode.COM_001));
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("sortBy", "abcxyz")
@@ -95,6 +109,8 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when direction invalid")
     void shouldReturn400WhenInvalidDirection() throws Exception {
+        when(inventoryService.getInventories(any(), any(Pageable.class)))
+                .thenThrow(new BadRequestException(ErrorCode.COM_001));
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("sortBy", "updatedAt")
@@ -106,6 +122,8 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when page is negative")
     void shouldReturn400WhenPageNegative() throws Exception {
+        when(inventoryService.getInventories(any(), any(Pageable.class)))
+                .thenThrow(new BadRequestException(ErrorCode.COM_006));
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("page", "-1")
@@ -117,6 +135,8 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when size is zero")
     void shouldReturn400WhenSizeIsZero() throws Exception {
+        when(inventoryService.getInventories(any(), any(Pageable.class)))
+                .thenThrow(new BadRequestException(ErrorCode.COM_007));
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("size", "0"))
@@ -127,6 +147,8 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when size exceeds max limit")
     void shouldReturn400WhenSizeTooLarge() throws Exception {
+        when(inventoryService.getInventories(any(), any(Pageable.class)))
+                .thenThrow(new BadRequestException(ErrorCode.COM_008));
 
         mockMvc.perform(get("/api/v1/inventories")
                         .param("size", "101"))
@@ -165,6 +187,9 @@ class InventoryControllerTest {
     @DisplayName("Should return 400 when productId format is invalid")
     void shouldReturn400WhenProductIdIsInvalid() throws Exception {
         String invalidProductId = "invalid-uuid";
+        
+        when(inventoryService.getSummaryByProduct(invalidProductId))
+                .thenThrow(new BadRequestException(ErrorCode.COM_001));
 
         mockMvc.perform(get("/api/v1/inventories/summary/{productId}", invalidProductId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -195,7 +220,7 @@ class InventoryControllerTest {
                 ))
                 .build();
 
-        when(inventoryService.getInventoryByLocation(ArgumentMatchers.any(InventoryFilterRequest.class)))
+        when(inventoryService.getInventoryByLocation(any(InventoryFilterRequest.class)))
                 .thenReturn(List.of(mockResponse));
 
         mockMvc.perform(get("/api/v1/inventories/by-location")
@@ -226,7 +251,7 @@ class InventoryControllerTest {
                 .message("Stock available")
                 .build();
 
-        when(inventoryService.checkAvailability(ArgumentMatchers.any(CheckAvailabilityRequest.class)))
+        when(inventoryService.checkAvailability(any(CheckAvailabilityRequest.class)))
                 .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/inventories/check-availability")
@@ -277,7 +302,7 @@ class InventoryControllerTest {
                 .status("RESERVED")
                 .build();
 
-        when(inventoryService.reserve(ArgumentMatchers.any(InventoryReserveRequest.class)))
+        when(inventoryService.reserve(any(InventoryReserveRequest.class)))
                 .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/inventories/reserve")
@@ -300,6 +325,59 @@ class InventoryControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/inventories/reserve")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when unreservation is successful")
+    void shouldReturn200WhenUnreservationIsSuccessful() throws Exception {
+        InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .orderLineId("OL-1001")
+                .quantity(new BigDecimal("10.00"))
+                .build();
+
+        InventoryUnreserveResponse mockResponse = InventoryUnreserveResponse.builder()
+                .reservationId("res-1")
+                .inventoryId("inv-1")
+                .productId("prod-1")
+                .unreservedQuantity(new BigDecimal("10.00"))
+                .remainingReservedQuantity(BigDecimal.ZERO)
+                .orderLineId("OL-1001")
+                .status("RELEASED")
+                .unreservedAt(LocalDateTime.now())
+                .build();
+
+        when(inventoryService.unreserve(any(InventoryUnreserveRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/unreserve")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.reservation_id").value("res-1"))
+                .andExpect(jsonPath("$.data.status").value("RELEASED"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when unreservation request is invalid")
+    void shouldReturn400WhenUnreservationRequestIsInvalid() throws Exception {
+        InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                // productId and warehouseId are missing
+                .quantity(new BigDecimal("-5.00"))
+                .build();
+
+        mockMvc.perform(post("/api/v1/inventories/unreserve")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
