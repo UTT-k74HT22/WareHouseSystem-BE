@@ -41,6 +41,14 @@ public enum ErrorCode {
     WHS_003("WHS_003", "Invalid warehouse operation"),
     WHS_004("WHS_004", "Warehouse code already exists"),
 
+    WH_001("WHS_001", "Warehouse not found"),
+    WH_002("WHS_002", "Insufficient stock in warehouse"),
+    WH_003("WHS_003", "Invalid warehouse operation"),
+    WH_004("WHS_004", "Warehouse code already exists"),
+    WH_005("WHS_005", "Warehouse cannot be deleted because it has active locations"),
+    WH_006("WHS_006", "Warehouse cannot be deleted because inventory still exists"),
+    WH_007("WHS_007", "Warehouse is already inactive"),
+    WH_008("WHS_008", "Warehouse is referenced by other resources"),
     INV_001("INV_001", "Inventory not found"),
     INV_004("INV_004", "Insufficient available stock"),
 
@@ -99,6 +107,9 @@ public enum ErrorCode {
     CUST_002("CUST_002", "Customer code already exists"),
     CUST_003("CUST_003", "Invalid customer status"),
     CUST_004("CUST_004", "Business partner is not a customer type"),
+
+    // Purchase order errors
+    PO_001("PO_001", "Purchase order not found"),
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
