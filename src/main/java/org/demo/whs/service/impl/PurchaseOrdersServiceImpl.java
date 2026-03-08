@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.BusinessPartners;
+import org.demo.whs.entity.PurchaseOrderLines;
 import org.demo.whs.entity.PurchaseOrders;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.PurchaseOrders.PurchaseOrdersFilterRequest;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -163,8 +165,37 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
     @Override
     @Transactional
     public PurchaseOrdersResponse confirm(String id) {
-        log.warn("[SERVICE][PURCHASE_ORDERS][CONFIRM] WHS-54 service implementation is pending, id={}", id);
-        throw new UnsupportedOperationException("WHS-54 confirm purchase order service is not implemented yet");
+        log.info("Confirm purchase order draft, id={}", id);
+
+        PurchaseOrders purchaseOrders = findByIdForMutation(id);
+        validateDraftStatus(purchaseOrders, "confirmed");
+
+        List<PurchaseOrderLines> purchaseOrderLines = purchaseOrderLinesRepository
+                .findByPurchaseOrderIdOrderByLineNumberAsc(purchaseOrders.getId());
+        validatePurchaseOrderLinesForConfirmation(purchaseOrders.getId(), purchaseOrderLines);
+
+        BigDecimal subTotal = recalculateSubTotal(purchaseOrderLines);
+        BigDecimal taxAmount = defaultZero(purchaseOrders.getTaxAmount());
+        String actorId = getCurrentActorId();
+
+        purchaseOrders.setSubTotal(subTotal);
+        purchaseOrders.setTaxAmount(taxAmount);
+        purchaseOrders.setTotalAmount(subTotal.add(taxAmount));
+        purchaseOrders.setStatus(PurchaseOrdersStatus.CONFIRMED);
+        purchaseOrders.setConfirmedAt(LocalDateTime.now());
+        purchaseOrders.setConfirmedBy(actorId);
+        applyAuditFields(purchaseOrders, actorId, false);
+
+        PurchaseOrders confirmedPurchaseOrder = purchaseOrdersRepository.save(purchaseOrders);
+        log.info(
+                "Purchase order confirmed successfully, id={}, purchaseOrderNumber={}, lineCount={}, totalAmount={}",
+                confirmedPurchaseOrder.getId(),
+                confirmedPurchaseOrder.getPurchaseOrderNumber(),
+                purchaseOrderLines.size(),
+                confirmedPurchaseOrder.getTotalAmount()
+        );
+
+        return purchaseOrdersMapper.toResponse(confirmedPurchaseOrder);
     }
 
     private String generatePurchaseOrderNumber() {
@@ -346,5 +377,77 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
             return null;
         }
         return value.trim();
+    }
+
+    private void validatePurchaseOrderLinesForConfirmation(
+            String purchaseOrderId,
+            List<PurchaseOrderLines> purchaseOrderLines
+    ) {
+        if (purchaseOrderLines == null || purchaseOrderLines.isEmpty()) {
+            throw new BadRequestException(
+                    "Purchase order must have at least one line item before confirmation",
+                    ErrorCode.COM_001
+            );
+        }
+
+        for (PurchaseOrderLines purchaseOrderLine : purchaseOrderLines) {
+            if (!purchaseOrderId.equals(purchaseOrderLine.getPurchaseOrderId())) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s does not belong to purchase order %s", purchaseOrderLine.getId(), purchaseOrderId),
+                        ErrorCode.COM_001
+                );
+            }
+
+            if (purchaseOrderLine.getQuantityOrdered() == null
+                    || purchaseOrderLine.getQuantityOrdered().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s must have quantity ordered greater than zero", purchaseOrderLine.getLineNumber()),
+                        ErrorCode.COM_001
+                );
+            }
+
+            if (purchaseOrderLine.getQuantityReceived() == null
+                    || purchaseOrderLine.getQuantityReceived().compareTo(BigDecimal.ZERO) < 0) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s has invalid received quantity", purchaseOrderLine.getLineNumber()),
+                        ErrorCode.COM_001
+                );
+            }
+
+            if (purchaseOrderLine.getQuantityReceived().compareTo(purchaseOrderLine.getQuantityOrdered()) > 0) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s has received quantity greater than ordered quantity", purchaseOrderLine.getLineNumber()),
+                        ErrorCode.COM_001
+                );
+            }
+
+            if (purchaseOrderLine.getUnitPrice() == null
+                    || purchaseOrderLine.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s must have unit price greater than or equal to zero", purchaseOrderLine.getLineNumber()),
+                        ErrorCode.COM_001
+                );
+            }
+
+            BigDecimal expectedLineTotal = purchaseOrderLine.getQuantityOrdered().multiply(purchaseOrderLine.getUnitPrice());
+            if (purchaseOrderLine.getLineTotal() == null
+                    || purchaseOrderLine.getLineTotal().compareTo(expectedLineTotal) != 0) {
+                throw new BadRequestException(
+                        String.format("Purchase order line %s has invalid line total", purchaseOrderLine.getLineNumber()),
+                        ErrorCode.COM_001
+                );
+            }
+        }
+    }
+
+    private BigDecimal recalculateSubTotal(List<PurchaseOrderLines> purchaseOrderLines) {
+        return purchaseOrderLines.stream()
+                .map(PurchaseOrderLines::getLineTotal)
+                .map(this::defaultZero)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal defaultZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }
