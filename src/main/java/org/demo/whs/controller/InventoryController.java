@@ -3,169 +3,93 @@ package org.demo.whs.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
-import org.demo.whs.exception.BadRequestException;
-import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.InventoryService;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Controller for managing inventory-related operations.
+ * Controller for managing inventory operations.
  */
 @RestController
 @RequestMapping("/api/v1/inventories")
 @RequiredArgsConstructor
-@Slf4j
-@Validated
-@Tag(name = "Inventory Management", description = "APIs for managing warehouse inventory")
-@PreAuthorize("isAuthenticated()")
+@Tag(name = "Inventory Management", description = "Endpoints for managing warehouse inventory")
 public class InventoryController {
 
     private final InventoryService inventoryService;
 
     /**
-     * Get list of inventories with filtering and pagination.
+     * Get inventories with pagination and filtering.
      *
-     * @param productId   Filter by product ID
-     * @param productSku  Filter by product SKU (partial match)
-     * @param productName Filter by product name (partial match)
-     * @param warehouseId Filter by warehouse ID
-     * @param locationId  Filter by location ID
-     * @param batchId     Filter by batch ID
-     * @param batchNumber Filter by batch number (partial match)
-     * @param page        Page number (0-based)
-     * @param size        Page size
-     * @param sortBy      Field to sort by
-     * @param direction   Sort direction (ASC/DESC)
-     * @return Paginated list of inventories
+     * @param filter   Inventory filter criteria
+     * @param pageable Pagination information
+     * @return List of inventories
      */
-    @Operation(summary = "Get paginated inventories", description = "Returns a paginated list of inventory items with optional filters")
     @GetMapping
+    @Operation(summary = "Get inventories", description = "Fetch inventories with filtering and pagination")
     public ResponseEntity<BaseResponse<PageResponse<InventoryResponse>>> getInventories(
-            @RequestParam(required = false) String productId,
-            @RequestParam(required = false) String productSku,
-            @RequestParam(required = false) String productName,
-            @RequestParam(required = false) String warehouseId,
-            @RequestParam(required = false) String locationId,
-            @RequestParam(required = false) String batchId,
-            @RequestParam(required = false) String batchNumber,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "updatedAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") Sort.Direction direction){
-
-        List<String> allowedSortFields = List.of(
-                "updatedAt",
-                "createdAt",
-                "onHandQuantity"
-        );
-
-        if (!allowedSortFields.contains(sortBy)) {
-            throw new BadRequestException(ErrorCode.COM_001);
-        }
-
-        if (page < 0) {
-            throw new BadRequestException(ErrorCode.COM_006);
-        }
-
-        if (size <= 0) {
-            throw new BadRequestException(ErrorCode.COM_007);
-        }
-
-        if (size > 100) {
-            throw new BadRequestException(ErrorCode.COM_008);
-        }
-
-        InventoryFilterRequest filter = InventoryFilterRequest.builder()
-                .productId(productId)
-                .productSku(productSku)
-                .productName(productName)
-                .warehouseId(warehouseId)
-                .locationId(locationId)
-                .batchId(batchId)
-                .batchNumber(batchNumber)
-                .build();
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-
-        PageResponse<InventoryResponse> response =
-                inventoryService.getInventories(filter, pageable);
-
-        return ResponseEntity.ok(BaseResponse.success(response));
+            InventoryFilterRequest filter, Pageable pageable) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.getInventories(filter, pageable)));
     }
 
     /**
-     * Get inventory summary for a specific product.
+     * Get inventory summary for a product.
      *
-     * @param productId The product ID (must be a valid UUID)
+     * @param productId The product ID
      * @return Inventory summary
      */
-    @Operation(summary = "Get inventory summary by product", description = "Returns total quantity and location counts for a specific product")
     @GetMapping("/summary/{productId}")
-    public ResponseEntity<BaseResponse<InventorySummaryResponse>> getInventorySummary(
-            @PathVariable @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$") String productId) {
-        log.info("Received request to get inventory summary for product ID: {}", productId);
-        InventorySummaryResponse response = inventoryService.getSummaryByProduct(productId);
-        return ResponseEntity.ok(BaseResponse.success(response));
+    @Operation(summary = "Get product summary", description = "Get aggregate inventory data for a product")
+    public ResponseEntity<BaseResponse<InventorySummaryResponse>> getSummaryByProduct(
+            @PathVariable String productId) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.getSummaryByProduct(productId)));
     }
 
     /**
-     * Get inventory grouped by location with filtering.
+     * Get inventory grouped by location.
      *
-     * @param warehouseId Filter by warehouse ID
-     * @param productId   Filter by product ID
-     * @return List of inventory grouped by location
+     * @param filter Inventory filter criteria
+     * @return List of inventory by location
      */
-    @Operation(summary = "Get inventory grouped by location", description = "Returns inventory data grouped by location to support picking and replenishment")
     @GetMapping("/by-location")
+    @Operation(summary = "Get inventory by location", description = "Get inventory data grouped by warehouse location")
     public ResponseEntity<BaseResponse<List<InventoryByLocationResponse>>> getInventoryByLocation(
-            @RequestParam(required = false) String warehouseId,
-            @RequestParam(required = false) String productId) {
-        
-        log.info("Received request to get inventory grouped by location. Warehouse: {}, Product: {}", warehouseId, productId);
-        
-        InventoryFilterRequest filter = InventoryFilterRequest.builder()
-                .warehouseId(warehouseId)
-                .productId(productId)
-                .build();
-                
-        List<InventoryByLocationResponse> response = inventoryService.getInventoryByLocation(filter);
-        return ResponseEntity.ok(BaseResponse.success(response));
+            InventoryFilterRequest filter) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.getInventoryByLocation(filter)));
     }
 
     /**
-     * Check inventory availability for a product.
+     * Check inventory availability.
      *
      * @param request The check availability request
      * @return Availability result
      */
-    @Operation(summary = "Check inventory availability", description = "Checks if requested quantity is available for a product, optionally filtered by warehouse/location")
     @PostMapping("/check-availability")
+    @Operation(summary = "Check availability", description = "Check if requested product quantity is available")
     public ResponseEntity<BaseResponse<CheckAvailabilityResponse>> checkAvailability(
-            @RequestBody @Valid CheckAvailabilityRequest request) {
-        log.info("Received request to check inventory availability: {}", request);
-        CheckAvailabilityResponse response = inventoryService.checkAvailability(request);
-        return ResponseEntity.ok(BaseResponse.success(response));
+            @Valid @RequestBody CheckAvailabilityRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.checkAvailability(request)));
     }
 
     /**
@@ -174,12 +98,23 @@ public class InventoryController {
      * @param request The reservation request
      * @return Reservation result
      */
-    @Operation(summary = "Reserve inventory", description = "Reserves inventory for a specific product, warehouse, and optional location/batch")
     @PostMapping("/reserve")
+    @Operation(summary = "Reserve inventory", description = "Reserve stock for an order line using allocation strategy")
     public ResponseEntity<BaseResponse<InventoryReserveResponse>> reserve(
-            @RequestBody @Valid InventoryReserveRequest request) {
-        log.info("Received request to reserve inventory: {}", request);
-        InventoryReserveResponse response = inventoryService.reserve(request);
-        return ResponseEntity.ok(BaseResponse.success(response));
+            @Valid @RequestBody InventoryReserveRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.reserve(request)));
+    }
+
+    /**
+     * Release previously reserved inventory.
+     *
+     * @param request The unreservation request
+     * @return Unreservation result
+     */
+    @PostMapping("/unreserve")
+    @Operation(summary = "Unreserve inventory", description = "Release previously reserved stock for an order line")
+    public ResponseEntity<BaseResponse<InventoryUnreserveResponse>> unreserve(
+            @Valid @RequestBody InventoryUnreserveRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.unreserve(request)));
     }
 }

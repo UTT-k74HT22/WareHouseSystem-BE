@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -210,6 +211,29 @@ public class InventoryMapper {
                 .availableQuantity(available)
                 .isAvailable(isAvailable)
                 .message(message)
+                .build();
+    }
+
+    /**
+     * Reservation Entity → Unreserve Response
+     */
+    public InventoryUnreserveResponse toUnreserveResponse(
+            InventoryReservation reservation,
+            BigDecimal unreservedQty
+    ) {
+        if (reservation == null) {
+            return null;
+        }
+
+        return InventoryUnreserveResponse.builder()
+                .reservationId(reservation.getId())
+                .inventoryId(reservation.getInventoryId())
+                .productId(reservation.getProductId())
+                .unreservedQuantity(unreservedQty)
+                .remainingReservedQuantity(reservation.getQuantity())
+                .orderLineId(reservation.getOrderLineId())
+                .status(reservation.getStatus().name())
+                .unreservedAt(LocalDateTime.now())
                 .build();
     }
 }
