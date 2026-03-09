@@ -23,7 +23,7 @@
 | 10 | **Stock Adjustments** | 5 | 5 | 0 | ✅ 100% |
 | 11 | **Stock Transfers** | 5 | 5 | 0 | ✅ 100% |
 | 12 | **Purchase Orders** | 6 | 6 | 0 | ✅ 100% |
-| 13 | **Purchase Order Lines** | 3 | 0 | 3 | 🔴 0% |
+| 13 | **Purchase Order Lines** | 3 | 3 | 0 | ✅ 100% |
 | 14 | **Inbound Receipts** | 7 | 0 | 7 | 🔴 0% |
 | 15 | **Inbound Receipt Lines** | 3 | 0 | 3 | 🔴 0% |
 | 16 | **Sales Orders** | 7 | 0 | 7 | 🔴 0% |
@@ -35,7 +35,7 @@
 | 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **168** | **95** | **73** | **57%** |
+| | **TỔNG CỘNG** | **168** | **98** | **70** | **58%** |
 
 ---
 
@@ -54,7 +54,7 @@ Inventory          █████░░░░░ 50%
 Stock Adjustments  ██████████ 100% ✅
 Stock Transfers    ██████████ 100% ✅
 Purchase Orders    ██████████ 100% ✅  🆕
-PO Lines           ░░░░░░░░░░ 0%  🔴
+PO Lines           ██████████ 100% ✅  🆕
 Inbound Receipts   ░░░░░░░░░░ 0%  🔴
 IR Lines           ░░░░░░░░░░ 0%  🔴
 Sales Orders       ░░░░░░░░░░ 0%  🔴
@@ -73,6 +73,7 @@ Storage            ██████████ 100% ✅
 ## 🔄 Đồng Bộ Jira/GitHub (09/03/2026)
 
 - **09/03/2026** — Full code scan, đồng bộ trạng thái toàn bộ controller vs API plan.
+- `PurchaseOrderLinesController.java` đã có 3/3 endpoints (Create, Update, Delete) → module `Purchase Order Lines` **100% Done** 🆕
 - `PurchaseOrdersController.java` đã có 6/6 endpoints (CRUD + confirm) → module `Purchase Orders` **100% Done**.
 - `BusinessPartnerController.java` đã có endpoint `GET /search` → cập nhật từ 6/8 lên 7/8.
 - `WareHouseController.java` đã có `DELETE /{id}` → cập nhật từ 6/7 lên 7/7.
@@ -378,11 +379,57 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/purchase-order-lines` | Thêm dòng vào PO | ❌ Not Done |
-| 2 | `PUT` | `/api/v1/purchase-order-lines/{id}` | Cập nhật dòng PO | ❌ Not Done |
-| 3 | `DELETE` | `/api/v1/purchase-order-lines/{id}` | Xóa dòng PO | ❌ Not Done |
+| 1 | `POST` | `/api/v1/purchase-order-lines` | Thêm dòng vào PO | ✅ Done 🆕 |
+| 2 | `PUT` | `/api/v1/purchase-order-lines/{id}` | Cập nhật dòng PO | ✅ Done 🆕 |
+| 3 | `DELETE` | `/api/v1/purchase-order-lines/{id}` | Xóa dòng PO | ✅ Done 🆕 |
 
-> 🔴 **Controller rỗng** — CRUD dòng PO chỉ cho phép khi PO ở trạng thái DRAFT
+> ✅ **Module này đã hoàn thành 100%** (3/3 APIs)
+>
+> **Business Rules:**
+> - Chỉ thao tác trên PO có trạng thái `DRAFT`
+> - Tự động tính `lineTotal = quantityOrdered × unitPrice`
+> - Auto-increment `lineNumber` khi tạo mới
+> - Không cho phép trùng `productId` trong cùng một PO
+> - Validate `quantityOrdered > 0` và `unitPrice >= 0`
+> - Pessimistic locking để tránh race condition
+>
+> **Request Fields (Create):**
+> ```json
+> {
+>   "purchase_order_id": "string (required)",
+>   "product_id": "string (required)",
+>   "quantity_ordered": "decimal (required, min: 0.01)",
+>   "unit_price": "decimal (required, min: 0.00)",
+>   "notes": "string (optional, max: 500 chars)"
+> }
+> ```
+>
+> **Request Fields (Update):**
+> ```json
+> {
+>   "product_id": "string (optional)",
+>   "quantity_ordered": "decimal (optional, min: 0.01)",
+>   "unit_price": "decimal (optional, min: 0.00)",
+>   "notes": "string (optional, max: 500 chars)"
+> }
+> ```
+>
+> **Response Fields:**
+> ```json
+> {
+>   "id": "string",
+>   "purchase_order_id": "string",
+>   "product_id": "string",
+>   "line_number": "integer",
+>   "quantity_ordered": "decimal",
+>   "quantity_received": "decimal",
+>   "unit_price": "decimal",
+>   "line_total": "decimal",
+>   "notes": "string",
+>   "created_at": "yyyy-MM-dd HH:mm:ss",
+>   "updated_at": "yyyy-MM-dd HH:mm:ss"
+> }
+> ```
 
 ---
 
