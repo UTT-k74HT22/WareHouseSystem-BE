@@ -1,10 +1,13 @@
 package org.demo.whs.repository;
 
+import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.Products;
+import org.demo.whs.entity.PurchaseOrders;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -87,6 +90,16 @@ public interface ProductRepository extends JpaRepository<Products, String> {
      * @return count of products
      */
     long countByUomId(String uomId);
+
+    /**
+     * Find a product by ID with a pessimistic write lock for update operations.
+     *
+     * @param id the product ID
+     * @return optional product with lock
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Products p WHERE p.id = :id")
+    Optional<PurchaseOrders> findByIdForUpdate(String id);
 }
 
 
