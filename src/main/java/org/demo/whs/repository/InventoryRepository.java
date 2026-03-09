@@ -95,3 +95,12 @@ public interface InventoryRepository extends
             @Param("requestedQuantity") java.math.BigDecimal requestedQuantity
     );
     }
+
+    @Query("""
+        SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+        FROM Inventory i
+        WHERE i.warehouseId = :warehouseId
+            AND (i.onHandQuantity > 0 OR i.reservedQuantity > 0)
+        """)
+    boolean existsActiveInventoryByWarehouseId(@Param("warehouseId") String warehouseId);
+}

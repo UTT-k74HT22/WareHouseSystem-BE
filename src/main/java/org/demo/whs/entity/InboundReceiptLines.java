@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * Entity class representing inbound receipt lines in the warehouse management system.
  */
 @Entity
-@Table(name = "inbound_receipt_lines ")
+@Table(name = "inbound_receipt_lines")
 @Getter
 @Setter
 @Builder
@@ -27,7 +27,7 @@ public class InboundReceiptLines extends BaseEntity {
     @Column(name = "product_id", nullable = false, columnDefinition = "char(36)")
     private String productId;
 
-    @Column(name = "batch_id", nullable = false, columnDefinition = "char(36)")
+    @Column(name = "batch_id", columnDefinition = "char(36)")
     private String batchId;
 
     @Column(name = "location_id", nullable = false, columnDefinition = "char(36)")

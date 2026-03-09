@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * Entity representing a Purchase Order in the warehouse management system.
  */
 @Entity
-@Table(name = "purchase_orders ")
+@Table(name = "purchase_orders")
 @Getter
 @Setter
 @Builder

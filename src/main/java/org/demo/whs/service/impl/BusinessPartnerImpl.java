@@ -4,9 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.BusinessPartners;
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
+import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BusinessPartnerStatus;
+import org.demo.whs.entity.enums.BusinessPartnerType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
@@ -14,9 +17,13 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.BusinessPartnerMapper;
 import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.service.BusinessPartnerService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 /**
@@ -171,6 +178,68 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
                 entity.getId(), entity.getStatus());
 
         return mapper.toResponse(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<BusinessPartnerResponse> searchBusinessPartners(
+            SearchBusinessPartnerRequest request,
+            Integer page,
+            Integer size
+    ) {
+        log.info("Searching business partners = page={}, size={}", page, size);
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        List<BusinessPartnerType> types = normalizeType(request.getType());
+
+        Page<BusinessPartners> partnerPage = repository.search(
+                request.getCode(),
+                request.getName(),
+                request.getStatus(),
+                types,
+                pageable
+        );
+
+        return buildPageResponse(partnerPage);
+    }
+
+    private List<BusinessPartnerType> normalizeType(BusinessPartnerType type) {
+
+        if (type == null) return null;
+
+        return switch (type) {
+
+            case SUPPLIER -> List.of(
+                    BusinessPartnerType.SUPPLIER,
+                    BusinessPartnerType.BOTH
+            );
+
+            case CUSTOMER -> List.of(
+                    BusinessPartnerType.CUSTOMER,
+                    BusinessPartnerType.BOTH
+            );
+
+            case BOTH -> List.of(BusinessPartnerType.BOTH);
+        };
+    }
+
+    private PageResponse<BusinessPartnerResponse> buildPageResponse(
+            Page<BusinessPartners> partnerPage
+    ) {
+
+        List<BusinessPartners> partners = partnerPage.getContent();
+
+        List<BusinessPartnerResponse> responses =
+                partners.stream()
+                        .map(mapper::toResponse)
+                        .toList();
+
+        return PageResponse.from(partnerPage, responses);
     }
 
 }

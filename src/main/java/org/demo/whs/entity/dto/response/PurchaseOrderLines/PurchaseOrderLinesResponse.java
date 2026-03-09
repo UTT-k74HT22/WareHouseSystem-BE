@@ -1,4 +1,4 @@
-package org.demo.whs.entity.dto.response.PurchaseOrders;
+package org.demo.whs.entity.dto.response.PurchaseOrderLines;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -19,31 +18,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class PurchaseOrdersResponse {
+public class PurchaseOrderLinesResponse {
 
     private String id;
-    private String purchaseOrderNumber;
-    private String supplierId;
-    private String warehouseId;
-
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate orderDate;
-
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate expectedDeliveryDate;
-
-    private String status;
-    private BigDecimal subTotal;
-    private BigDecimal taxAmount;
-    private BigDecimal totalAmount;
-    private String currency;
-    private String paymentTerms;
+    private String purchaseOrderId;
+    private String productId;
+    private Integer lineNumber;
+    private BigDecimal quantityOrdered;
+    private BigDecimal quantityReceived;
+    private BigDecimal unitPrice;
+    private BigDecimal lineTotal;
     private String notes;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime confirmedAt;
-
-    private String confirmedBy;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;

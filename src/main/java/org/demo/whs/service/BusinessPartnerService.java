@@ -2,8 +2,10 @@ package org.demo.whs.service;
 
 
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
+import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 
 import java.util.List;
 
@@ -38,4 +40,6 @@ public interface BusinessPartnerService {
      * Đổi trạng thái (optional nhưng rất hay dùng)
      */
     BusinessPartnerResponse changeStatus(String id, String status);
+
+    PageResponse<BusinessPartnerResponse> searchBusinessPartners(SearchBusinessPartnerRequest request, Integer page, Integer size );
 }
