@@ -5,5 +5,5 @@ public enum PurchaseOrdersStatus {
     CONFIRMED,
     PARTIALLY_RECEIVED,
     COMPLETED,
-    CANCELLED
+    APPROVED, CANCELLED
 }

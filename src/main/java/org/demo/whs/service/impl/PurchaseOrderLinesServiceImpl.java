@@ -58,6 +58,7 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
 
         //Step 5: Create the purchase order line entity, calculate line total, and save
         PurchaseOrderLines line = purchaseOrderLinesMapper.toEntity(request);
+        validateOrderLineAmounts(line);
         line.setLineNumber(nextLineNumber);
         line.setQuantityReceived(BigDecimal.ZERO);
         line.setLineTotal(calculateLineTotal(request.getQuantityOrdered(), request.getUnitPrice()));
