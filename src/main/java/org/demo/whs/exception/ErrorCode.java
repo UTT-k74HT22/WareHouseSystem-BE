@@ -110,6 +110,18 @@ public enum ErrorCode {
 
     // Purchase order errors
     PO_001("PO_001", "Purchase order not found"),
+    PO_002("PO_002", "Purchase order status is not DRAFT - cannot modify"),
+    PO_003("PO_003", "Purchase order status transition is not allowed"),
+
+    // Purchase order line errors
+    POL_001("POL_001", "Purchase order line not found"),
+    POL_002("POL_002", "Purchase order line quantity must be greater than zero"),
+    POL_003("POL_003", "Purchase order line product not found"),
+    POL_004("POL_004", "Purchase order line product is not active"),
+    POL_005("POL_005","Product already exists in this purchase order"),
+    POL_006("POL_006", "Quantity received cannot be greater than quantity ordered"),
+    POL_007("POL_007", "Unit price must be greater than or equal to zero"),
+    POL_008("POL_008", "Quantity ordered must be greater than zero"),
 
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),

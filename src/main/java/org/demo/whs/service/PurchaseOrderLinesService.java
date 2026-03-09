@@ -9,8 +9,21 @@ import org.demo.whs.entity.dto.response.PurchaseOrderLines.PurchaseOrderLinesRes
  */
 public interface PurchaseOrderLinesService {
 
+    /**
+     * Creates a new purchase order line.
+     *
+     * @param request the request containing the details of the purchase order line to create
+     * @return the response containing the created purchase order line details
+     */
     PurchaseOrderLinesResponse create(PurchaseOrderLinesRequest request);
 
+    /**
+     * Updates an existing purchase order line.
+     *
+     * @param id the ID of the purchase order line to update
+     * @param request the request containing the updated details of the purchase order line
+     * @return the response containing the updated purchase order line details
+     */
     PurchaseOrderLinesResponse update(String id, UpdatePurchaseOrderLinesRequest request);
 
     void delete(String id);
