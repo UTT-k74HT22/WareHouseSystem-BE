@@ -21,12 +21,16 @@ import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.StockMovements;
 import org.demo.whs.entity.enums.InventoryReservationStatus;
+import org.demo.whs.entity.enums.ReferenceType;
+import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
+import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.InventoryReservationRepository;
@@ -35,6 +39,7 @@ import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.repository.specification.InventorySpecification;
 import org.demo.whs.service.InventoryService;
+import org.demo.whs.service.StockMovementsService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -67,6 +72,8 @@ public class InventoryServiceImpl implements InventoryService {
     private final WareHouseRepository wareHouseRepository;
     private final LocationRepository locationRepository;
     private final BatchRepository batchRepository;
+    private final StockMovementsService stockMovementsService;
+    private final StockMovementsMapper stockMovementsMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -271,12 +278,33 @@ public class InventoryServiceImpl implements InventoryService {
             return new ConflictException(ErrorCode.INV_004);
         });
 
+        // Capture available quantity BEFORE update
+        BigDecimal availableBefore = inventory.getAvailableQuantity();
+
         // 3. Update Inventory (Reserved Quantity)
         inventory.setReservedQuantity(inventory.getReservedQuantity().add(request.getQuantity()));
         inventory.setLastMovementAt(LocalDateTime.now());
         inventoryRepository.save(inventory);
 
-        // 4. Persist Reservation Ledger with Uniqueness enforcement
+        // 4. Record Stock Movement (Audit Trail)
+        StockMovements movement = stockMovementsMapper.toEntity(
+                StockMovementsType.RESERVE,
+                inventory.getProductId(),
+                inventory.getWarehouseId(),
+                inventory.getLocationId(),
+                inventory.getBatchId(),
+                request.getQuantity().negate(), // Reduced available stock
+                availableBefore,
+                inventory.getAvailableQuantity(),
+                ReferenceType.SALES_ORDER,
+                request.getOrderLineId(),
+                null, // Reference number if available
+                "System Reservation for Order Line: " + request.getOrderLineId(),
+                null // Current user ID if context available
+        );
+        stockMovementsService.recordMovement(movement);
+
+        // 5. Persist Reservation Ledger with Uniqueness enforcement
         InventoryReservation reservation = InventoryReservation.builder()
                 .inventoryId(inventory.getId())
                 .productId(inventory.getProductId())
@@ -347,6 +375,9 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = inventoryRepository.findByIdForUpdate(reservation.getInventoryId())
                 .orElseThrow(() -> new NotFoundException(ErrorCode.INV_001));
 
+        // Capture available quantity BEFORE update
+        BigDecimal availableBefore = inventory.getAvailableQuantity();
+
         // 6. FINAL GUARD: Ensure Inventory record itself has enough reserved stock to subtract
         if (inventory.getReservedQuantity().compareTo(unreserveQty) < 0) {
             log.error("Data inconsistency: Inventory reservedQty {} < request {}", 
@@ -359,12 +390,34 @@ public class InventoryServiceImpl implements InventoryService {
         inventory.setLastMovementAt(LocalDateTime.now());
         inventoryRepository.save(inventory);
 
-        // 8. Update Reservation Record (Ledger)
-        reservation.setQuantity(reservation.getQuantity().subtract(unreserveQty));
-        if (reservation.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            reservation.setStatus(InventoryReservationStatus.RELEASED);
+        // 8. Record Stock Movement (Audit Trail)
+        StockMovements movement = stockMovementsMapper.toEntity(
+                StockMovementsType.UNRESERVE,
+                inventory.getProductId(),
+                inventory.getWarehouseId(),
+                inventory.getLocationId(),
+                inventory.getBatchId(),
+                unreserveQty, // Increased available stock
+                availableBefore,
+                inventory.getAvailableQuantity(),
+                ReferenceType.SALES_ORDER,
+                request.getOrderLineId(),
+                null,
+                "System Unreservation for Order Line: " + request.getOrderLineId(),
+                null
+        );
+        stockMovementsService.recordMovement(movement);
+
+        // 9. Update or Delete Reservation Record (Ledger)
+        BigDecimal newQuantity = reservation.getQuantity().subtract(unreserveQty);
+        reservation.setQuantity(newQuantity); // Update the object first for the response mapper
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            log.info("Reservation fully released. Deleting record for order line: {}", request.getOrderLineId());
+            inventoryReservationRepository.delete(reservation);
+        } else {
+            inventoryReservationRepository.save(reservation);
         }
-        inventoryReservationRepository.save(reservation);
 
         log.info("Successfully unreserved {} for order line: {} (inventory id: {})", 
                 unreserveQty, request.getOrderLineId(), inventory.getId());
