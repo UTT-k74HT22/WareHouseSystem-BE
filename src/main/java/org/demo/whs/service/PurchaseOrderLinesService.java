@@ -4,10 +4,20 @@ import org.demo.whs.entity.dto.request.PurchaseOrderLines.PurchaseOrderLinesRequ
 import org.demo.whs.entity.dto.request.PurchaseOrderLines.UpdatePurchaseOrderLinesRequest;
 import org.demo.whs.entity.dto.response.PurchaseOrderLines.PurchaseOrderLinesResponse;
 
+import java.util.List;
+
 /**
  * Service interface for managing purchase order lines.
  */
 public interface PurchaseOrderLinesService {
+
+    /**
+     * Retrieves all purchase order lines for a given purchase order, ordered by line number ascending.
+     *
+     * @param purchaseOrderId the ID of the parent purchase order
+     * @return the list of purchase order line responses
+     */
+    List<PurchaseOrderLinesResponse> getByPurchaseOrderId(String purchaseOrderId);
 
     /**
      * Creates a new purchase order line.

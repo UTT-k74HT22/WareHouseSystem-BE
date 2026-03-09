@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
  * Service implementation for managing purchase order lines.
@@ -35,6 +36,22 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
     private final PurchaseOrdersRepository purchaseOrdersRepository;
     private final ProductRepository productRepository;
     private final PurchaseOrderLinesMapper purchaseOrderLinesMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderLinesResponse> getByPurchaseOrderId(String purchaseOrderId) {
+        log.info("Get purchase order lines by purchaseOrderId={}", purchaseOrderId);
+
+        // Validate PO exists
+        purchaseOrdersRepository.findById(purchaseOrderId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PO_001));
+
+        return purchaseOrderLinesRepository
+                .findByPurchaseOrderIdOrderByLineNumberAsc(purchaseOrderId)
+                .stream()
+                .map(purchaseOrderLinesMapper::toResponse)
+                .toList();
+    }
 
     @Override
     @Transactional
