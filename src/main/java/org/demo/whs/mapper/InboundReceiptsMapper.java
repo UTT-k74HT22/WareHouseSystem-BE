@@ -1,6 +1,9 @@
 package org.demo.whs.mapper;
 
+import org.demo.whs.entity.InboundReceiptLines;
 import org.demo.whs.entity.InboundReceipts;
+import org.demo.whs.entity.PurchaseOrders;
+import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.InboundReceipts.InboundReceiptsRequest;
 import org.demo.whs.entity.dto.request.InboundReceipts.UpdateInboundReceiptsRequest;
 import org.demo.whs.entity.dto.response.InboundReceiptLines.InboundReceiptLinesResponse;
@@ -45,6 +48,26 @@ public class InboundReceiptsMapper {
         if (request.getNotes() != null) {
             entity.setNotes(request.getNotes());
         }
+    }
+
+    public InboundReceiptsResponse toResponse(
+            InboundReceipts entity,
+            PurchaseOrders purchaseOrders,
+            Warehouses warehouses,
+            List<InboundReceiptLinesResponse> lines
+    ) {
+        if (entity == null) {
+            return null;
+        }
+
+        InboundReceiptsResponse response = toResponse(entity, lines);
+        if (purchaseOrders != null) {
+            response.setPurchaseOrderNumber(purchaseOrders.getPurchaseOrderNumber());
+        }
+        if (warehouses != null) {
+            response.setWarehouseName(warehouses.getName());
+        }
+        return response;
     }
 
     public InboundReceiptsResponse toResponse(
