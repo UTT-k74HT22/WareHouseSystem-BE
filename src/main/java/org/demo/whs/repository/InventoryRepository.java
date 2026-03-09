@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends
@@ -26,19 +27,6 @@ public interface InventoryRepository extends
         WHERE i.id = :id
     """)
     Optional<Inventory> findByIdForUpdate(@Param("id") String id);
-
-    /**
-     * Lock inventory row by its dimensional keys.
-     */
-    /**
-     * Retrieves an inventory record by its dimensions with a pessimistic write lock to prevent concurrent modifications.
-     *
-     * @param productId   the ID of the product
-     * @param warehouseId the ID of the warehouse
-     * @param locationId  the ID of the location (nullable)
-     * @param batchId     the ID of the batch (nullable)
-     * @return an Optional containing the inventory record if found, or empty if not found
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i
@@ -47,11 +35,11 @@ public interface InventoryRepository extends
         AND i.warehouseId = :warehouseId
         AND (
             (:locationId IS NULL AND i.locationId IS NULL)
-            OR i.locationId = :locationId
+            OR (i.locationId = :locationId)
         )
         AND (
             (:batchId IS NULL AND i.batchId IS NULL)
-            OR i.batchId = :batchId
+            OR (i.batchId = :batchId)
         )
     """)
     Optional<Inventory> findByDimensionForUpdate(
@@ -59,6 +47,52 @@ public interface InventoryRepository extends
             @Param("warehouseId") String warehouseId,
             @Param("locationId") String locationId,
             @Param("batchId") String batchId
+    );
+
+    /**
+     * Find all inventory records matching non-null dimensions with pessimistic write lock.
+     * If a dimension is null, it is not used as a filter.
+     * Results are ordered by available quantity descending to pick the best candidate.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT i
+        FROM Inventory i
+        WHERE i.productId = :productId
+        AND i.warehouseId = :warehouseId
+        AND (:locationId IS NULL OR i.locationId = :locationId)
+        AND (:batchId IS NULL OR i.batchId = :batchId)
+        ORDER BY (i.onHandQuantity - i.reservedQuantity) DESC
+    """)
+    List<Inventory> findAllSuitableForUpdate(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId
+    );
+
+    /**
+     * Optimized: Find the single best inventory row that can fulfill the entire requested quantity.
+     * This avoids scanning all rows in the application layer and uses DB-level filtering.
+     * Note: @Lock is not supported for native queries, so we use "FOR UPDATE" in SQL.
+     */
+    @Query(value = """
+        SELECT * FROM inventory i
+        WHERE i.product_id = :productId
+        AND i.warehouse_id = :warehouseId
+        AND (:locationId IS NULL OR i.location_id = :locationId)
+        AND (:batchId IS NULL OR i.batch_id = :batchId)
+        AND (i.on_hand_quantity - i.reserved_quantity) >= :requestedQuantity
+        ORDER BY (i.on_hand_quantity - i.reserved_quantity) DESC
+        LIMIT 1
+        FOR UPDATE
+    """, nativeQuery = true)
+    Optional<Inventory> findBestSuitableForUpdate(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId,
+            @Param("requestedQuantity") java.math.BigDecimal requestedQuantity
     );
 
     @Query("""

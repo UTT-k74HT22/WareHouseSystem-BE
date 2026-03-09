@@ -72,6 +72,14 @@ public class StockMovementsServiceImpl implements StockMovementsService {
         return PageResponse.from(movementPage, content);
     }
 
+    @Override
+    @Transactional
+    public StockMovementsResponse recordMovement(StockMovements movement) {
+        log.info("Recording stock movement: {} for product: {}", movement.getMovementType(), movement.getProductId());
+        StockMovements saved = stockMovementsRepository.save(movement);
+        return stockMovementsMapper.toResponse(saved);
+    }
+
     private Pageable buildPageable(Integer page, Integer size) {
         int targetPage = page == null ? 0 : page;
         int targetSize = size == null ? 20 : size;

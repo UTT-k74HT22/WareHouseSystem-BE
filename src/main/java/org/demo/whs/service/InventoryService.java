@@ -2,10 +2,14 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -45,4 +49,20 @@ public interface InventoryService {
      * @return Availability result
      */
     CheckAvailabilityResponse checkAvailability(CheckAvailabilityRequest request);
+
+    /**
+     * Reserve inventory for an order line.
+     *
+     * @param request The reservation request
+     * @return Reservation result
+     */
+    InventoryReserveResponse reserve(InventoryReserveRequest request);
+
+    /**
+     * Release previously reserved inventory.
+     *
+     * @param request The unreservation request
+     * @return Unreservation result
+     */
+    InventoryUnreserveResponse unreserve(InventoryUnreserveRequest request);
 }

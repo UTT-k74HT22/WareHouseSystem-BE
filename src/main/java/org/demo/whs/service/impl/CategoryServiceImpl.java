@@ -57,8 +57,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> getCategories(CategoryStatus status, Pageable pageable) {
-        validatePageable(pageable);
-
         Page<Category> categoryPage = status == null
                 ? categoryRepository.findAll(pageable)
                 : categoryRepository.findAllByStatus(status, pageable);
@@ -110,12 +108,6 @@ public class CategoryServiceImpl implements CategoryService {
         category.setStatus(request.getStatus());
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(updatedCategory);
-    }
-
-    private void validatePageable(Pageable pageable) {
-        if (pageable.getPageNumber() < 0 || pageable.getPageSize() <= 0 || pageable.getPageSize() > 100) {
-            throw new BadRequestException(ErrorCode.COM_001);
-        }
     }
 
     private boolean hasAnyUpdatableField(UpdateCategoryRequest request) {

@@ -1,23 +1,76 @@
 package org.demo.whs.mapper;
 
-import org.demo.whs.entity.Batch;
-import org.demo.whs.entity.Inventory;
-import org.demo.whs.entity.Locations;
-import org.demo.whs.entity.Products;
-import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class InventoryMapper {
+
+    /**
+     * Entity → Reserve Response
+     */
+    public InventoryReserveResponse toReserveResponse(
+            Inventory inventory,
+            String orderLineId,
+            String status
+    ) {
+        if (inventory == null) {
+            return null;
+        }
+
+        return InventoryReserveResponse.builder()
+                .inventoryId(inventory.getId())
+                .productId(inventory.getProductId())
+                .warehouseId(inventory.getWarehouseId())
+                .locationId(inventory.getLocationId())
+                .batchId(inventory.getBatchId())
+                .reservedQuantity(inventory.getReservedQuantity())
+                .onHandQuantity(inventory.getOnHandQuantity())
+                .availableQuantity(inventory.getAvailableQuantity())
+                .orderLineId(orderLineId)
+                .status(status)
+                .reservedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * Reservation Entity → Reserve Response
+     */
+    public InventoryReserveResponse toReserveResponse(
+            InventoryReservation reservation,
+            Inventory inventory
+    ) {
+        if (reservation == null) {
+            return null;
+        }
+
+        return InventoryReserveResponse.builder()
+                .inventoryId(reservation.getInventoryId())
+                .productId(reservation.getProductId())
+                .warehouseId(reservation.getWarehouseId())
+                .locationId(reservation.getLocationId())
+                .batchId(reservation.getBatchId())
+                .reservedQuantity(reservation.getQuantity())
+                .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
+                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
+                .orderLineId(reservation.getOrderLineId())
+                .status(reservation.getStatus().name())
+                .reservedAt(reservation.getCreatedAt())
+                .build();
+    }
+
 
     /**
      * Entity → Response
@@ -158,6 +211,29 @@ public class InventoryMapper {
                 .availableQuantity(available)
                 .isAvailable(isAvailable)
                 .message(message)
+                .build();
+    }
+
+    /**
+     * Reservation Entity → Unreserve Response
+     */
+    public InventoryUnreserveResponse toUnreserveResponse(
+            InventoryReservation reservation,
+            BigDecimal unreservedQty
+    ) {
+        if (reservation == null) {
+            return null;
+        }
+
+        return InventoryUnreserveResponse.builder()
+                .reservationId(reservation.getId())
+                .inventoryId(reservation.getInventoryId())
+                .productId(reservation.getProductId())
+                .unreservedQuantity(unreservedQty)
+                .remainingReservedQuantity(reservation.getQuantity())
+                .orderLineId(reservation.getOrderLineId())
+                .status(reservation.getStatus().name())
+                .unreservedAt(LocalDateTime.now())
                 .build();
     }
 }
