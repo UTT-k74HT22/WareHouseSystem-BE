@@ -1,10 +1,15 @@
 package org.demo.whs.repository;
 
+import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.PurchaseOrderLines;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PurchaseOrderLinesRepository extends JpaRepository<PurchaseOrderLines, String> {
@@ -14,4 +19,14 @@ public interface PurchaseOrderLinesRepository extends JpaRepository<PurchaseOrde
     long countByPurchaseOrderId(String purchaseOrderId);
 
     List<PurchaseOrderLines> findByPurchaseOrderIdOrderByLineNumberAsc(String purchaseOrderId);
+
+    Optional<PurchaseOrderLines> findTopByPurchaseOrderIdOrderByLineNumberDesc(String purchaseOrderId);
+
+    boolean existsByPurchaseOrderIdAndProductId(String purchaseOrderId, String productId);
+
+    boolean existsByPurchaseOrderIdAndProductIdAndIdNot(String purchaseOrderId, String productId, String id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select pol from PurchaseOrderLines pol where pol.id = :id")
+    Optional<PurchaseOrderLines> findByIdForUpdate(@Param("id") String id);
 }
