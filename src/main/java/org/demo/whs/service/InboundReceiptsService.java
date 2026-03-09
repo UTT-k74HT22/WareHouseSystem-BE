@@ -25,4 +25,6 @@ public interface InboundReceiptsService {
     void delete(String id);
 
     List<InboundReceiptsResponse> getByPurchaseOrderId(String purchaseOrderId);
+
+    InboundReceiptsResponse confirm(String id);
 }

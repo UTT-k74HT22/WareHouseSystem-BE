@@ -144,4 +144,12 @@ public class InboundReceiptsController {
         return ResponseEntity.ok(BaseResponse.success(null));
     }
 
+    @Operation(summary = "Confirm inbound receipt")
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<BaseResponse<InboundReceiptsResponse>> confirm(@PathVariable String id) {
+        log.info("Confirm inbound receipt, id={}", id);
+        InboundReceiptsResponse response = inboundReceiptsService.confirm(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
 }

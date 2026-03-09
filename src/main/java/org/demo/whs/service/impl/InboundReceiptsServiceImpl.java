@@ -102,6 +102,13 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public InboundReceiptsResponse confirm(String id) {
+        log.info("Confirm inbound receipt requested, id={}", id);
+        throw new NotImplementedException("WHS-57 scaffold is ready. Implement receipt confirmation in InboundReceiptsServiceImpl.confirm.");
+    }
+
     private List<InboundReceiptLinesResponse> getLineResponses(String inboundReceiptId) {
         List<InboundReceiptLines> lines = inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc(inboundReceiptId);
         return inboundReceiptLinesMapper.toResponses(lines);
