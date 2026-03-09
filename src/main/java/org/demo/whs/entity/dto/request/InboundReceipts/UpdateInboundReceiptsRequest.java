@@ -2,20 +2,22 @@ package org.demo.whs.entity.dto.request.InboundReceipts;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class InboundReceiptsRequest {
-
-    @NotBlank(message = "Purchase order ID is required")
-    private String purchaseOrderId;
+public class UpdateInboundReceiptsRequest {
 
     private LocalDate receiptDate;
 
