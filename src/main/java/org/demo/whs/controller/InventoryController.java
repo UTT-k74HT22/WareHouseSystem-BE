@@ -8,9 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -163,6 +165,21 @@ public class InventoryController {
             @RequestBody @Valid CheckAvailabilityRequest request) {
         log.info("Received request to check inventory availability: {}", request);
         CheckAvailabilityResponse response = inventoryService.checkAvailability(request);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Reserve inventory for an order line.
+     *
+     * @param request The reservation request
+     * @return Reservation result
+     */
+    @Operation(summary = "Reserve inventory", description = "Reserves inventory for a specific product, warehouse, and optional location/batch")
+    @PostMapping("/reserve")
+    public ResponseEntity<BaseResponse<InventoryReserveResponse>> reserve(
+            @RequestBody @Valid InventoryReserveRequest request) {
+        log.info("Received request to reserve inventory: {}", request);
+        InventoryReserveResponse response = inventoryService.reserve(request);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 }
