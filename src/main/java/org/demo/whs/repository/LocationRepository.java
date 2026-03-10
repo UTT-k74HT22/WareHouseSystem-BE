@@ -33,7 +33,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @param warehouseId the warehouse ID
      * @return Optional containing the location if found
      */
-    @Query(value = "SELECT l FROM Locations l WHERE l.warehouseId = :warehouseId", nativeQuery = true)
+    @Query("SELECT l FROM Locations l WHERE l.warehouseId = :warehouseId")
     Optional<Locations> findByWarehouseId(String warehouseId);
 
     /**

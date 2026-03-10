@@ -139,6 +139,7 @@ public enum ErrorCode {
     BATCH_003("BATCH_003", "Invalid batch status"),
     BATCH_004("BATCH_004", "Batch already expired"),
     BATCH_005("BATCH_005", "Manufacturing date is invalid"),
+    BATCH_012("BATCH_012", "Batch is not available for stock operations"),
 
 
     // Rate limiting errors

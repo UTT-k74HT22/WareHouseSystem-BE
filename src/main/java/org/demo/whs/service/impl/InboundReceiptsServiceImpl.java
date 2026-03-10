@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.request.InboundReceipts.UpdateInboundReceiptsRequ
 import org.demo.whs.entity.dto.response.InboundReceiptLines.InboundReceiptLinesResponse;
 import org.demo.whs.entity.dto.response.InboundReceipts.InboundReceiptsResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.entity.enums.InboundReceiptsStatus;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.entity.enums.PurchaseOrdersStatus;
@@ -253,6 +254,13 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         // Step 3: Load purchase order and lines with locks
         PurchaseOrders purchaseOrder = validatePurchaseOrderForReceipt(receipt);
 
+        // Step 3.1: Re-check receipt status after locking PO to prevent race condition
+        InboundReceipts recheckedReceipt = inboundReceiptsRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Inbound receipt not found", ErrorCode.COM_004));
+        if (recheckedReceipt.getStatus() != InboundReceiptsStatus.DRAFT) {
+            throw new BadRequestException("Receipt was modified by another process", ErrorCode.COM_001);
+        }
+
         // Step 4: Map purchase order lines for quick access
         List<PurchaseOrderLines> poLines = loadPurchaseOrderLinesForConfirm(purchaseOrder.getId());
         Map<String, PurchaseOrderLines> poLineMap = poLines.stream()
@@ -442,6 +450,13 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
             throw new BadRequestException("Batch does not belong to receipt line product", ErrorCode.COM_001);
         }
 
+        if (batch.getStatus() != BatchStatus.AVAILABLE) {
+            throw new BadRequestException(
+                    "Batch must be AVAILABLE for inbound receipt. Current status: " + batch.getStatus(),
+                    ErrorCode.BATCH_012
+            );
+        }
+
         return batch;
     }
 
@@ -451,6 +466,11 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
             String actorId,
             LocalDateTime now
     ) {
+        // TODO: WHS-XXX - Handle available_quantity for QUARANTINE items
+        // Currently: on_hand increases for QUARANTINE items
+        // Expected: available_quantity should exclude QUARANTINE until released
+        // This is a known technical debt to be handled in hardening phase
+
         Inventory inventory = inventoryRepository.findByDimensionForUpdate(
                 receiptLine.getProductId(),
                 receipt.getWarehouseId(),
