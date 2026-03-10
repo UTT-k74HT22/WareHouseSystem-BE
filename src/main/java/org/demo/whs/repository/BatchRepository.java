@@ -20,7 +20,7 @@ public interface BatchRepository extends JpaRepository<Batch, String> {
      * @param batchNumber the batch number to check
      * @return true if batch exists, false otherwise
      */
-    boolean existsByBatchNumber(String batchNumber);
+    boolean existsByProductIdAndBatchNumber(String productId, String batchNumber);
 
     /**
      * Finds a batch by its batch number.

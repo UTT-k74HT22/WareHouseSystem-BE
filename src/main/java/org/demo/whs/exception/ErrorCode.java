@@ -134,12 +134,19 @@ public enum ErrorCode {
     COM_007("COM_007", "Page size must be greater than zero"),
     COM_008("COM_008", "Page size must not exceed 100"),
 
+    // Batch errors
     BATCH_001("BATCH_001", "Batch not found"),
-    BATCH_002("BATCH_002", "Batch number already exists"),
-    BATCH_003("BATCH_003", "Invalid batch status"),
+    BATCH_002("BATCH_002", "Batch number already exists for this product"),
+    BATCH_003("BATCH_003", "Invalid batch status transition"),
     BATCH_004("BATCH_004", "Batch already expired"),
-    BATCH_005("BATCH_005", "Manufacturing date is invalid"),
-
+    BATCH_005("BATCH_005", "Manufacturing date cannot be in the future"),
+    BATCH_006("BATCH_006", "Expiry date must be after manufacturing date"),
+    BATCH_007("BATCH_007", "Batch cannot be quarantined because reserved inventory exists"),
+    BATCH_008("BATCH_008", "Batch cannot be released because it is expired"),
+    BATCH_009("BATCH_009", "Product does not support batch tracking"),
+    BATCH_010("BATCH_010", "Batch cannot change product once created"),
+    BATCH_011("BATCH_011", "Batch status cannot be updated through this endpoint"),
+    BATCH_012("BATCH_012", "Batch is not available for stock operations"),
 
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
