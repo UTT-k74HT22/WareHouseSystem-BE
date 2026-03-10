@@ -63,7 +63,7 @@ class BatchServiceImplTest {
 
             when(productRepository.findById("P1")).thenReturn(Optional.of(product));
             when(batchRepository.existsByProductIdAndBatchNumber("P1", "B001")).thenReturn(false);
-            when(batchMapper.toEntity(request)).thenReturn(batch);
+            when(batchMapper.createEntity(request)).thenReturn(batch);
             when(batchRepository.save(batch)).thenReturn(savedBatch);
             when(batchMapper.toResponse(savedBatch)).thenReturn(response);
 
