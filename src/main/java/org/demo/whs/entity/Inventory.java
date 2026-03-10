@@ -98,6 +98,10 @@ public class Inventory extends BaseEntity {
     private BigDecimal onHandQuantity = BigDecimal.ZERO;
 
     @Builder.Default
+    @Column(name = "quarantine_quantity", nullable = false, precision = 15, scale = 2)
+    private BigDecimal quarantineQuantity = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "reserved_quantity", nullable = false, precision = 15, scale = 2)
     private BigDecimal reservedQuantity = BigDecimal.ZERO;
 
@@ -109,6 +113,6 @@ public class Inventory extends BaseEntity {
     private LocalDateTime lastMovementAt;
 
     public BigDecimal getAvailableQuantity() {
-        return onHandQuantity.subtract(reservedQuantity);
+        return onHandQuantity.subtract(quarantineQuantity).subtract(reservedQuantity);
     }
 }

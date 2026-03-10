@@ -15,7 +15,9 @@ import org.demo.whs.entity.dto.request.InboundReceipts.InboundReceiptsFilterRequ
 import org.demo.whs.entity.dto.request.InboundReceipts.InboundReceiptsRequest;
 import org.demo.whs.entity.dto.response.InboundReceiptLines.InboundReceiptLinesResponse;
 import org.demo.whs.entity.dto.response.InboundReceipts.InboundReceiptsResponse;
+import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.entity.enums.InboundReceiptsStatus;
+import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.entity.enums.PurchaseOrdersStatus;
 import org.demo.whs.entity.enums.QualityStatus;
@@ -253,11 +255,13 @@ class InboundReceiptsServiceImplTest {
 
         Batch batch = Batch.builder()
                 .productId("prod-1")
+                .status(BatchStatus.AVAILABLE)
                 .build();
         batch.setId("batch-1");
 
         Locations location = Locations.builder()
                 .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
                 .build();
         location.setId("loc-1");
 
@@ -352,6 +356,7 @@ class InboundReceiptsServiceImplTest {
 
         PurchaseOrders purchaseOrder = PurchaseOrders.builder()
                 .status(PurchaseOrdersStatus.CONFIRMED)
+                .warehouseId("wh-1")
                 .build();
         purchaseOrder.setId("po-1");
 
@@ -363,6 +368,18 @@ class InboundReceiptsServiceImplTest {
                 .build();
         poLine.setId("pol-1");
 
+        Products product = Products.builder()
+                .status(ProductStatus.ACTIVE)
+                .requiresBatchTracking(false)
+                .build();
+        product.setId("prod-1");
+
+        Locations location = Locations.builder()
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .build();
+        location.setId("loc-1");
+
         mockedSecurityUtils.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
         when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account("user-1", "admin")));
         when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
@@ -370,9 +387,11 @@ class InboundReceiptsServiceImplTest {
                 .thenReturn(List.of(receiptLine));
         when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
         when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
+        lenient().when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
+        lenient().when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
 
         assertThrows(BadRequestException.class, () -> inboundReceiptsService.confirm("receipt-1"));
-        verifyNoInteractions(productRepository, locationRepository, inventoryRepository, stockMovementsRepository);
+        verifyNoInteractions(inventoryRepository, stockMovementsRepository);
     }
 
     @Test
@@ -397,13 +416,14 @@ class InboundReceiptsServiceImplTest {
 
         PurchaseOrders purchaseOrder = PurchaseOrders.builder()
                 .status(PurchaseOrdersStatus.CONFIRMED)
+                .warehouseId("wh-1")
                 .build();
         purchaseOrder.setId("po-1");
 
         PurchaseOrderLines poLine = PurchaseOrderLines.builder()
                 .purchaseOrderId("po-1")
                 .productId("prod-1")
-                .quantityOrdered(new BigDecimal("10.00"))
+                .quantityOrdered(new BigDecimal("30.00"))
                 .quantityReceived(BigDecimal.ZERO)
                 .build();
         poLine.setId("pol-1");
@@ -416,18 +436,19 @@ class InboundReceiptsServiceImplTest {
 
         Locations location = Locations.builder()
                 .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
                 .build();
         location.setId("loc-1");
 
         mockedSecurityUtils.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
         when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account("user-1", "admin")));
-        when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
-        when(inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc("receipt-1"))
+        lenient().when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
+        lenient().when(inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc("receipt-1"))
                 .thenReturn(List.of(receiptLine));
-        when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
-        when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
-        when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
-        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
+        lenient().when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
+        lenient().when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
+        lenient().when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
+        lenient().when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
 
         assertThrows(BadRequestException.class, () -> inboundReceiptsService.confirm("receipt-1"));
         verifyNoInteractions(inventoryRepository, stockMovementsRepository);

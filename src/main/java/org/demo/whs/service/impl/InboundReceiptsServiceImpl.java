@@ -11,6 +11,7 @@ import org.demo.whs.entity.dto.response.InboundReceipts.InboundReceiptsResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.entity.enums.InboundReceiptsStatus;
+import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.entity.enums.PurchaseOrdersStatus;
 import org.demo.whs.entity.enums.QualityStatus;
@@ -347,6 +348,13 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
             );
         }
 
+        if (!Objects.equals(purchaseOrder.getWarehouseId(), receipt.getWarehouseId())) {
+            throw new BadRequestException(
+                    "Receipt warehouse does not match purchase order warehouse",
+                    ErrorCode.COM_001
+            );
+        }
+
         return purchaseOrder;
     }
 
@@ -422,6 +430,20 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         if (!Objects.equals(location.getWarehouseId(), receipt.getWarehouseId())) {
             throw new BadRequestException("Location not in receipt warehouse", ErrorCode.LOC_002);
         }
+
+        if (location.getStatus() == LocationStatus.INACTIVE) {
+            throw new BadRequestException(
+                    "Location is INACTIVE and cannot receive goods",
+                    ErrorCode.LOC_002
+            );
+        }
+
+        if (location.getStatus() == LocationStatus.MAINTENANCE) {
+            throw new BadRequestException(
+                    "Location is under MAINTENANCE and cannot receive goods",
+                    ErrorCode.LOC_002
+            );
+        }
     }
 
     private void validateQualityRules(InboundReceiptLines receiptLine) {
@@ -466,10 +488,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
             String actorId,
             LocalDateTime now
     ) {
-        // TODO: WHS-XXX - Handle available_quantity for QUARANTINE items
-        // Currently: on_hand increases for QUARANTINE items
-        // Expected: available_quantity should exclude QUARANTINE until released
-        // This is a known technical debt to be handled in hardening phase
+        boolean isQuarantine = receiptLine.getQualityStatus() == QualityStatus.QUARANTINE;
 
         Inventory inventory = inventoryRepository.findByDimensionForUpdate(
                 receiptLine.getProductId(),
@@ -478,15 +497,26 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                 receiptLine.getBatchId()
         ).orElseGet(() -> createOrReloadInventory(receipt, receiptLine, actorId));
 
-        BigDecimal quantityBefore = zeroIfNull(inventory.getOnHandQuantity());
-        BigDecimal quantityAfter = quantityBefore.add(receiptLine.getQuantityReceived());
+        if (isQuarantine) {
+            BigDecimal quarantineBefore = zeroIfNull(inventory.getQuarantineQuantity());
+            BigDecimal quarantineAfter = quarantineBefore.add(receiptLine.getQuantityReceived());
+            inventory.setQuarantineQuantity(quarantineAfter);
+        } else {
+            BigDecimal quantityBefore = zeroIfNull(inventory.getOnHandQuantity());
+            BigDecimal quantityAfter = quantityBefore.add(receiptLine.getQuantityReceived());
+            inventory.setOnHandQuantity(quantityAfter);
+        }
 
-        inventory.setOnHandQuantity(quantityAfter);
         inventory.setUpdatedBy(actorId);
         inventory.setLastMovementAt(now);
         Inventory savedInventory = inventoryRepository.save(inventory);
 
-        return new InventorySnapshot(savedInventory, quantityBefore, quantityAfter);
+        BigDecimal before = isQuarantine
+                ? zeroIfNull(inventory.getQuarantineQuantity()).subtract(receiptLine.getQuantityReceived())
+                : zeroIfNull(inventory.getOnHandQuantity()).subtract(receiptLine.getQuantityReceived());
+        return new InventorySnapshot(savedInventory, before, isQuarantine
+                ? inventory.getQuarantineQuantity()
+                : inventory.getOnHandQuantity());
     }
 
     private Inventory createOrReloadInventory(InboundReceipts receipt, InboundReceiptLines receiptLine, String actorId) {
