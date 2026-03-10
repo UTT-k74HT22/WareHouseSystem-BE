@@ -33,7 +33,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -178,6 +177,11 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
 
         if (receipt.getStatus() != InboundReceiptsStatus.DRAFT) {
             throw new BadRequestException("Only draft receipts can be deleted", ErrorCode.COM_001);
+        }
+
+        long lineCount = inboundReceiptLinesRepository.countByInboundReceiptId(id);
+        if (lineCount > 0) {
+            throw new BadRequestException("Cannot delete receipt with lines", ErrorCode.COM_001);
         }
 
         inboundReceiptsRepository.delete(receipt);
