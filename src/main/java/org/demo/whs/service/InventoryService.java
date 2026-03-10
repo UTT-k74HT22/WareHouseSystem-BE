@@ -65,4 +65,13 @@ public interface InventoryService {
      * @return Unreservation result
      */
     InventoryUnreserveResponse unreserve(InventoryUnreserveRequest request);
+
+    /**
+     * Increase inventory on-hand quantity.
+     * Source: Inbound receipt or stock adjustment.
+     *
+     * @param request The increase request
+     * @return Updated inventory data
+     */
+    InventoryResponse increase(org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest request);
 }

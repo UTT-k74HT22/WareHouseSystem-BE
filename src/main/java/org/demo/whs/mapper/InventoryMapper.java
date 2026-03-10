@@ -5,6 +5,7 @@ import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
@@ -234,6 +235,24 @@ public class InventoryMapper {
                 .orderLineId(reservation.getOrderLineId())
                 .status(reservation.getStatus().name())
                 .unreservedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * Request → Inventory Entity (Initial creation)
+     */
+    public Inventory toEntity(InventoryIncreaseRequest request) {
+        if (request == null) {
+            return null;
+        }
+
+        return Inventory.builder()
+                .productId(request.getProductId())
+                .warehouseId(request.getWarehouseId())
+                .locationId(request.getLocationId())
+                .batchId(request.getBatchId())
+                .onHandQuantity(BigDecimal.ZERO)
+                .reservedQuantity(BigDecimal.ZERO)
                 .build();
     }
 }

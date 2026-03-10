@@ -1,5 +1,7 @@
 package org.demo.whs.entity.dto.request.Inventory;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +17,7 @@ import java.math.BigDecimal;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class InventoryIncreaseRequest {
 
     @NotBlank(message = "Product ID is required")
@@ -34,8 +37,10 @@ public class InventoryIncreaseRequest {
     @NotNull(message = "Reference type is required")
     private ReferenceType referenceType;
 
+    private String referenceId;
+
     @NotBlank(message = "Reference number is required")
     private String referenceNumber;
 
-    private String remarks;
+    private String notes;
 }
