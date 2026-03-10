@@ -2,252 +2,213 @@
 
 This file defines strict operational rules for AI coding agents working on this repository.
 
-This project is a **production-grade Warehouse Management System (WMS) backend**.
-All generated code must follow enterprise backend standards.
+This project is a production-grade Warehouse Management System (WMS) backend.
 
 ---
 
 # 1. Project Overview
 
 - Architecture: Layered Monolith
-- Stack: Java 17, Spring Boot 3
-- ORM: Spring Data JPA
-- Migration: Flyway
-- Cache: Redis
-- Messaging: RabbitMQ
-- Database: MySQL 8 / PostgreSQL 16
-- All tables contain: `created_at`, `updated_at`
-
-This is a backend-only repository.
+- Stack: Java 17, Spring Boot 3.5.9, Spring Data JPA
+- Migration: Flyway | Cache: Redis | Messaging: RabbitMQ
+- Runtime database: MySQL 8
+- Test database: H2 with MySQL compatibility mode
+- Build tool: Maven
+- Common audit fields include `created_at` and `updated_at`
 
 ---
 
-# 2. Package Structure (Strict)
+# 2. Build, Test & Run Commands
 
-com.yourcompany.whs
+```bash
+# Build
+mvn clean install
+mvn clean package -DskipTests
+mvn -q -DskipTests compile
 
-- controller      → REST only (NO business logic)
-- service         → Business logic, @Transactional here
-- repository      → Spring Data JPA repositories
-- entity          → JPA entities only
-- dto             → Request / Response DTOs
-- mapper          → Entity ↔ DTO conversion
-- config          → Security, Redis, RabbitMQ configs
-- exception       → Custom exceptions + Global handler
-- util            → Utility classes
+# Run
+mvn spring-boot:run
+java -jar target/whs-0.0.1-SNAPSHOT.jar
 
-Do NOT violate this structure.
-
----
-
-# 3. Architecture Rules (Non-Negotiable)
-
-## Controllers
-- Must be thin
-- No business logic
-- No repository calls
-- Validate input using `@Valid`
-- Return DTOs only
-
-## Services
-- Contain business logic
-- Annotated with `@Transactional`
-- Coordinate repositories
-- Throw custom exceptions (never raw RuntimeException)
-
-## Repositories
-- Use Spring Data JPA
-- Avoid native SQL unless absolutely necessary
-- Avoid N+1 problems (use fetch join / entity graph when needed)
-
-## Entities
-- No business logic
-- No controller/service dependency
+# Test
+mvn test
+mvn test -Dtest=ClassName
+mvn test -Dtest=ClassName#testMethod
+mvn test -Dtest="ClassName#m1+m2"
+mvn test -Dspring.profiles.active=test
+```
 
 ---
 
-# 4. Security Rules (Strict)
+# 3. Package Structure
+
+Base package: `org.demo.whs`
+
+- `controller` -> REST endpoints only, no business logic
+- `service` -> business logic and transaction boundaries
+- `service.impl` -> service implementations
+- `repository` -> Spring Data JPA repositories and custom query support
+- `entity` -> JPA entities
+- `entity.dto.request` -> request DTOs
+- `entity.dto.response` -> response DTOs, including `BaseResponse<T>` and `PageResponse<T>`
+- `entity.enums` -> domain enums
+- `mapper` -> entity to DTO conversion
+- `configuration` -> security, Redis, RabbitMQ, web, and infrastructure config
+- `exception` -> custom exceptions and global exception handler
+- `security`, `interceptor`, `helpers`, `utils` -> cross-cutting support code
+
+---
+
+# 4. Code Style Guidelines
+
+## Import Order
+1. Jakarta EE (`jakarta.*`)
+2. Spring Framework (`org.springframework.*`)
+3. External libraries (`org.*`, `com.*`) alphabetically
+4. Internal project (`org.demo.whs.*`)
+5. Static imports last
+
+## Naming Conventions
+- Classes: PascalCase (`WareHouseController`, `InventoryService`)
+- Methods and variables: camelCase
+- Constants: UPPER_SNAKE_CASE
+- DTOs: `{Entity}{Request|Response}` where it matches the existing module naming
+- Tests: `should_DoSomething_When_Condition`
+
+## Formatting
+- Use Lombok where the module already follows that pattern
+- Max line length: 120 characters
+- Indentation: 4 spaces
+
+## Entity
+- Use `@Entity`, `@Table`, `@Column`
+- Keep entities free of business logic
+- Use enums for status fields
+- Preserve the current audit strategy based on `BaseEntity` with `@PrePersist` and `@PreUpdate`
+- Do not introduce `@CreatedDate` / `@LastModifiedDate` selectively unless the project is migrated consistently
+
+## DTO
+- Request DTOs must use Bean Validation (`@NotNull`, `@NotBlank`, `@Size`, and similar)
+- Response DTOs should remain mapper-friendly and consistent with current patterns
+- Keep DTOs grouped by module under `entity/dto/request/*` and `entity/dto/response/*`
+
+## Service
+- Use `@Transactional` intentionally, with `readOnly = true` for pure queries where appropriate
+- Throw custom domain exceptions, never new raw `RuntimeException` in business flows
+- Log with `@Slf4j`
+
+## Controller
+- Use `@RestController`, `@RequestMapping`, `@RequiredArgsConstructor`
+- Validate request bodies with `@Valid`
+- Keep controllers thin
+- Return `BaseResponse<T>` wrappers
+- Use `PageResponse<T>` for paginated endpoints
+
+---
+
+# 5. Error Handling
+
+- Prefer custom exceptions extending `BaseException`
+- Map exceptions through the global exception handler
+- Return `BaseResponse` with stable error codes
+- Log at `ERROR` for unexpected failures and `WARN` for business-rule violations
+
+---
+
+# 6. Security Rules
 
 - NEVER disable authentication or authorization
-- NEVER expose sensitive data (password, tokens, internal IDs)
-- Always validate input (Bean Validation)
-- Always check authorization when modifying business-critical data
-- Never log credentials or tokens
-
-If a feature requires bypassing security → reject it.
+- NEVER expose sensitive data
+- Always validate input
+- Preserve `@PreAuthorize` and method security on protected endpoints
+- Never log credentials, tokens, or secret values
 
 ---
 
-# 5. Database & Performance Rules
+# 7. Database & Performance
 
-- Always consider N+1 query risks
-- Add indexes for frequent filter/join columns
-- Use pagination for list endpoints
-- Avoid loading entire tables into memory
-- Use Redis only for:
-    - Frequently read but rarely updated data
-    - Token/session data
-
-## Migration file format
-
-V{version}__{description}.sql
-
-Example:
-
-V12__add_inventory_adjustment_table.sql
+- Avoid N+1 with fetch joins, `@EntityGraph`, or projection strategies where appropriate
+- Index frequent filter and join columns through Flyway migrations
+- Paginate list endpoints unless the use case is intentionally bounded
+- Use Redis only for read-heavy or coordination use cases that justify cache or shared-state complexity
+- Name migrations as `V{version}__{description}.sql`
 
 ---
 
-# 6. Testing Rules
+# 8. Testing
 
-When business logic changes:
-
-- Add or update unit tests
-- Cover edge cases
-- Test failure scenarios
-- Test validation errors
-
-## Test naming convention
-
-should_DoSomething_When_Condition
-
-Never merge new business logic without tests unless explicitly instructed.
+- Unit tests: `@ExtendWith(MockitoExtension.class)` with `@Mock` and `@InjectMocks`
+- Integration tests: `@SpringBootTest` or focused slice tests with the `test` profile and H2
+- Repository tests: `@DataJpaTest`
+- Test naming: `should_ThrowException_When_NotFound`
+- Cover happy path, validation failures, edge cases, and regression scenarios
 
 ---
 
-# 7. Logging Rules
+# 9. Logging
 
-- Use structured logging
-- No debug leftovers
-- No TODO in production PR
-- Log meaningful business events
+- Use structured logging such as `log.info("message {}", value)`
+- Do not leave debug-only code paths in production logic
+- Do not add new TODO comments in changed code
+- Log meaningful create, update, delete, and status transition events
 
 ---
 
-# 8. Boundaries
+# 10. Boundaries
 
-- Never commit secrets or `.env` files
+- Never commit secrets or local credential files
 - Never hardcode credentials
-- Never disable validation to bypass errors
-- No raw SQL unless necessary
-- No business logic inside controllers
+- Never disable validation
+- No raw SQL unless necessary and justified
+- No business logic in controllers
 
 ---
 
-# 9. Pull Request Review Checklist
+# 11. Branch Naming
 
-When asked to review a PR:
-
-## Code Quality
-- [ ] Logic correct
-- [ ] No unused code
-- [ ] Naming clear and consistent
-- [ ] No debug leftovers
-
-## Architecture
-- [ ] Controller thin
-- [ ] @Transactional only in service layer
-- [ ] No hardcoded values
-
-## Security
-- [ ] Input validated
-- [ ] Authorization enforced
-- [ ] No sensitive data exposed
-
-## Database
-- [ ] No N+1 issue
-- [ ] Proper indexes for filter columns
-- [ ] Migration file correct format
-
-## Testing
-- [ ] Unit tests included
-- [ ] Edge cases covered
-
----
-
-# Review Output Format
-
-Use exactly this format:
-
-✅ Approved / ⚠️ Needs Changes / ❌ Rejected
-
-Summary:
-Short explanation
-
-Issues:
-- [CRITICAL] ...
-- [MAJOR] ...
-- [MINOR] ...
-
-Suggestions:
-- ...
-
----
-
-# 10. Jira Task Creation Template
-
-When asked to create a Jira task:
-
-Summary: [VERB] + [Object] + [Context]
-
-Description:
-
-## What
-Clear description of the feature
-
-## Why
-Business reason
-
-## Acceptance Criteria
-- [ ] Endpoint works correctly
-- [ ] Unit tests added
-- [ ] Swagger documented
-
-## Technical Notes
-- Affected services:
-- DB migration needed: Yes / No
-- Redis affected: Yes / No
-- RabbitMQ event triggered: Yes / No
-
-Labels: backend  
-Story Points: 1 / 2 / 3 / 5 / 8  
-Priority: Low / Medium / High / Critical
-
----
-
-# 11. Feature Breakdown Rule
-
-When breaking down a feature:
-
-1. Design (API + schema)
-2. Migration
-3. Implementation
-4. Testing
-5. Review
-
-Tasks must follow this order.
-
----
-
-# 12. Branch Naming Rule
-
-feature/WHS-{jiraId}-{short-description}  
+```text
+feature/WHS-{jiraId}-{short-description}
 bugfix/WHS-{jiraId}-{short-description}
-
-Example:
-
-feature/WHS-123-inventory-adjustment-api
+```
 
 ---
 
-# 13. Agent Behavior Philosophy
+# 12. Agent Philosophy
 
-Agents must behave like:
+- Senior Java backend developer mindset
+- Performance-aware and security-first
+- Clean architecture, no shortcut coding
 
-- Senior Java Backend Developer
-- Performance-aware
-- Security-first
-- Clean Architecture mindset
-- No shortcut coding
+---
 
-If a request conflicts with these rules → explain why and refuse.
+# 13. WMS Business Flow Rules
+
+## Domain Rules
+- State transitions must be explicit and validated
+- Never bypass status validation in the service layer
+- Quantity-related fields must never become negative
+- Header totals must be recalculated from lines, not trusted from client input
+- Child records must belong to the same tenant, company, or warehouse scope as the parent
+- Soft business constraints must return business exceptions, not generic errors
+
+## Transaction Rules
+- Multi-step inventory mutations must be atomic
+- Validate concurrency-sensitive stock updates carefully
+- Do not split one business transaction across multiple services unless clearly intentional
+- Avoid side effects before all validations pass
+
+## Data Integrity Rules
+- Validate referenced entities before create or update mutations
+- Never trust frontend-calculated totals, statuses, or derived fields
+- On delete or update, verify record ownership and current status before mutation
+- Preserve audit fields and metadata updates consistently
+
+## Review Rules for Agents
+Before changing code, always identify:
+1. invariant being protected
+2. state transition being changed
+3. affected aggregate root
+4. possible regression points
+5. minimal verification strategy
+
+If a request conflicts with these rules, explain why and refuse.
