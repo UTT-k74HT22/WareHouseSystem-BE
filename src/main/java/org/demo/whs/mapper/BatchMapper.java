@@ -15,7 +15,7 @@ public class BatchMapper {
     /**
      * Convert CreateBatchRequest → Batch entity
      */
-    public Batch toEntity(CreateBatchRequest request) {
+    public Batch createEntity(CreateBatchRequest request) {
         if (request == null) {
             return null;
         }
@@ -27,17 +27,13 @@ public class BatchMapper {
                 .expiryDate(request.getExpiryDate())
                 .supplierBatchNumber(request.getSupplierBatchNumber())
                 .notes(request.getNotes())
-                .status(
-                        request.getStatus() != null
-                        ? request.getStatus()
-                                 : BatchStatus.AVAILABLE
-                )
+                .status(BatchStatus.AVAILABLE)
                 .build();
     }
     /**
      * Update existing Batch entity from UpdateBatchRequest
      */
-    public void toEntity(UpdateBatchRequest request, Batch batch) {
+    public void updateEntity(UpdateBatchRequest request, Batch batch) {
 
         if (batch == null || request == null) {
             return;
@@ -63,9 +59,6 @@ public class BatchMapper {
             batch.setNotes(request.getNotes());
         }
 
-        if ( request.getStatus() != null) {
-            batch.setStatus(request.getStatus());
-        }
     }
 
     /**

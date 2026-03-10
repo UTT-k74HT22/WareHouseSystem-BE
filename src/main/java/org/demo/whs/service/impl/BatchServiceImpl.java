@@ -73,7 +73,7 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
 
-        Batch batch = batchMapper.toEntity(request);
+        Batch batch = batchMapper.createEntity(request);
         batch.setStatus(BatchStatus.AVAILABLE);
 
         Batch savedBatch = batchRepository.save(batch);
