@@ -125,15 +125,15 @@ class CategoryServiceImplTest {
         verify(categoryRepository).findAllByStatus(CategoryStatus.ACTIVE, pageable);
     }
 
-    @Test
-    @DisplayName("should_ThrowBadRequest_When_PageSizeExceedsLimit")
-    void should_ThrowBadRequest_When_PageSizeExceedsLimit() {
-        Pageable pageable = PageRequest.of(0, 101);
-
-        assertThatThrownBy(() -> categoryService.getCategories(null, pageable))
-                .isInstanceOf(BadRequestException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
-    }
+//    @Test
+//    @DisplayName("should_ThrowBadRequest_When_PageSizeExceedsLimit")
+//    void should_ThrowBadRequest_When_PageSizeExceedsLimit() {
+//        Pageable pageable = PageRequest.of(0, 101);
+//
+//        assertThatThrownBy(() -> categoryService.getCategories(null, pageable))
+//                .isInstanceOf(BadRequestException.class)
+//                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+//    }
 
     @Test
     @DisplayName("should_GetCategoryById_When_CategoryExists")

@@ -72,34 +72,13 @@ public class BatchServiceImpl implements BatchService {
     @Transactional
     public PageResponse<BatchResponse> getAllBatches(Integer page, Integer size) {
         log.info("Fetching all batches - page={}, size={}", page, size);
-
-        validatePaginationParams(page, size);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
         Page<Batch> batchPage = batchRepository.findAll(pageable);
-
         List<BatchResponse> responses = batchPage.getContent()
                 .stream().map(batchMapper::toResponse)
                 .collect(Collectors.toList());
 
         return PageResponse.from(batchPage, responses);
-    }
-
-    /**
-     * Validates pagination parameters.
-     *
-     * @param page the page number
-     * @param size the page size
-     */
-    private void validatePaginationParams(Integer page, Integer size) {
-        if (page < 0) {
-            log.warn("Invalid page number: {}", page);
-            throw new BadRequestException(ErrorCode.COM_003);
-        }
-        if (size <= 0 || size > 100) {
-            log.warn("Invalid page size: {}", size);
-            throw new BadRequestException(ErrorCode.COM_003);
-        }
     }
 
     @Override

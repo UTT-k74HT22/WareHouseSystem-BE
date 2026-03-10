@@ -1,5 +1,6 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.StockMovements;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -41,4 +42,12 @@ public interface StockMovementsService {
             Integer page,
             Integer size
     );
+
+    /**
+     * Records a new stock movement.
+     *
+     * @param movement the stock movement entity to record
+     * @return the recorded stock movement response
+     */
+    StockMovementsResponse recordMovement(StockMovements movement);
 }
