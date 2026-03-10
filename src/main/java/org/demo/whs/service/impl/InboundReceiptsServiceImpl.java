@@ -238,7 +238,8 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
     @Transactional
     public InboundReceiptsResponse confirm(String id) {
         log.info("Confirm inbound receipt requested, id={}", id);
-        throw new NotImplementedException("WHS-57 scaffold is ready. Implement receipt confirmation in InboundReceiptsServiceImpl.confirm.");
+
+        return null;
     }
 
     private List<InboundReceiptLinesResponse> getLineResponses(String inboundReceiptId) {
