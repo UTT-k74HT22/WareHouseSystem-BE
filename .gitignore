@@ -38,7 +38,7 @@ gha-creds-*.json
 .codex/
 .copilot/
 .mvn/
-.opencode
+.opencode/
 opencode.json
 
 
