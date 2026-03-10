@@ -81,7 +81,7 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
     mode: HTML
-    cache: false   # dev cho dễ debug
+    cache: false   # Disabled in development for easier template debugging.
 
   # Mail Configuration
   mail:
@@ -139,8 +139,8 @@ app:
     reset-token-expiration: PT5M
   cors:
     # CORS Configuration for Frontend
-    # Development: localhost với các port phổ biến
-    # Production: thay bằng domain thực tế của frontend (VD: https://warehouse.yourdomain.com)
+    # Development: localhost with the most common frontend ports.
+    # Production: replace with the real frontend domain.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:5173,http://localhost:8080}
     allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}
     allowed-headers: ${CORS_ALLOWED_HEADERS:*}
@@ -149,18 +149,18 @@ app:
   # Rate Limiting Configuration
   rate-limit:
     enabled: true
-    # Default rate limit cho tất cả endpoints nếu không có custom config
+    # Default rate limit for endpoints without dedicated overrides.
     default:
       limit: 100
       duration: 60 # seconds
-    # Custom rate limit cho các endpoints cụ thể
+    # Custom rate limits for sensitive endpoints.
     endpoints:
       login:
         limit: 5
-        duration: 300 # 5 phút - chống brute force
+        duration: 300 # 5 minutes to reduce brute-force attempts
       register:
         limit: 3
-        duration: 3600 # 1 giờ
+        duration: 3600 # 1 hour
       refresh-token:
         limit: 10
         duration: 60
@@ -171,7 +171,7 @@ app:
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket-name: ${MINIO_BUCKET_NAME:whs-storage}
-    presigned-url-expiry: 3600 # seconds – 1 hour
+    presigned-url-expiry: 3600 # seconds - 1 hour
 
   # Email Configuration
   email:

@@ -1223,10 +1223,10 @@ Return paginated results
 
 ## 📚 Related Documents
 
-- [01_PROJECT_OVERVIEW.md](../CORE/01_PROJECT_OVERVIEW.md) - Overall system context
-- [02_SYSTEM_ARCHITECTURE.md](../CORE/02_SYSTEM_ARCHITECTURE.md) - Technical architecture
-- [04_DATABASE_SCHEMA.md](../CORE/04_DATABASE_SCHEMA.md) - Complete database schema
-- [05_IMPLEMENTATION_GUIDE.md](../CORE/05_IMPLEMENTATION_GUIDE.md) - Development guidelines
+- [01_PROJECT_OVERVIEW.md](../Core/01_PROJECT_OVERVIEW.md) - Overall system context
+- [02_SYSTEM_ARCHITECTURE.md](../Core/02_SYSTEM_ARCHITECTURE.md) - Technical architecture
+- [04_DATABASE_SCHEMA.md](../Core/04_DATABASE_SCHEMA.md) - Complete database schema
+- [05_IMPLEMENTATION_GUIDE.md](../Core/05_IMPLEMENTATION_GUIDE.md) - Development guidelines
 
 ---
 
