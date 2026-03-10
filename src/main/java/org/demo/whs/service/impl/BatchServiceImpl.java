@@ -59,16 +59,17 @@ public class BatchServiceImpl implements BatchService {
             log.warn("Batch already exists: productId={}, batchNumber={}",
                     request.getProductId(), request.getBatchNumber());
 
-            throw new BadRequestException(ErrorCode.BATCH_001);
+            throw new BadRequestException(ErrorCode.BATCH_002);
         }
 
-        if (request.getManufacturingDate().isAfter(LocalDate.now())) {
+        if (request.getManufacturingDate() != null &&
+                request.getManufacturingDate().isAfter(LocalDate.now())) {
             throw new BadRequestException(ErrorCode.BATCH_005);
         }
 
-        if (request.getExpiryDate() != null &&
+        if (request.getManufacturingDate() != null &&
+                request.getExpiryDate() != null &&
                 request.getExpiryDate().isBefore(request.getManufacturingDate())) {
-
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
 
