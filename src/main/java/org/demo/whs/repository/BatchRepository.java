@@ -31,4 +31,13 @@ public interface BatchRepository extends JpaRepository<Batch, String> {
      * @return Optional containing the batch if found, otherwise empty
      */
     Optional<Batch> findByBatchNumber(String batchNumber);
+
+    /**
+     *
+     * @param productId
+     * @param batchNumber
+     * @param id
+     * @return
+     */
+    boolean existsByProductIdAndBatchNumberAndIdNot(String productId, String batchNumber, String id);
 }

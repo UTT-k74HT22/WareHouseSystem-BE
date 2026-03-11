@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
+import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.service.BatchService;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,7 +48,7 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_001);
         }
 
-        Batch batch = batchMapper.toEntity(request);
+        Batch batch = batchMapper.createEntity(request);
 
         Batch batchSave =  batchRepository.save(batch);
         log.info("Batch created successfully with ID={}", batch.getId());
@@ -93,5 +95,32 @@ public class BatchServiceImpl implements BatchService {
         Batch updateStatus = batchRepository.save(batch);
         log.info("Batch status changed successfully with ID={}", updateStatus.getId());
         return batchMapper.toResponse(updateStatus);
+    }
+
+    @Override
+    @Transactional
+    public BatchResponse updateBatch (String id, UpdateBatchRequest request) {
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException(ErrorCode.BATCH_001));
+
+        if (request.getBatchNumber() != null && batchRepository.existsByProductIdAndBatchNumberAndIdNot(
+                batch.getProductId(),
+                request.getBatchNumber(),
+                id
+        )) {
+            throw new BadRequestException(ErrorCode.BATCH_001);
+        }
+
+        LocalDate manufacturingDate = request.getManufacturingDate() != null ? request.getManufacturingDate() : batch.getManufacturingDate();
+
+        if (request.getExpiryDate() != null && manufacturingDate != null && request.getExpiryDate().isBefore(manufacturingDate)) {
+            throw new BadRequestException(ErrorCode.BATCH_001);
+        }
+
+        batchMapper.updateEntity(request, batch);
+
+        batchRepository.save(batch);
+
+        return batchMapper.toResponse(batch);
     }
 }

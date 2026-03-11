@@ -20,4 +20,6 @@ public interface BatchService {
     PageResponse<BatchResponse> getAllBatches(Integer page, Integer size);
 
     BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request);
+
+    BatchResponse updateBatch(String id, UpdateBatchRequest request);
 }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
 import org.demo.whs.entity.enums.BatchStatus;
@@ -65,5 +66,13 @@ public class BatchController {
         BatchResponse response = batchService.changeBatchStatus(id, request);
 
         return ResponseEntity.ok(BaseResponse.success(response, "Batch status changed successfully"));
+    }
+
+    @PutMapping("/{id}")
+    public BatchResponse updateBatch(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateBatchRequest request
+            ) {
+        return batchService.updateBatch(id, request);
     }
 }

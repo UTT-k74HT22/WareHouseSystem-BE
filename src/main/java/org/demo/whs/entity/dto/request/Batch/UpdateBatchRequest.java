@@ -56,9 +56,4 @@ public class UpdateBatchRequest {
     @Size(max = 1000)
     private String notes;
 
-
-    /**
-     * Batch status (optional)
-     */
-    private BatchStatus status;
 }
