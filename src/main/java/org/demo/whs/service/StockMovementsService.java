@@ -68,4 +68,22 @@ public interface StockMovementsService {
             BigDecimal quantityBefore,
             BigDecimal quantityAfter
     );
+
+    /**
+     * Checks if a stock movement exists for the provided reference type and ID.
+     *
+     * @param referenceType the type of reference
+     * @param referenceId   the ID of the reference
+     * @return true if a stock movement exists for the given reference, false otherwise
+     */
+    boolean existsByReference(ReferenceType referenceType, String referenceId);
+
+    /**
+     * Checks if a stock movement exists for the provided reference type and reference number.
+     *
+     * @param referenceType    the type of reference
+     * @param referenceNumber the number of the reference
+     * @return true if a stock movement exists for the given reference, false otherwise
+     */
+    boolean existsByReferenceNumber(ReferenceType referenceType, String referenceNumber);
 }

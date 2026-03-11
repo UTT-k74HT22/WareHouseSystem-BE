@@ -436,6 +436,23 @@ public class InventoryServiceImpl implements InventoryService {
                 request.getQuantity()
         );
 
+        // 0. Validate duplicate reference
+        if (request.getReferenceId() != null && !request.getReferenceId().isBlank()) {
+            if (stockMovementsService.existsByReference(request.getReferenceType(), request.getReferenceId())) {
+                log.warn("Duplicate inventory increase request for reference ID: {}:{}", 
+                        request.getReferenceType(), request.getReferenceId());
+                throw new ConflictException("Inventory has already been increased for this reference ID", ErrorCode.COM_001);
+            }
+        }
+        
+        if (request.getReferenceNumber() != null && !request.getReferenceNumber().isBlank()) {
+            if (stockMovementsService.existsByReferenceNumber(request.getReferenceType(), request.getReferenceNumber())) {
+                log.warn("Duplicate inventory increase request for reference number: {}:{}", 
+                        request.getReferenceType(), request.getReferenceNumber());
+                throw new ConflictException("Inventory has already been increased for this reference number", ErrorCode.COM_001);
+            }
+        }
+
         // 1. Validate quantity
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException(ErrorCode.COM_001);
@@ -472,7 +489,7 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = findOrCreateInventoryWithLock(request);
 
         // 4. Update Inventory
-        BigDecimal availableBefore = inventory.getAvailableQuantity();
+        BigDecimal onHandBefore = inventory.getOnHandQuantity();
         inventory.setOnHandQuantity(inventory.getOnHandQuantity().add(request.getQuantity()));
         inventory.setLastMovementAt(LocalDateTime.now());
         inventory = inventoryRepository.save(inventory);
@@ -480,8 +497,8 @@ public class InventoryServiceImpl implements InventoryService {
         // 5. Record Stock Movement
         stockMovementsService.recordIncrease(
                 request,
-                availableBefore,
-                inventory.getAvailableQuantity()
+                onHandBefore,
+                inventory.getOnHandQuantity()
         );
 
         log.info("Successfully increased inventory. New on-hand: {}", inventory.getOnHandQuantity());

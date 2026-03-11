@@ -101,6 +101,24 @@ public class StockMovementsServiceImpl implements StockMovementsService {
         return recordMovement(movement);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByReference(ReferenceType referenceType, String referenceId) {
+        if (referenceId == null || referenceId.isBlank()) {
+            return false;
+        }
+        return stockMovementsRepository.existsByReferenceTypeAndReferenceId(referenceType, referenceId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByReferenceNumber(ReferenceType referenceType, String referenceNumber) {
+        if (referenceNumber == null || referenceNumber.isBlank()) {
+            return false;
+        }
+        return stockMovementsRepository.existsByReferenceTypeAndReferenceNumber(referenceType, referenceNumber);
+    }
+
     private Pageable buildPageable(Integer page, Integer size) {
         int targetPage = page == null ? 0 : page;
         int targetSize = size == null ? 20 : size;
