@@ -54,5 +54,19 @@ public interface InboundReceiptsService {
      */
     void delete(String id);
 
+    /**
+     * Get a list of inbound receipts by purchase order ID.
+     *
+     * @param purchaseOrderId the purchase order ID to filter by
+     * @return a list of inbound receipts associated with the specified purchase order ID
+     */
     List<InboundReceiptsResponse> getByPurchaseOrderId(String purchaseOrderId);
+
+    /**
+     * Confirm an inbound receipt by its ID.
+     *
+     * @param id the ID of the inbound receipt to be confirmed
+     * @return the response containing the details of the confirmed inbound receipt
+     */
+    InboundReceiptsResponse confirm(String id);
 }

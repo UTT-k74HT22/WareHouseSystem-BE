@@ -66,7 +66,8 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                 """
                 SELECT
                     COALESCE(SUM(i.on_hand_quantity),0) AS totalOnHandQuantity,
-                    COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity
+                    COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity,
+                    COALESCE(SUM(i.quarantine_quantity),0) AS totalQuarantineQuantity
                 FROM inventory i
                 WHERE i.product_id = :productId
                 AND (:warehouseId IS NULL OR i.warehouse_id = :warehouseId)
@@ -82,7 +83,8 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
 
         BigDecimal onHand = (BigDecimal) result[0];
         BigDecimal reserved = (BigDecimal) result[1];
-        BigDecimal available = onHand.subtract(reserved);
+        BigDecimal quarantine = (BigDecimal) result[2];
+        BigDecimal available = onHand.subtract(quarantine).subtract(reserved);
 
         return CheckAvailabilityResponse.builder()
                 .productId(productId)
@@ -113,6 +115,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                     b.id AS batchId,
                     b.batch_number AS batchNumber,
                     i.on_hand_quantity AS onHandQuantity,
+                    i.quarantine_quantity AS quarantineQuantity,
                     i.reserved_quantity AS reservedQuantity
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id

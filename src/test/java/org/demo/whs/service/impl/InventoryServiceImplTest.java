@@ -1,18 +1,15 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.*;
+import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
-import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.enums.InventoryReservationStatus;
 import org.demo.whs.entity.enums.ReferenceType;
-import org.demo.whs.entity.enums.StockMovementsType;
-import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
-import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
@@ -23,11 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
-
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -105,6 +100,35 @@ class InventoryServiceImplTest {
         // Assert
         assertThat(inventory.getOnHandQuantity()).isEqualByComparingTo("60.00");
         verify(stockMovementsService).recordIncrease(eq(request), any(), any());
+    }
+
+    @Test
+    @DisplayName("getInventoryByLocation_shouldExcludeQuarantineFromAvailableQuantity")
+    void getInventoryByLocation_shouldExcludeQuarantineFromAvailableQuantity() {
+        InventoryFilterRequest filter = InventoryFilterRequest.builder().build();
+        InventoryLocationProjection projection = InventoryLocationProjection.builder()
+                .locationId("loc-1")
+                .locationCode("LOC-01")
+                .locationName("Receiving")
+                .warehouseId("wh-1")
+                .warehouseName("Main WH")
+                .productId("prod-1")
+                .productSku("SKU-1")
+                .productName("Item 1")
+                .batchId("batch-1")
+                .batchNumber("BATCH-001")
+                .onHandQuantity(new BigDecimal("20.00"))
+                .quarantineQuantity(new BigDecimal("6.00"))
+                .reservedQuantity(new BigDecimal("4.00"))
+                .build();
+
+        when(inventoryRepository.getInventoryByLocation(filter)).thenReturn(List.of(projection));
+
+        List<InventoryByLocationResponse> response = inventoryService.getInventoryByLocation(filter);
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).getItems()).hasSize(1);
+        assertThat(response.get(0).getItems().get(0).getAvailableQuantity()).isEqualByComparingTo("10.00");
     }
 
     @Test

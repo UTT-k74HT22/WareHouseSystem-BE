@@ -2,6 +2,7 @@ package org.demo.whs.repository;
 
 import org.demo.whs.entity.Batch;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -31,4 +32,7 @@ public interface BatchRepository extends JpaRepository<Batch, String> {
      * @return Optional containing the batch if found, otherwise empty
      */
     Optional<Batch> findByBatchNumber(String batchNumber);
+
+    @Query(value = "SELECT b FROM Batch b WHERE b.productId = :productId AND b.id = :batchId")
+    Optional<Object> findByProductIdAndBatchId(String productId, String batchId);
 }

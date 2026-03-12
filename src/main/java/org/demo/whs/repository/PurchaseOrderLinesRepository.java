@@ -29,4 +29,8 @@ public interface PurchaseOrderLinesRepository extends JpaRepository<PurchaseOrde
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select pol from PurchaseOrderLines pol where pol.id = :id")
     Optional<PurchaseOrderLines> findByIdForUpdate(@Param("id") String id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(value = "SELECT * FROM purchase_order_lines WHERE purchase_order_id = :purchaseOrderId FOR UPDATE", nativeQuery = true)
+    List<PurchaseOrderLines> findByPurchaseOrderIdForUpdate(String purchaseOrderId);
 }
