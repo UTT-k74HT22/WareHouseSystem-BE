@@ -129,26 +129,36 @@ public class BatchServiceImpl implements BatchService {
     @Transactional
     public BatchResponse updateBatch (String id, UpdateBatchRequest request) {
         Batch batch = batchRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.BATCH_001));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
 
         if (request.getBatchNumber() != null && batchRepository.existsByProductIdAndBatchNumberAndIdNot(
                 batch.getProductId(),
                 request.getBatchNumber(),
                 id
         )) {
-            throw new BadRequestException(ErrorCode.BATCH_001);
+            throw new BadRequestException(ErrorCode.BATCH_002);
         }
 
-        LocalDate manufacturingDate = request.getManufacturingDate() != null ? request.getManufacturingDate() : batch.getManufacturingDate();
+        LocalDate manufacturingDate = request.getManufacturingDate() != null
+                ? request.getManufacturingDate()
+                : batch.getManufacturingDate();
 
-        if (request.getExpiryDate() != null && manufacturingDate != null && request.getExpiryDate().isBefore(manufacturingDate)) {
-            throw new BadRequestException(ErrorCode.BATCH_001);
+        LocalDate expiryDate = request.getExpiryDate() != null
+                ? request.getExpiryDate()
+                : batch.getExpiryDate();
+
+        if (manufacturingDate != null && manufacturingDate.isAfter(LocalDate.now())) {
+            throw new BadRequestException(ErrorCode.BATCH_003);
+        }
+
+        if (expiryDate != null && manufacturingDate != null && expiryDate.isBefore(manufacturingDate)) {
+            throw new BadRequestException(ErrorCode.BATCH_006);
         }
 
         batchMapper.updateEntity(request, batch);
 
-        batchRepository.save(batch);
+        Batch updateBatch = batchRepository.save(batch);
 
-        return batchMapper.toResponse(batch);
+        return batchMapper.toResponse(updateBatch);
     }
 }

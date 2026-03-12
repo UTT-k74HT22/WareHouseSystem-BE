@@ -69,10 +69,15 @@ public class BatchController {
     }
 
     @PutMapping("/{id}")
-    public BatchResponse updateBatch(
+    public ResponseEntity<BaseResponse<BatchResponse>> updateBatch(
             @PathVariable String id,
             @Valid @RequestBody UpdateBatchRequest request
-            ) {
-        return batchService.updateBatch(id, request);
+    ) {
+
+        BatchResponse response = batchService.updateBatch(id, request);
+
+        return ResponseEntity.ok(
+                BaseResponse.success(response, "Batch updated successfully")
+        );
     }
 }
