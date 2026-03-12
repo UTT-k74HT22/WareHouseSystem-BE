@@ -1,9 +1,13 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.StockMovements;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
+
+import java.math.BigDecimal;
 
 /**
  * Service interface for managing StockMovements operations.
@@ -50,4 +54,36 @@ public interface StockMovementsService {
      * @return the recorded stock movement response
      */
     StockMovementsResponse recordMovement(StockMovements movement);
+
+    /**
+     * Records an increase in inventory based on the provided request and balance details.
+     *
+     * @param request        the inventory increase request
+     * @param quantityBefore the quantity before the increase
+     * @param quantityAfter  the quantity after the increase
+     * @return the recorded stock movement response
+     */
+    StockMovementsResponse recordIncrease(
+            InventoryIncreaseRequest request,
+            BigDecimal quantityBefore,
+            BigDecimal quantityAfter
+    );
+
+    /**
+     * Checks if a stock movement exists for the provided reference type and ID.
+     *
+     * @param referenceType the type of reference
+     * @param referenceId   the ID of the reference
+     * @return true if a stock movement exists for the given reference, false otherwise
+     */
+    boolean existsByReference(ReferenceType referenceType, String referenceId);
+
+    /**
+     * Checks if a stock movement exists for the provided reference type and reference number.
+     *
+     * @param referenceType    the type of reference
+     * @param referenceNumber the number of the reference
+     * @return true if a stock movement exists for the given reference, false otherwise
+     */
+    boolean existsByReferenceNumber(ReferenceType referenceType, String referenceNumber);
 }

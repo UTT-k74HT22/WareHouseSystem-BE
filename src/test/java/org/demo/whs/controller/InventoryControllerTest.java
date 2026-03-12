@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
@@ -378,6 +379,58 @@ class InventoryControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/inventories/unreserve")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when increase is successful")
+    void shouldReturn200WhenIncreaseIsSuccessful() throws Exception {
+        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .quantity(new BigDecimal("10.00"))
+                .referenceType(org.demo.whs.entity.enums.ReferenceType.INBOUND_RECEIPT)
+                .referenceId("ref-uuid")
+                .referenceNumber("REC-001")
+                .notes("Test notes")
+                .build();
+
+        InventoryResponse mockResponse = InventoryResponse.builder()
+                .id("inv-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .onHandQuantity(new BigDecimal("110.00"))
+                .build();
+
+        when(inventoryService.increase(any(InventoryIncreaseRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/increase")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("inv-1"))
+                .andExpect(jsonPath("$.data.on_hand_quantity").value(110.00));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when increase request is invalid")
+    void shouldReturn400WhenIncreaseRequestIsInvalid() throws Exception {
+        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+                // productId and warehouseId are missing
+                .quantity(new BigDecimal("-5.00"))
+                .build();
+
+        mockMvc.perform(post("/api/v1/inventories/increase")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

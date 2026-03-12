@@ -10,6 +10,7 @@ import org.demo.whs.entity.Products;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
@@ -423,6 +424,119 @@ public class InventoryServiceImpl implements InventoryService {
                 unreserveQty, request.getOrderLineId(), inventory.getId());
 
         return inventoryMapper.toUnreserveResponse(reservation, unreserveQty);
+    }
+
+    @Override
+    @Transactional
+    public InventoryResponse increase(InventoryIncreaseRequest request) {
+        log.info(
+                "Increasing inventory product={} warehouse={} qty={}",
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getQuantity()
+        );
+
+        // 0. Validate duplicate reference
+        if (request.getReferenceId() != null && !request.getReferenceId().isBlank()) {
+            if (stockMovementsService.existsByReference(request.getReferenceType(), request.getReferenceId())) {
+                log.warn("Duplicate inventory increase request for reference ID: {}:{}", 
+                        request.getReferenceType(), request.getReferenceId());
+                throw new ConflictException("Inventory has already been increased for this reference ID", ErrorCode.COM_001);
+            }
+        }
+        
+        if (request.getReferenceNumber() != null && !request.getReferenceNumber().isBlank()) {
+            if (stockMovementsService.existsByReferenceNumber(request.getReferenceType(), request.getReferenceNumber())) {
+                log.warn("Duplicate inventory increase request for reference number: {}:{}", 
+                        request.getReferenceType(), request.getReferenceNumber());
+                throw new ConflictException("Inventory has already been increased for this reference number", ErrorCode.COM_001);
+            }
+        }
+
+        // 1. Validate quantity
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        // 2. Validate Dimensions
+        Products product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
+
+        Warehouses warehouse = wareHouseRepository.findById(request.getWarehouseId())
+                .orElseThrow(() -> new NotFoundException(ErrorCode.WHS_001));
+
+        Locations location = null;
+        if (request.getLocationId() != null) {
+            location = locationRepository.findById(request.getLocationId())
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.LOC_001));
+            
+            if (!location.getWarehouseId().equals(warehouse.getId())) {
+                throw new ConflictException(ErrorCode.INV_003);
+            }
+        }
+
+        Batch batch = null;
+        if (request.getBatchId() != null) {
+            batch = batchRepository.findById(request.getBatchId())
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
+
+            if (!batch.getProductId().equals(product.getId())) {
+                throw new ConflictException(ErrorCode.INV_003);
+            }
+        }
+
+        // 3. Find or Create Inventory Record with Locking (Race condition safe)
+        Inventory inventory = findOrCreateInventoryWithLock(request);
+
+        // 4. Update Inventory
+        BigDecimal onHandBefore = inventory.getOnHandQuantity();
+        inventory.setOnHandQuantity(inventory.getOnHandQuantity().add(request.getQuantity()));
+        inventory.setLastMovementAt(LocalDateTime.now());
+        inventory = inventoryRepository.save(inventory);
+
+        // 5. Record Stock Movement
+        stockMovementsService.recordIncrease(
+                request,
+                onHandBefore,
+                inventory.getOnHandQuantity()
+        );
+
+        log.info("Successfully increased inventory. New on-hand: {}", inventory.getOnHandQuantity());
+
+        return inventoryMapper.toResponse(inventory, product, warehouse, location, batch);
+    }
+
+    private Inventory findOrCreateInventoryWithLock(InventoryIncreaseRequest request) {
+        // Try to find with lock first
+        Optional<Inventory> existing = inventoryRepository.findByDimensionForUpdate(
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getLocationId(),
+                request.getBatchId()
+        );
+
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        // Not found, try to create
+        log.info("Inventory record not found. Attempting to create new one for dimensions: product={}, warehouse={}, location={}, batch={}",
+                request.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId());
+
+        Inventory newInventory = inventoryMapper.toEntity(request);
+        try {
+            // saveAndFlush to trigger unique constraint check immediately
+            return inventoryRepository.saveAndFlush(newInventory);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Inventory record was created by another thread. Re-fetching with lock.");
+            // Record was created by another thread in the meantime, fetch it with lock
+            return inventoryRepository.findByDimensionForUpdate(
+                    request.getProductId(),
+                    request.getWarehouseId(),
+                    request.getLocationId(),
+                    request.getBatchId()
+            ).orElseThrow(() -> new ConflictException("Concurrent inventory creation failed", ErrorCode.COM_001));
+        }
     }
 
     private Optional<InventoryReservation> findExistingReservation(InventoryReserveRequest request) {
