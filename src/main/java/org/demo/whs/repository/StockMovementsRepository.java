@@ -18,4 +18,8 @@ public interface StockMovementsRepository extends JpaRepository<StockMovements, 
             String referenceId,
             Pageable pageable
     );
+
+    boolean existsByReferenceTypeAndReferenceId(ReferenceType referenceType, String referenceId);
+
+    boolean existsByReferenceTypeAndReferenceNumber(ReferenceType referenceType, String referenceNumber);
 }

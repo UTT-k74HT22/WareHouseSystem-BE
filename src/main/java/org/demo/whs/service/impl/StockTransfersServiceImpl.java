@@ -139,8 +139,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
 
         // Step 6: Kiểm tra số lượng hàng có sẵn tại nguồn (hàng có sẵn đã được đặt trước).
         BigDecimal onHand = defaultZero(sourceInventory.getOnHandQuantity()); // tồn kho thực tế
-        BigDecimal reserved = defaultZero(sourceInventory.getReservedQuantity()); // đã đặt trước
-        BigDecimal available = onHand.subtract(reserved); // hàng có sẵn để chuyển
+        BigDecimal available = defaultZero(sourceInventory.getAvailableQuantity()); // loại trừ cả reserved và quarantine
 
         if (available.compareTo(quantity) < 0) {
             throw new BadRequestException("Insufficient available stock in source inventory", ErrorCode.INV_004);
@@ -150,7 +149,9 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         BigDecimal sourceBefore = onHand; // số lượng hàng thực tế tại nguồn trước khi chuyển
         BigDecimal sourceAfter = sourceBefore.subtract(quantity); // số lượng hàng thực tế tại nguồn sau khi chuyển
         // Kiểm tra lại số lượng hàng có sẵn sau khi trừ đi lượng chuyển để đảm bảo không bị âm do các giao dịch khác đã cập nhật trước đó
-        if (sourceAfter.compareTo(reserved) < 0) {
+        BigDecimal unavailableAfterTransfer = defaultZero(sourceInventory.getReservedQuantity())
+                .add(defaultZero(sourceInventory.getQuarantineQuantity()));
+        if (sourceAfter.compareTo(unavailableAfterTransfer) < 0) {
             throw new BadRequestException("Insufficient available stock in source inventory after re-checking", ErrorCode.INV_004);
         }
         BigDecimal destinationBefore = defaultZero(destinationInventory.getOnHandQuantity()); // số lượng hàng thực tế tại đích trước khi chuyển

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import org.demo.whs.entity.enums.BatchStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Setter
 @Getter
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)

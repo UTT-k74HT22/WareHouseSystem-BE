@@ -1,65 +1,327 @@
 # API Inventory Implementation Plan (Jira-driven)
 
-Updated: 2026-03-06
+Updated: 2026-03-12
 
-## Scope baseline
-- Source of truth reviewed: `docs/API_INVENTORY_COMPREHENSIVE.md`
-- Codebase check completed against current controllers in `src/main/java/org/demo/whs/controller`
-- Existing implemented endpoints were excluded from new task creation (for example: `GET/POST /api/v1/batches`, `GET /api/v1/batches/{id}`)
-- Existing Jira tasks were reused, no duplicate tasks created for modules already planned (`Category`, `Inventory`, `Stock Adjustments`, `Stock Transfers`)
-- Missing Jira coverage for stock transfer completion was corrected on `2026-03-06` by adding `WHS-87`
+## 1. Scope baseline
 
-## Module task map
-- Auth remaining: parent `WHS-28`, subtasks `WHS-29`, `WHS-30`
-- Category: parent `WHS-18`, subtasks `WHS-5` .. `WHS-9`
-- Inventory: parent `WHS-19`, subtasks `WHS-10` .. `WHS-17`
-- Stock Adjustments: parent `WHS-20`, subtasks `WHS-21` .. `WHS-24`
-- Stock Transfers: parent `WHS-25`, subtasks `WHS-26`, `WHS-27`, `WHS-87`
-- Warehouse remaining: parent `WHS-31`, subtask `WHS-36`
-- Location remaining: parent `WHS-32`, subtask `WHS-37`
-- Product remaining: parent `WHS-33`, subtasks `WHS-38`, `WHS-39`
-- Business Partner remaining: parent `WHS-34`, subtask `WHS-40`
-- Batch remaining: parent `WHS-35`, subtasks `WHS-41`, `WHS-42`
-- Purchase Orders: parent `WHS-43`, subtasks `WHS-53`, `WHS-54`
-- Purchase Order Lines: parent `WHS-44`, subtask `WHS-55`
-- Inbound Receipts: parent `WHS-45`, subtasks `WHS-56`, `WHS-57`
-- Inbound Receipt Lines: parent `WHS-46`, subtask `WHS-58`
-- Sales Orders: parent `WHS-47`, subtasks `WHS-59`, `WHS-60`
-- Sales Order Lines: parent `WHS-48`, subtask `WHS-61`
-- Outbound Shipments: parent `WHS-49`, subtasks `WHS-62`, `WHS-63`
-- Outbound Shipment Lines: parent `WHS-50`, subtask `WHS-65`
-- Stock Movements: parent `WHS-51`, subtasks `WHS-64`, `WHS-66`
-- Reporting: parent `WHS-52`, subtasks `WHS-67`, `WHS-68`, `WHS-69`
+- Source of truth for API coverage: `docs/API_INVENTORY_COMPREHENSIVE.md`
+- Code scan completed against current controllers in `src/main/java/org/demo/whs/controller`
+- Service alignment checked for high-impact modules:
+  - `InventoryServiceImpl`
+  - `InboundReceiptsServiceImpl`
+- Planning baseline moved from "controller exists" to:
+  - endpoint exists
+  - service implementation exists
+  - business flow is usable end-to-end
 
-## Execution order (mandatory)
-1. Design
-- Finalize endpoint contracts, DTOs, validation rules, error codes, authorization matrix.
-- Lock workflow/state machine for: PO, Inbound Receipt, SO, Outbound Shipment, Stock Adjustment/Transfer.
+## 2. Current implementation snapshot
 
-2. Migration
-- Add/adjust schema only when needed; follow `V{version}__{description}.sql`.
-- Add indexes for high-frequency filter/join columns before enabling list/report endpoints at scale.
+### 2.1. Completed and usable now
 
-3. Implementation
-- Implement by module in this order:
-  - Category/Inventory/Stock Adjustment/Stock Transfer (already planned parents `WHS-18`, `WHS-19`, `WHS-20`, `WHS-25`)
-  - Inbound chain: `WHS-43` -> `WHS-44` -> `WHS-45` -> `WHS-46`
-  - Outbound chain: `WHS-47` -> `WHS-48` -> `WHS-49` -> `WHS-50`
-  - Tracking and analytics: `WHS-35`, `WHS-51`, `WHS-52`
-  - Remaining master/auth improvements: `WHS-28`, `WHS-31`, `WHS-32`, `WHS-33`, `WHS-34`
+- Master data core:
+  - Warehouse
+  - Location
+  - Product
+  - UOM
+  - Business Partner
+  - Category
+  - Employee
+- Inventory core:
+  - list inventories
+  - summary by product
+  - by-location
+  - check availability
+  - reserve
+  - unreserve
+  - increase
+- Stock mutation modules:
+  - Stock Adjustments
+  - Stock Transfers
+- Inbound chain completed at core level:
+  - Purchase Orders
+  - Purchase Order Lines
+  - Inbound Receipts
+  - Confirm Receipt
 
-4. Testing
-- Unit tests for all service rules and transition constraints.
-- Integration tests for:
-  - inventory impact (reserve/unreserve/increase/decrease/confirm flows),
-  - concurrency-sensitive paths (confirm, stock mutations),
-  - validation and authorization failures.
+### 2.2. Partially done
 
-5. Review
-- Architecture checks: thin controller, business logic in service, `@Transactional` in service layer.
-- Security checks: auth/authz enforced, no sensitive data exposure, strict input validation.
-- DB/performance checks: no N+1 in list/report paths, proper pagination, indexes validated.
+- Batch:
+  - create
+  - list
+  - detail
+  - change status
+- Stock Movements:
+  - list
+  - detail
+  - by reference
 
-## Delivery cadence
-- Complete and move each module parent to Done only after all child subtasks are Done and checklist is satisfied.
-- Prefer small PR slices per subtask: endpoint + service + tests + swagger.
+### 2.3. Still shell / not implemented
+
+- Inbound Receipt Lines
+- Sales Orders
+- Sales Order Lines
+- Outbound Shipments
+- Outbound Shipment Lines
+- Reporting
+
+## 3. Jira map by current status
+
+### Done in current baseline
+
+- `WHS-53` Purchase Orders CRUD
+- `WHS-54` Purchase Order confirm
+- `WHS-55` Purchase Order Lines
+- `WHS-56` Inbound Receipts CRUD
+- `WHS-57` Confirm Receipt
+- Existing inventory/stock tasks under `WHS-19`, `WHS-20`, `WHS-25` that already landed in code
+
+### Remaining / next execution pool
+
+- `WHS-58` Inbound Receipt Lines
+- `WHS-59`, `WHS-60` Sales Orders
+- `WHS-61` Sales Order Lines
+- `WHS-62`, `WHS-63` Outbound Shipments
+- `WHS-65` Outbound Shipment Lines
+- `WHS-41`, `WHS-42` Batch enhancements
+- `WHS-64`, `WHS-66` Stock Movements enhancements
+- `WHS-67`, `WHS-68`, `WHS-69` Reporting
+- `WHS-29`, `WHS-30` remaining auth endpoints
+
+## 4. Delivery principles
+
+### 4.1. Planning rule
+
+Before each phase, lock:
+
+- request/response DTO
+- state machine
+- validation rules
+- error codes
+- side effects
+- ownership of transaction boundary
+
+### 4.2. Service rule
+
+- Controller stays thin
+- Transaction logic stays in service
+- Inventory mutation and movement write must remain atomic
+- Derived fields must be recomputed, never trusted from client
+
+### 4.3. Verification rule
+
+Each phase must end with:
+
+- unit tests for service rules
+- integration tests for main transaction
+- docs update
+- manual review of auth and invariants
+
+## 5. Recommended execution order
+
+### Phase A — Inbound hardening and remaining line API
+
+**Goal:** close the last inbound gap and stabilize the current inbound/inventory baseline before starting outbound.
+
+**Scope:**
+
+- `WHS-58` Inbound Receipt Lines CRUD
+- harden current `WHS-56/57`
+- sync docs and examples
+
+**Deliverables:**
+
+- `POST /api/v1/inbound-receipt-lines`
+- `PUT /api/v1/inbound-receipt-lines/{id}`
+- `DELETE /api/v1/inbound-receipt-lines/{id}`
+- line validation:
+  - only mutate when receipt is `DRAFT`
+  - product/location/PO line binding valid
+  - batch required only when `requiresBatchTracking = true`
+  - quarantine requires notes
+- receipt detail returns line data consistently
+- integration tests for:
+  - draft line mutations
+  - confirm after line edits
+  - rollback when one line invalid
+  - partial receipt
+  - quarantine receipt
+
+**Acceptance criteria:**
+
+- inbound chain works end-to-end from `PO -> IR -> IRL -> confirm`
+- no direct inventory mutation outside confirm for inbound flow
+- docs are aligned with controller and service behavior
+
+**Suggested effort:** 4-5 days
+
+### Phase B — Inventory hardening for outbound readiness
+
+**Goal:** make current inventory APIs safe to reuse for outbound chain.
+
+**Scope:**
+
+- review `increase` public exposure
+- define `decrease` contract
+- harden reserve/unreserve for outbound reuse
+- finalize idempotency and invariant checks
+
+**Deliverables:**
+
+- decision record:
+  - keep `POST /inventories/increase` public or move to internal-only usage
+- design + implement `POST /inventories/decrease`
+- add tests for:
+  - `available = onHand - quarantine - reserved`
+  - reserve/unreserve race conditions
+  - decrease not allowed below available stock
+- clarify movement write ownership for reserve vs decrease flows
+
+**Acceptance criteria:**
+
+- outbound modules can consume inventory APIs without redesign
+- decrease flow preserves movement invariant and stock non-negative rule
+
+**Suggested effort:** 2-3 days
+
+### Phase C — Sales order foundation
+
+**Goal:** build commercial demand side before physical shipment execution.
+
+**Scope:**
+
+- `WHS-59`, `WHS-60` Sales Orders
+- `WHS-61` Sales Order Lines
+
+**Deliverables:**
+
+- Sales Order header CRUD
+- confirm/cancel lifecycle
+- Sales Order line CRUD
+- total recomputation from lines
+- reserve inventory on confirm
+- unreserve on cancel where business rule applies
+
+**Acceptance criteria:**
+
+- `SalesOrder` becomes aggregate root
+- header/line mutation blocked outside `DRAFT`
+- confirm creates inventory reservations atomically
+
+**Suggested effort:** 5-6 days
+
+### Phase D — Outbound shipment execution
+
+**Goal:** implement physical outbound after demand has been confirmed.
+
+**Scope:**
+
+- `WHS-62`, `WHS-63` Outbound Shipments
+- `WHS-65` Outbound Shipment Lines
+- inventory decrease integration
+
+**Deliverables:**
+
+- shipment CRUD
+- shipment line CRUD
+- picking state
+- shipment confirm
+- inventory decrease
+- stock movement write
+
+**Acceptance criteria:**
+
+- shipment confirm consumes reserved/available stock correctly
+- no negative stock
+- stock movement traces outbound references clearly
+
+**Suggested effort:** 6-7 days
+
+### Phase E — Batch and traceability enhancement
+
+**Goal:** strengthen quality, compliance, and investigation capabilities.
+
+**Scope:**
+
+- `WHS-41`, `WHS-42`
+- `WHS-64`, `WHS-66`
+
+**Deliverables:**
+
+- batch update
+- quarantine / release actions
+- expiring batches query
+- batches by product
+- stock movements by product
+- stock movements by batch
+- forward/backward traceability
+
+**Acceptance criteria:**
+
+- batch lifecycle is consistent with inbound quarantine
+- operations team can trace inventory history without raw DB queries
+
+**Suggested effort:** 4-5 days
+
+### Phase F — Reporting and residual auth
+
+**Goal:** complete read-heavy and platform-completeness features.
+
+**Scope:**
+
+- `WHS-67`, `WHS-68`, `WHS-69`
+- `WHS-29`, `WHS-30`
+
+**Deliverables:**
+
+- reporting controller and report request model
+- on-demand reports
+- async reporting workflow
+- scheduled reporting
+- auth verify-email and resend-verification
+
+**Acceptance criteria:**
+
+- no reporting endpoint introduced before read paths are indexed and paginated appropriately
+- auth flow complete for registration lifecycle
+
+**Suggested effort:** 6-8 days
+
+## 6. Recommended PR slicing
+
+### For each API slice
+
+- controller
+- DTOs
+- service interface
+- service implementation
+- repository changes if needed
+- tests
+- doc update
+
+### For each business-transaction slice
+
+- lock/validation helpers first
+- mutation logic second
+- stock movement and side effects third
+- tests last before review
+
+## 7. High-risk checkpoints
+
+These must be reviewed explicitly before merging:
+
+- inventory mutation under concurrency
+- reserve/decrease consistency
+- PO / receipt / shipment lifecycle transitions
+- quarantine availability exclusion
+- batch-to-product ownership validation
+- location-to-warehouse ownership validation
+
+## 8. Definition of done for the next phase
+
+Phase A is considered done only when:
+
+- `InboundReceiptLinesController` is no longer shell-only
+- line CRUD is fully implemented
+- inbound integration tests exist for confirm transaction
+- docs remain aligned with actual endpoints
+- no open blocker remains on current inbound confirm behavior

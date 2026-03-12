@@ -58,6 +58,7 @@ public class BatchMapper {
         if ( request.getNotes() != null) {
             batch.setNotes(request.getNotes());
         }
+
     }
 
     /**

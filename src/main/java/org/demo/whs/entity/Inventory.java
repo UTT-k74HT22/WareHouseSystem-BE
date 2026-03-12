@@ -58,6 +58,7 @@ import java.time.LocalDateTime;
                                 @ColumnResult(name = "batchId", type = String.class),
                                 @ColumnResult(name = "batchNumber", type = String.class),
                                 @ColumnResult(name = "onHandQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "quarantineQuantity", type = BigDecimal.class),
                                 @ColumnResult(name = "reservedQuantity", type = BigDecimal.class)
                         }
                 )
@@ -98,6 +99,10 @@ public class Inventory extends BaseEntity {
     private BigDecimal onHandQuantity = BigDecimal.ZERO;
 
     @Builder.Default
+    @Column(name = "quarantine_quantity", nullable = false, precision = 15, scale = 2)
+    private BigDecimal quarantineQuantity = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "reserved_quantity", nullable = false, precision = 15, scale = 2)
     private BigDecimal reservedQuantity = BigDecimal.ZERO;
 
@@ -109,6 +114,6 @@ public class Inventory extends BaseEntity {
     private LocalDateTime lastMovementAt;
 
     public BigDecimal getAvailableQuantity() {
-        return onHandQuantity.subtract(reservedQuantity);
+        return onHandQuantity.subtract(quarantineQuantity).subtract(reservedQuantity);
     }
 }

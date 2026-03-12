@@ -26,5 +26,6 @@ public class InventoryLocationProjection {
     private String batchNumber;
 
     private BigDecimal onHandQuantity;
+    private BigDecimal quarantineQuantity;
     private BigDecimal reservedQuantity;
 }

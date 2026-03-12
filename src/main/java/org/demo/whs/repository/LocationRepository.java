@@ -28,6 +28,15 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
     boolean existsByWarehouseIdAndCode(String warehouseId, String code);
 
     /**
+     * Finds a location by warehouse ID.
+     *
+     * @param warehouseId the warehouse ID
+     * @return Optional containing the location if found
+     */
+    @Query("SELECT l FROM Locations l WHERE l.warehouseId = :warehouseId")
+    Optional<Locations> findByWarehouseId(String warehouseId);
+
+    /**
      * Checks if a location code exists within a specific warehouse, excluding a specific location ID.
      * Used for update validation.
      *

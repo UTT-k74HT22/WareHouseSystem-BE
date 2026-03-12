@@ -182,4 +182,17 @@ public class InboundReceiptsController {
         return ResponseEntity.ok(BaseResponse.success(null));
     }
 
+    /**
+     * Confirm an inbound receipt by its ID.
+     *
+     * @param id the ID of the inbound receipt to be confirmed
+     * @return the response containing the details of the confirmed inbound receipt
+     */
+    @Operation(summary = "Confirm inbound receipt")
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<BaseResponse<InboundReceiptsResponse>> confirm(@PathVariable String id) {
+        log.info("Confirm inbound receipt, id={}", id);
+        InboundReceiptsResponse response = inboundReceiptsService.confirm(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
 }

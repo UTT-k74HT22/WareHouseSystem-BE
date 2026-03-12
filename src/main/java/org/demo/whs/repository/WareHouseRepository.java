@@ -1,5 +1,6 @@
 package org.demo.whs.repository;
 
+import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.data.domain.Page;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository interface for Warehouses entity.
