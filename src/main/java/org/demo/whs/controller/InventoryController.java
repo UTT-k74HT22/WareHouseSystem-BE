@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
@@ -116,5 +117,18 @@ public class InventoryController {
     public ResponseEntity<BaseResponse<InventoryUnreserveResponse>> unreserve(
             @Valid @RequestBody InventoryUnreserveRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.unreserve(request)));
+    }
+
+    /**
+     * Increase inventory on-hand quantity.
+     *
+     * @param request The increase request
+     * @return Updated inventory data
+     */
+    @PostMapping("/increase")
+    @Operation(summary = "Increase inventory", description = "Increase on-hand stock from inbound or adjustment")
+    public ResponseEntity<BaseResponse<InventoryResponse>> increase(
+            @Valid @RequestBody InventoryIncreaseRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.increase(request)));
     }
 }
