@@ -4,9 +4,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,24 +37,50 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BatchServiceImpl implements BatchService {
 
+    private final ProductRepository productRepository;
     private final BatchRepository batchRepository;
     private final BatchMapper batchMapper;
 
     @Override
     @Transactional
-    public BatchResponse createBatch (CreateBatchRequest request) {
+    public BatchResponse createBatch(CreateBatchRequest request) {
 
-        if (batchRepository.existsByBatchNumber(request.getBatchNumber())) {
-            log.info("Create batch already exists for batch number: {}", request.getBatchNumber());
-            throw new BadRequestException(ErrorCode.BATCH_001);
+        Products product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
+
+        if (!product.getRequiresBatchTracking()) {
+            throw new BadRequestException(ErrorCode.BATCH_009);
         }
 
-        Batch batch = batchMapper.toEntity(request);
+        if (batchRepository.existsByProductIdAndBatchNumber(
+                request.getProductId(),
+                request.getBatchNumber())) {
 
-        Batch batchSave =  batchRepository.save(batch);
-        log.info("Batch created successfully with ID={}", batch.getId());
+            log.warn("Batch already exists: productId={}, batchNumber={}",
+                    request.getProductId(), request.getBatchNumber());
 
-        return batchMapper.toResponse(batchSave);
+            throw new BadRequestException(ErrorCode.BATCH_002);
+        }
+
+        if (request.getManufacturingDate() != null &&
+                request.getManufacturingDate().isAfter(LocalDate.now())) {
+            throw new BadRequestException(ErrorCode.BATCH_005);
+        }
+
+        if (request.getManufacturingDate() != null &&
+                request.getExpiryDate() != null &&
+                request.getExpiryDate().isBefore(request.getManufacturingDate())) {
+            throw new BadRequestException(ErrorCode.BATCH_006);
+        }
+
+        Batch batch = batchMapper.createEntity(request);
+        batch.setStatus(BatchStatus.AVAILABLE);
+
+        Batch savedBatch = batchRepository.save(batch);
+
+        log.info("Batch created successfully with ID={}", savedBatch.getId());
+
+        return batchMapper.toResponse(savedBatch);
     }
 
     @Override

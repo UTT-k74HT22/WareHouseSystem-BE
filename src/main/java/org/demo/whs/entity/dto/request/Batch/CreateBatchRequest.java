@@ -15,6 +15,7 @@ import java.time.LocalDate;
 /**
  * Request DTO for creating a new batch.
  */
+@Setter
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateBatchRequest {
