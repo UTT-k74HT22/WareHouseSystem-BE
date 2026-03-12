@@ -1,21 +1,15 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.*;
+import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
-import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
-import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
-import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.enums.InventoryReservationStatus;
 import org.demo.whs.entity.enums.ReferenceType;
-import org.demo.whs.entity.enums.StockMovementsType;
-import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
-import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
@@ -26,12 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
