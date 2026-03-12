@@ -277,7 +277,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
             Products product = validateProductForReceiptLine(receiptLine);
             validateLocationForReceiptLine(receipt, receiptLine);
             validateQualityRules(receiptLine);
-            resolveBatchForReceiptLine(receiptLine, product);
+            resolveBatchForReceiptLine(receiptLine, product, actorId);
 
             // Step 5.3: Increase inventory and write stock movement
             InventorySnapshot inventorySnapshot = increaseInventoryForReceiptLine(receipt, receiptLine, actorId, now);
@@ -453,7 +453,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         }
     }
 
-    private Batch resolveBatchForReceiptLine(InboundReceiptLines receiptLine, Products product) {
+    private Batch resolveBatchForReceiptLine(InboundReceiptLines receiptLine, Products product, String actorId) {
         if (!Boolean.TRUE.equals(product.getRequiresBatchTracking())) {
             return null;
         }
@@ -470,6 +470,23 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
 
         if (!Objects.equals(batch.getProductId(), receiptLine.getProductId())) {
             throw new BadRequestException("Batch does not belong to receipt line product", ErrorCode.COM_001);
+        }
+
+        if (receiptLine.getQualityStatus() == QualityStatus.QUARANTINE) {
+            if (batch.getStatus() == BatchStatus.EXPIRED || batch.getStatus() == BatchStatus.RECALLED) {
+                throw new BadRequestException(
+                        "Batch cannot receive quarantine stock. Current status: " + batch.getStatus(),
+                        ErrorCode.BATCH_012
+                );
+            }
+
+            if (batch.getStatus() != BatchStatus.QUARANTINE) {
+                batch.setStatus(BatchStatus.QUARANTINE);
+                batch.setUpdatedBy(actorId);
+                batch = batchRepository.save(batch);
+            }
+
+            return batch;
         }
 
         if (batch.getStatus() != BatchStatus.AVAILABLE) {
@@ -497,26 +514,21 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                 receiptLine.getBatchId()
         ).orElseGet(() -> createOrReloadInventory(receipt, receiptLine, actorId));
 
+        BigDecimal onHandBefore = zeroIfNull(inventory.getOnHandQuantity());
+        BigDecimal onHandAfter = onHandBefore.add(receiptLine.getQuantityReceived());
+        inventory.setOnHandQuantity(onHandAfter);
+
         if (isQuarantine) {
             BigDecimal quarantineBefore = zeroIfNull(inventory.getQuarantineQuantity());
             BigDecimal quarantineAfter = quarantineBefore.add(receiptLine.getQuantityReceived());
             inventory.setQuarantineQuantity(quarantineAfter);
-        } else {
-            BigDecimal quantityBefore = zeroIfNull(inventory.getOnHandQuantity());
-            BigDecimal quantityAfter = quantityBefore.add(receiptLine.getQuantityReceived());
-            inventory.setOnHandQuantity(quantityAfter);
         }
 
         inventory.setUpdatedBy(actorId);
         inventory.setLastMovementAt(now);
         Inventory savedInventory = inventoryRepository.save(inventory);
 
-        BigDecimal before = isQuarantine
-                ? zeroIfNull(inventory.getQuarantineQuantity()).subtract(receiptLine.getQuantityReceived())
-                : zeroIfNull(inventory.getOnHandQuantity()).subtract(receiptLine.getQuantityReceived());
-        return new InventorySnapshot(savedInventory, before, isQuarantine
-                ? inventory.getQuarantineQuantity()
-                : inventory.getOnHandQuantity());
+        return new InventorySnapshot(savedInventory, onHandBefore, onHandAfter);
     }
 
     private Inventory createOrReloadInventory(InboundReceipts receipt, InboundReceiptLines receiptLine, String actorId) {
@@ -527,6 +539,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                     .locationId(receiptLine.getLocationId())
                     .batchId(receiptLine.getBatchId())
                     .onHandQuantity(BigDecimal.ZERO)
+                    .quarantineQuantity(BigDecimal.ZERO)
                     .reservedQuantity(BigDecimal.ZERO)
                     .version(0)
                     .build();

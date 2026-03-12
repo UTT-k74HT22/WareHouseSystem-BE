@@ -173,6 +173,7 @@ public class InventoryServiceImpl implements InventoryService {
             );
 
             BigDecimal onHand = p.getOnHandQuantity() != null ? p.getOnHandQuantity() : BigDecimal.ZERO;
+            BigDecimal quarantine = p.getQuarantineQuantity() != null ? p.getQuarantineQuantity() : BigDecimal.ZERO;
             BigDecimal reserved = p.getReservedQuantity() != null ? p.getReservedQuantity() : BigDecimal.ZERO;
 
             locationResponse.getItems().add(
@@ -184,7 +185,7 @@ public class InventoryServiceImpl implements InventoryService {
                     .batchNumber(p.getBatchNumber())
                     .onHandQuantity(onHand)
                     .reservedQuantity(reserved)
-                    .availableQuantity(onHand.subtract(reserved))
+                    .availableQuantity(onHand.subtract(quarantine).subtract(reserved))
                     .build()
             );
         }

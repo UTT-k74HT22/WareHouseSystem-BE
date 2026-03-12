@@ -62,7 +62,7 @@ public interface InventoryRepository extends
         AND i.warehouseId = :warehouseId
         AND (:locationId IS NULL OR i.locationId = :locationId)
         AND (:batchId IS NULL OR i.batchId = :batchId)
-        ORDER BY (i.onHandQuantity - i.reservedQuantity) DESC
+        ORDER BY (i.onHandQuantity - i.quarantineQuantity - i.reservedQuantity) DESC
     """)
     List<Inventory> findAllSuitableForUpdate(
             @Param("productId") String productId,
@@ -82,8 +82,8 @@ public interface InventoryRepository extends
         AND i.warehouse_id = :warehouseId
         AND (:locationId IS NULL OR i.location_id = :locationId)
         AND (:batchId IS NULL OR i.batch_id = :batchId)
-        AND (i.on_hand_quantity - i.reserved_quantity) >= :requestedQuantity
-        ORDER BY (i.on_hand_quantity - i.reserved_quantity) DESC
+        AND (i.on_hand_quantity - COALESCE(i.quarantine_quantity, 0) - i.reserved_quantity) >= :requestedQuantity
+        ORDER BY (i.on_hand_quantity - COALESCE(i.quarantine_quantity, 0) - i.reserved_quantity) DESC
         LIMIT 1
         FOR UPDATE
     """, nativeQuery = true)
@@ -99,7 +99,7 @@ public interface InventoryRepository extends
         SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
         FROM Inventory i
         WHERE i.warehouseId = :warehouseId
-            AND (i.onHandQuantity > 0 OR i.reservedQuantity > 0)
+            AND (i.onHandQuantity > 0 OR i.quarantineQuantity > 0 OR i.reservedQuantity > 0)
         """)
     boolean existsActiveInventoryByWarehouseId(@Param("warehouseId") String warehouseId);
 

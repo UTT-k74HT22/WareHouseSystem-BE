@@ -199,6 +199,26 @@ class StockTransfersServiceImplTest {
     }
 
     @Test
+    void should_ThrowBadRequest_When_CompleteTransferWithQuarantineReducingAvailableStock() {
+        StockTransfers transfer = buildDraftTransfer("trf-quarantine", "loc-1", "loc-2", "10.00");
+
+        Inventory sourceInventory = buildInventory("loc-1", "15.00", "0.00");
+        sourceInventory.setQuarantineQuantity(new BigDecimal("8.00"));
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-quarantine")).thenReturn(Optional.of(transfer));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
+                .thenReturn(Optional.of(sourceInventory));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-2", "batch-1"))
+                .thenReturn(Optional.of(buildInventory("loc-2", "0.00", "0.00")));
+
+        assertThatThrownBy(() -> stockTransfersService.complete("trf-quarantine"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INV_004");
+
+        verify(stockMovementsRepository, never()).save(any(StockMovements.class));
+    }
+
+    @Test
     void should_ThrowBadRequest_When_CompleteTransferWithNonPositiveQuantity() {
         StockTransfers transfer = buildDraftTransfer("trf-qty", "loc-1", "loc-2", "0.00");
 

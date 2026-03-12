@@ -58,6 +58,7 @@ import java.time.LocalDateTime;
                                 @ColumnResult(name = "batchId", type = String.class),
                                 @ColumnResult(name = "batchNumber", type = String.class),
                                 @ColumnResult(name = "onHandQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "quarantineQuantity", type = BigDecimal.class),
                                 @ColumnResult(name = "reservedQuantity", type = BigDecimal.class)
                         }
                 )
