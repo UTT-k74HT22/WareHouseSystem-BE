@@ -3,13 +3,17 @@ package org.demo.whs.service.impl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -26,7 +30,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +44,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BatchServiceImpl implements BatchService {
 
+    private final AccountRepository accountRepository;
+    private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
     private final BatchRepository batchRepository;
     private final BatchMapper batchMapper;
@@ -160,5 +168,79 @@ public class BatchServiceImpl implements BatchService {
         Batch updateBatch = batchRepository.save(batch);
 
         return batchMapper.toResponse(updateBatch);
+    }
+
+    @Override
+    @Transactional
+    public BatchResponse quarantineBatch(String id) {
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
+
+        validateQuarantine(batch);
+
+        Account currentUser = getCurrentUser();
+
+        batch.setStatus(BatchStatus.QUARANTINE);
+
+        setAuditFieldsForUpdate(batch, currentUser);
+
+        Batch saveBatch = batchRepository.save(batch);
+
+        log.info("Batch {} moved to QUARANTINE by user {}",
+                batch.getBatchNumber(), currentUser.getUsername());
+
+        return batchMapper.toResponse(saveBatch);
+
+    }
+
+    /**
+     * Validate business rules for quarantine
+     */
+    private void validateQuarantine(Batch batch) {
+
+        if (batch.getStatus() == BatchStatus.QUARANTINE) {
+            throw new BadRequestException(ErrorCode.BATCH_013);
+        }
+
+        if (batch.getStatus() == BatchStatus.EXPIRED) {
+            throw new BadRequestException(ErrorCode.BATCH_004);
+        }
+
+        if (batch.getStatus() == BatchStatus.RECALLED) {
+            throw new BadRequestException(ErrorCode.BATCH_014);
+        }
+
+        if (batch.getStatus() != BatchStatus.AVAILABLE) {
+            throw new BadRequestException(ErrorCode.BATCH_015);
+        }
+
+        boolean hasReservedStock =
+                inventoryRepository.existsReservedStockByBatchId(batch.getId());
+
+        if (hasReservedStock) {
+            throw new BadRequestException(ErrorCode.BATCH_007);
+        }
+    }
+
+    /**
+     * Set audit fields when updating batch
+     */
+    private void setAuditFieldsForUpdate(Batch batch, Account user) {
+        batch.setUpdatedBy(user.getId());
+        batch.setUpdatedAt(LocalDateTime.now());
+    }
+
+    /**
+     * Get current authenticated user
+     */
+    private Account getCurrentUser() {
+
+        String username = SecurityUtils.getCurrentUsername();
+
+        return accountRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.error("No authenticated user found with username: {}", username);
+                    return new BadRequestException(ErrorCode.AUTH_002);
+                });
     }
 }

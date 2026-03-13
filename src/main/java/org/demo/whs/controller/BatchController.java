@@ -80,4 +80,11 @@ public class BatchController {
                 BaseResponse.success(response, "Batch updated successfully")
         );
     }
+
+    @PutMapping("/{id}/quarantine")
+    public ResponseEntity<BatchResponse> quarantineBatch(
+            @PathVariable String id) {
+        BatchResponse response = batchService.quarantineBatch(id);
+        return ResponseEntity.ok(response);
+    }
 }

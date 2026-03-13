@@ -109,4 +109,12 @@ public interface InventoryRepository extends
      */
     @Query(value = "SELECT i FROM Inventory i WHERE i.productId = :productId AND i.warehouseId = :warehouseId AND i.locationId = :locationId AND i.batchId = :batchId")
     Optional<Object> findByProductIdAndWarehouseIdAndLocationIdAndBatchId(String productId, String warehouseId, String locationId, String batchId);
+
+    @Query("""
+           SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+           FROM Inventory i
+           WHERE i.batchId = :batchId
+           AND i.reservedQuantity > 0
+           """)
+    boolean existsReservedStockByBatchId(String batchId);
 }

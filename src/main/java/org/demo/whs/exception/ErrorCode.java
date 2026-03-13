@@ -148,6 +148,9 @@ public enum ErrorCode {
     BATCH_010("BATCH_010", "Batch cannot change product once created"),
     BATCH_011("BATCH_011", "Batch status cannot be updated through this endpoint"),
     BATCH_012("BATCH_012", "Batch is not available for stock operations"),
+    BATCH_013("BATCH_013", "Batch is already quarantined"),
+    BATCH_014("BATCH_014", "Recalled batch cannot be quarantined"),
+    BATCH_015("BATCH_015", "Only AVAILABLE batch can be quarantined"),
 
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),

@@ -1,5 +1,6 @@
 package org.demo.whs.service.impl;
 
+import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
@@ -9,8 +10,11 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.BatchMapper;
+import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
+import org.demo.whs.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +43,12 @@ class BatchServiceImplTest {
 
     @InjectMocks
     private BatchServiceImpl batchService;
+
+    @Mock
+    private InventoryRepository inventoryRepository;
+
+    @Mock
+    private AccountRepository accountRepository;
 
         @Test
         void createBatch_success() {
@@ -124,7 +134,7 @@ class BatchServiceImplTest {
 
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining(ErrorCode.BATCH_001.getMessage());
+                .hasMessageContaining(ErrorCode.BATCH_002.getMessage());
     }
 
     @Test
@@ -170,5 +180,87 @@ class BatchServiceImplTest {
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining(ErrorCode.BATCH_006.getMessage());
+    }
+
+    @Test
+    void quarantineBatch_success() {
+
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setBatchNumber("BATCH_01");
+        batch.setStatus(BatchStatus.AVAILABLE);
+
+        Account account = new Account();
+        account.setId("A1");
+        account.setUsername("admin");
+
+        BatchResponse response = BatchResponse.builder()
+                .id("B1")
+                .build();
+
+        when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
+        when(inventoryRepository.existsReservedStockByBatchId("B1")).thenReturn(false);
+
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+
+            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+
+            when(accountRepository.findByUsername("admin"))
+                    .thenReturn(Optional.of(account));
+
+            when(batchRepository.save(batch)).thenReturn(batch);
+            when(batchMapper.toResponse(batch)).thenReturn(response);
+
+            BatchResponse result = batchService.quarantineBatch("B1");
+
+            assertThat(result).isNotNull();
+            assertThat(batch.getStatus()).isEqualTo(BatchStatus.QUARANTINE);
+
+            verify(batchRepository).save(batch);
+        }
+    }
+
+    @Test
+    void quarantineBatch_batchNotFound() {
+
+        when(batchRepository.findById("B1"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> batchService.quarantineBatch("B1"))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining(ErrorCode.BATCH_001.getMessage());
+    }
+
+    @Test
+    void quarantineBatch_alreadyQuarantine() {
+
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setStatus(BatchStatus.QUARANTINE);
+
+        when(batchRepository.findById("B1"))
+                .thenReturn(Optional.of(batch));
+
+        assertThatThrownBy(() -> batchService.quarantineBatch("B1"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining(ErrorCode.BATCH_013.getMessage());
+    }
+
+    @Test
+    void quarantineBatch_hasReservedStock() {
+
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setStatus(BatchStatus.AVAILABLE);
+
+        when(batchRepository.findById("B1"))
+                .thenReturn(Optional.of(batch));
+
+        when(inventoryRepository.existsReservedStockByBatchId("B1"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> batchService.quarantineBatch("B1"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining(ErrorCode.BATCH_007.getMessage());
     }
 }
