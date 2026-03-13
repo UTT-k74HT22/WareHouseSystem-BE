@@ -9,7 +9,7 @@ Database migration sẽ tự động chạy khi start application (Flyway).
 mvn flyway:info
 
 # Migration file đã được tạo:
-# V20260125_01__Create_email_logs_table.sql
+# V20260313_03__Create_email_logs_table.sql
 ```
 
 ## Bước 2: Cấu hình Email

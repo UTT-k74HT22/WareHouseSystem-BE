@@ -24,4 +24,6 @@ public interface BatchService {
     BatchResponse updateBatch(String id, UpdateBatchRequest request);
 
     BatchResponse quarantineBatch(String id);
+
+    BatchResponse releaseBatch(String id);
 }

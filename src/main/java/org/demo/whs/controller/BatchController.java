@@ -87,4 +87,12 @@ public class BatchController {
         BatchResponse response = batchService.quarantineBatch(id);
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/{id}/release")
+    public ResponseEntity<BatchResponse> releaseBatch(
+            @PathVariable String id
+    ) {
+        BatchResponse response = batchService.releaseBatch(id);
+        return ResponseEntity.ok(response);
+    }
 }

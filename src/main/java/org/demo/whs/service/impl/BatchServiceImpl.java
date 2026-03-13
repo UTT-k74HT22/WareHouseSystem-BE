@@ -193,6 +193,26 @@ public class BatchServiceImpl implements BatchService {
 
     }
 
+    @Override
+    @Transactional
+    public BatchResponse releaseBatch(String id) {
+
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
+
+        validateRelease(batch);
+
+        Account user = getCurrentUser();
+
+        batch.setStatus(BatchStatus.AVAILABLE);
+
+        setAuditFieldsForUpdate(batch, user);
+
+        Batch savedBatch = batchRepository.save(batch);
+
+        return batchMapper.toResponse(savedBatch);
+    }
+
     /**
      * Validate business rules for quarantine
      */
@@ -219,6 +239,26 @@ public class BatchServiceImpl implements BatchService {
 
         if (hasReservedStock) {
             throw new BadRequestException(ErrorCode.BATCH_007);
+        }
+    }
+
+    /**
+     * Validate business rules for release
+     */
+    private void validateRelease(Batch batch) {
+
+        if (batch.getStatus() == BatchStatus.RECALLED) {
+            throw new BadRequestException(ErrorCode.BATCH_018);
+        }
+
+        if (batch.getStatus() != BatchStatus.QUARANTINE) {
+            throw new BadRequestException(ErrorCode.BATCH_016);
+        }
+
+        if (batch.getExpiryDate() != null &&
+                batch.getExpiryDate().isBefore(LocalDate.now())) {
+
+            throw new BadRequestException(ErrorCode.BATCH_017);
         }
     }
 

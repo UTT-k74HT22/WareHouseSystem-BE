@@ -151,6 +151,9 @@ public enum ErrorCode {
     BATCH_013("BATCH_013", "Batch is already quarantined"),
     BATCH_014("BATCH_014", "Recalled batch cannot be quarantined"),
     BATCH_015("BATCH_015", "Only AVAILABLE batch can be quarantined"),
+    BATCH_016("BATCH_016", "Batch cannot be released because it is not in quarantine"),
+    BATCH_017("BATCH_017", "Batch cannot be released because it is expired"),
+    BATCH_018("BATCH_018", "Recalled batch cannot be released"),
 
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
