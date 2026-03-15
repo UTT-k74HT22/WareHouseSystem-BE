@@ -408,6 +408,70 @@ class InboundReceiptsServiceImplTest {
     }
 
     @Test
+    @DisplayName("should_ThrowBadRequest_When_AnotherReceiptWasConfirmedFirstAndReducedRemainingQuantity")
+    void should_ThrowBadRequest_When_AnotherReceiptWasConfirmedFirstAndReducedRemainingQuantity() {
+        InboundReceipts receipt = draftReceipt();
+        InboundReceiptLines receiptLine = receiptLine(QualityStatus.PASS, new BigDecimal("60.00"), null, null);
+        PurchaseOrders purchaseOrder = purchaseOrder(PurchaseOrdersStatus.PARTIALLY_RECEIVED, "wh-1");
+        PurchaseOrderLines poLine = purchaseOrderLine(new BigDecimal("100.00"), new BigDecimal("70.00"));
+        Products product = product(false, ProductStatus.ACTIVE);
+        Locations location = location("wh-1", LocationStatus.ACTIVE);
+
+        mockActor();
+        when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
+        when(inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc("receipt-1"))
+                .thenReturn(List.of(receiptLine));
+        when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
+        when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
+        lenient().when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
+        lenient().when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
+
+        assertThrows(BadRequestException.class, () -> inboundReceiptsService.confirm("receipt-1"));
+        verifyNoInteractions(inventoryRepository, stockMovementsRepository);
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_MultipleLinesForSamePurchaseOrderLineExceedRemainingDuringConfirm")
+    void should_ThrowBadRequest_When_MultipleLinesForSamePurchaseOrderLineExceedRemainingDuringConfirm() {
+        InboundReceipts receipt = draftReceipt();
+        InboundReceiptLines firstLine = receiptLine(QualityStatus.PASS, new BigDecimal("30.00"), null, null);
+        InboundReceiptLines secondLine = InboundReceiptLines.builder()
+                .inboundReceiptId("receipt-1")
+                .purchaseOrderLineId("pol-1")
+                .productId("prod-1")
+                .locationId("loc-1")
+                .lineNumber(2)
+                .quantityReceived(new BigDecimal("35.00"))
+                .qualityStatus(QualityStatus.PASS)
+                .build();
+        secondLine.setId("line-2");
+
+        PurchaseOrders purchaseOrder = purchaseOrder(PurchaseOrdersStatus.CONFIRMED, "wh-1");
+        PurchaseOrderLines poLine = purchaseOrderLine(new BigDecimal("100.00"), new BigDecimal("40.00"));
+        Products product = product(false, ProductStatus.ACTIVE);
+        Locations location = location("wh-1", LocationStatus.ACTIVE);
+        Inventory inventory = inventory(null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+
+        mockActor();
+        when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
+        when(inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc("receipt-1"))
+                .thenReturn(List.of(firstLine, secondLine));
+        when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
+        when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", null))
+                .thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new StockMovements());
+
+        assertThrows(BadRequestException.class, () -> inboundReceiptsService.confirm("receipt-1"));
+        verify(purchaseOrderLinesRepository, never()).saveAll(anyList());
+        verify(inboundReceiptsRepository, never()).save(any(InboundReceipts.class));
+    }
+
+    @Test
     @DisplayName("should_ThrowBadRequest_When_QuarantineLineMissingNotes")
     void should_ThrowBadRequest_When_QuarantineLineMissingNotes() {
         InboundReceipts receipt = draftReceipt();
