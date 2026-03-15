@@ -7,12 +7,13 @@ import lombok.Getter;
 import lombok.Setter;
 import org.demo.whs.entity.enums.BatchStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class BatchResponse {
 
@@ -24,6 +25,10 @@ public class BatchResponse {
     private String supplierBatchNumber;
     private String notes;
     private BatchStatus status;
+    private BigDecimal totalOnHandQuantity;
+    private BigDecimal totalQuarantineQuantity;
+    private BigDecimal totalReservedQuantity;
+    private BigDecimal totalAvailableQuantity;
     private String createdBy;
     private LocalDateTime createdAt;
     private String updatedBy;

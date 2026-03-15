@@ -12,6 +12,7 @@ import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.SearchBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
@@ -20,7 +21,9 @@ import org.demo.whs.entity.dto.response.Batch.BatchFifoRecommendationResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchTraceabilityResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.service.BatchService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RequestMapping("/api/v1/batches")
@@ -71,13 +75,35 @@ public class BatchController {
     }
 
     @GetMapping
-    @Operation(summary = "List batches", description = "List batches with pagination")
+    @Operation(summary = "List batches", description = "List batches with business filters and pagination")
     public ResponseEntity<BaseResponse<PageResponse<BatchResponse>>> getAllBatches(
-            @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size) {
-        log.info("Fetching all batches - page: {}, size: {}", page, size);
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "product_id", required = false) String productId,
+            @RequestParam(name = "warehouse_id", required = false) String warehouseId,
+            @RequestParam(name = "status", required = false) BatchStatus status,
+            @RequestParam(name = "manufacturing_date_from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate manufacturingDateFrom,
+            @RequestParam(name = "manufacturing_date_to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate manufacturingDateTo,
+            @RequestParam(name = "expiry_date_from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiryDateFrom,
+            @RequestParam(name = "expiry_date_to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiryDateTo,
+            @RequestParam(name = "page", defaultValue = "0") @Min(0) Integer page,
+            @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) Integer size) {
+        SearchBatchRequest request = buildSearchRequest(
+                keyword,
+                productId,
+                warehouseId,
+                status,
+                manufacturingDateFrom,
+                manufacturingDateTo,
+                expiryDateFrom,
+                expiryDateTo
+        );
+        log.info("Fetching batches with filters - request={}, page={}, size={}", request, page, size);
 
-        PageResponse<BatchResponse> response = batchService.getAllBatches(page, size);
+        PageResponse<BatchResponse> response = batchService.getAllBatches(request, page, size);
         BaseResponse<PageResponse<BatchResponse>> baseResponse = BaseResponse.success(response);
 
         return ResponseEntity.ok(baseResponse);
@@ -158,5 +184,26 @@ public class BatchController {
             @Valid @RequestBody ReleaseBatchRequest request) {
         BatchResponse response = batchService.releaseBatch(id, request);
         return ResponseEntity.ok(BaseResponse.success(response, "Batch released successfully"));
+    }
+
+    private SearchBatchRequest buildSearchRequest(
+            String keyword,
+            String productId,
+            String warehouseId,
+            BatchStatus status,
+            LocalDate manufacturingDateFrom,
+            LocalDate manufacturingDateTo,
+            LocalDate expiryDateFrom,
+            LocalDate expiryDateTo) {
+        SearchBatchRequest request = new SearchBatchRequest();
+        request.setKeyword(keyword);
+        request.setProductId(productId);
+        request.setWarehouseId(warehouseId);
+        request.setStatus(status);
+        request.setManufacturingDateFrom(manufacturingDateFrom);
+        request.setManufacturingDateTo(manufacturingDateTo);
+        request.setExpiryDateFrom(expiryDateFrom);
+        request.setExpiryDateTo(expiryDateTo);
+        return request;
     }
 }

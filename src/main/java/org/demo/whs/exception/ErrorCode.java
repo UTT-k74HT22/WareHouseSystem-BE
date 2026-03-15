@@ -154,6 +154,7 @@ public enum ErrorCode {
     BATCH_016("BATCH_016", "Batch cannot be released because it is not in quarantine"),
     BATCH_017("BATCH_017", "Batch cannot be released because it is expired"),
     BATCH_018("BATCH_018", "Recalled batch cannot be released"),
+    BATCH_019("BATCH_019", "Batch date filter range is invalid"),
 
     // Inbound Receipt Line errors
     IRL_001("IRL_001", "Inbound receipt line not found"),

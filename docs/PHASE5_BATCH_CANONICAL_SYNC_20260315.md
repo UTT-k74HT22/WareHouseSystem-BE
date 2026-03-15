@@ -1,402 +1,175 @@
 # Phase 5 Canonical + Batch Sync Audit
 
 Date: 2026-03-15
-Scope: canonicalize Phase 5 and audit Batch module across code, docs, and Jira
-Status: Working review baseline
+Scope: canonicalize Phase 5 and keep Batch code, docs, and Jira aligned
+Status: refreshed after `WHS-83`, `WHS-41`, `WHS-42`, `WHS-84`, `WHS-86`, and ongoing `WHS-85`
 
 ---
 
 ## 1. Purpose
 
-This document is the canonical reference for two questions that are currently inconsistent across the repository:
+This document is the current source of truth for:
 
-1. What `Phase 5` means in the current implementation baseline
-2. How far `Batch` is actually implemented versus what Jira and documents say
+1. what `Phase 5` means in the Inventory/Inbound roadmap
+2. what `Batch` scope is now considered complete in code
+3. which gaps are still outside `WHS-35` release readiness
 
-This document does not overwrite historical roadmap documents. It defines the current source of truth to sync implementation, Jira, and API inventory.
+This document supersedes earlier Batch sync notes created before the Batch branches were completed.
 
 ---
 
 ## 2. Canonical Decision for Phase 5
 
-## 2.1 Current canonical meaning
-
-As of 2026-03-15, `Phase 5` should be interpreted as:
+As of 2026-03-15, `Phase 5` means:
 
 `Inventory + Inbound hardening after inbound core is already usable`
 
 It is not a single Jira task.
 
-It is a grouped stabilization phase composed from:
+Canonical source precedence remains:
+
+1. `docs/API_INVENTORY_COMPREHENSIVE.md`
+2. `docs/08-api-inventory-implementation-plan.md`
+3. `documents/Inbound/INBOUND_IMPLEMENTATION_ROADMAP_20260309.md`
+4. older planning documents only for historical traceability
+
+Current canonical Phase 5 work items:
 
 - inbound confirm hardening
 - inbound receipt line regression hardening
 - inventory hardening for outbound readiness
 - API and documentation contract sync
 
-## 2.2 Source precedence
+Phase 5 is still not fully closed because Inventory `decrease` remains open.
 
-Use sources in this order when Phase 5 is referenced:
+---
 
-1. `docs/API_INVENTORY_COMPREHENSIVE.md`
-2. `docs/08-api-inventory-implementation-plan.md`
-3. `documents/Inbound/INBOUND_IMPLEMENTATION_ROADMAP_20260309.md`
-4. Older planning documents only for historical traceability
+## 3. Batch Delivery Snapshot
 
-## 2.3 Why the confusion exists
+### 3.1 Jira structure used for Batch
 
-Historical numbering changed between documents:
-
-| Source | Meaning of Phase 5 |
-|---|---|
-| `documents/Inbound/INBOUND_MODULE_REVIEW_AND_PLAN_20260307.md` | `WHS-57` Confirm Receipt |
-| `documents/Inbound/INBOUND_IMPLEMENTATION_ROADMAP_20260309.md` | Hardening |
-| `docs/API_INVENTORY_COMPREHENSIVE.md` | Harden Inventory + Inbound |
-
-Therefore:
-
-- `WHS-57` is the old `Phase 5` in one planning document
-- current canonical `Phase 5` is the hardening phase after `WHS-57` and `WHS-58`
-
-## 2.4 Jira mapping for canonical Phase 5
-
-There is no single Jira issue that fully represents current `Phase 5`.
-
-Use this mapping:
-
-| Canonical work item | Closest Jira scope | Jira status | Sync status |
+| Jira | Summary | Jira status | Code/doc status |
 |---|---|---|---|
-| Inbound confirm core | `WHS-57` | Done | implemented |
-| Inbound receipt lines hardening | `WHS-58` | Done | implemented but still needs regression confidence review |
-| Inventory decrease for outbound readiness | `WHS-17` | In Progress | real open gap |
-| Inventory module parent | `WHS-19` | In Progress | parent only, no hardening subtasks |
-| Hardening docs/auth/tests sync | no dedicated Jira issue found | n/a | missing Jira breakdown |
+| `WHS-35` | Batch API Remaining Completion | In Progress | parent scope still open until Jira sync is done |
+| `WHS-83` | Design Batch API contract + state machine | In Progress | implemented on branch baseline |
+| `WHS-84` | Migration + index plan for Batch query APIs | Done | synced |
+| `WHS-41` | Implement Batch lifecycle APIs | Done | synced |
+| `WHS-42` | Implement Batch traceability APIs | In Progress | code complete, Jira not yet updated |
+| `WHS-86` | Testing plan + coverage for Batch APIs | In Progress | code complete, Jira not yet updated |
+| `WHS-85` | Final review + release readiness | In Progress | current working branch |
 
-## 2.5 Canonical Phase 5 requirements
+### 3.2 Branch and commit baseline
 
-Current Phase 5 scope is:
-
-| Priority | Work item | Canonical requirement |
-|---|---|---|
-| P0 | Inbound integration test hardening | Cover `PO -> receipt -> receipt lines -> confirm`, partial receipt, quarantine, rollback, concurrent confirm risk |
-| P0 | Inbound Receipt Lines regression hardening | Cover split-line, duplicate business dimension, remaining quantity guard, batch and quality validation, draft-only mutation |
-| P1 | Inventory hardening | Finalize `increase` public/internal contract, complete `decrease`, review reserve and unreserve auth + idempotency |
-| P1 | API and doc sync | Align Swagger, error code matrix, request and response examples, and controller contract with real code |
-
-## 2.6 Implementation note
-
-The current codebase already absorbed part of this hardening:
-
-- quarantine is excluded from inventory available quantity
-- reserve path already has idempotency ledger support
-- inbound confirm and receipt line rules already have meaningful unit tests
-
-But the phase is not complete because:
-
-- `decrease` is still missing
-- inbound hardening is not represented as dedicated Jira work
-- contract and review items are still inconsistent across controller, docs, and Jira
-
----
-
-## 3. Batch Canonical Review Frame
-
-Before changing Batch implementation, keep these review anchors locked:
-
-| Item | Canonical value |
-|---|---|
-| Invariant being protected | batch lifecycle must not bypass status rules; batch-tracked product ownership must remain valid; unavailable batches must not re-enter shipping availability incorrectly |
-| State transitions being changed | `AVAILABLE -> QUARANTINE`, `QUARANTINE -> AVAILABLE`, auto/controlled moves to `EXPIRED` or `RECALLED` |
-| Affected aggregate root | `Batch` |
-| Main regression points | invalid transition bypass, reserved stock quarantine, expired batch release, contract mismatch between controller and BA/Jira, missing query APIs for traceability and expiry |
-| Minimal verification strategy | controller tests, service tests for transitions, repository/integration tests for queries, contract review for response envelope and auth |
-
----
-
-## 4. Batch Source of Truth
-
-## 4.1 Business source
-
-Business baseline:
-
-- `documents/Batch/BA_MODULE_03_BATCH_MANAGEMENT.md`
-- `documents/Batch/DB_MODULE_03_BATCH.md`
-
-## 4.2 Jira source
-
-Current Jira structure:
-
-| Jira | Summary | Status |
-|---|---|---|
-| `WHS-35` | Batch API Remaining Completion | In Progress |
-| `WHS-83` | Design Batch API contract + state machine | To Do |
-| `WHS-84` | Migration + index plan for Batch query APIs | To Do |
-| `WHS-41` | Implement Batch lifecycle APIs | To Do |
-| `WHS-42` | Implement Batch traceability APIs | To Do |
-| `WHS-86` | Testing plan + coverage for Batch APIs | To Do |
-| `WHS-85` | Final review + release readiness | To Do |
-
-Important consequence:
-
-`WHS-41` is still `To Do`, but the codebase already contains partial lifecycle implementation. Jira is not synchronized with real code state.
-
----
-
-## 5. Batch API Inventory: Canonical Expectation
-
-## 5.1 Business and Jira expected APIs
-
-If business doc plus Jira are treated as the target state, Batch has `11` APIs, not `10`.
-
-| # | Method | Endpoint | Expected source |
+| Task | Branch | Commit | Result |
 |---|---|---|---|
-| 1 | `POST` | `/api/v1/batches` | implemented core CRUD |
-| 2 | `GET` | `/api/v1/batches` | implemented core CRUD |
-| 3 | `GET` | `/api/v1/batches/{id}` | implemented core CRUD |
-| 4 | `PUT` | `/api/v1/batches/{id}` | lifecycle scope |
-| 5 | `PATCH` or controlled alternative | `/api/v1/batches/{id}/status` | present in code and API inventory, but not clearly governed in Jira scope |
-| 6 | `PUT` | `/api/v1/batches/{id}/quarantine` | lifecycle scope |
-| 7 | `PUT` | `/api/v1/batches/{id}/release` | lifecycle scope |
-| 8 | `GET` | `/api/v1/batches/{id}/traceability` | `WHS-42` |
-| 9 | `GET` | `/api/v1/batches/expiring` | `WHS-42` |
-| 10 | `GET` | `/api/v1/batches/fifo-recommendations` | `WHS-42` and BA |
-| 11 | `GET` | `/api/v1/batches/by-product/{productId}` | `WHS-42` |
+| `WHS-83` | `feature/dunghd/WHS-83` | `3c75094` | contract + state machine locked |
+| `WHS-41` | `feature/dunghd/WHS-41` | `9b613ac` | lifecycle APIs hardened |
+| `WHS-42` | `feature/dunghd/WHS-42` | `1410afd` | traceability/expiring/FIFO/by-product implemented |
+| `WHS-84` | `feature/dunghd/WHS-84` | `32bba69` | migration + index plan added |
+| `WHS-86` | `feature/dunghd/WHS-86` | `993b58c` | controller/service/repository coverage added |
+| `WHS-85` | `feature/dunghd/WHS-85` | working tree | final review + doc sync + filtered list hardening |
 
-## 5.2 Current mismatch with API inventory doc
+Important sync note:
 
-`docs/API_INVENTORY_COMPREHENSIVE.md` currently counts Batch as `7/10` and does not include `GET /api/v1/batches/fifo-recommendations`.
-
-Canonical correction:
-
-- if Batch follows BA and Jira target state, module target size is `11`
-- if FIFO is intentionally moved out of Batch scope later, that decision must be written explicitly in Jira and docs
-
-Until that decision exists, treat FIFO recommendation as an open Batch API gap.
+Jira still understates actual completion for `WHS-42` and `WHS-86`. Manual Jira update is still required.
 
 ---
 
-## 6. Batch Code Reality Check
+## 4. Batch API Scope: Canonical Target State
 
-## 6.1 What is implemented in code
+Batch target size is `11` APIs.
 
-Implemented endpoints found in code:
-
-- `POST /api/v1/batches`
-- `GET /api/v1/batches`
-- `GET /api/v1/batches/{id}`
-- `PUT /api/v1/batches/{id}`
-- `PATCH /api/v1/batches/{id}/status`
-- `PUT /api/v1/batches/{id}/quarantine`
-- `PUT /api/v1/batches/{id}/release`
-
-Implemented business validations found in service:
-
-- product must support batch tracking on create
-- unique `(product_id, batch_number)`
-- manufacturing date cannot be future
-- expiry date must be after manufacturing date
-- quarantine blocks reserved stock
-- quarantine blocks already quarantined, recalled, expired, and non-available states
-- release only allowed from `QUARANTINE`
-- release blocks recalled and expired batches
-
-## 6.2 What is not implemented in code
-
-Missing endpoints:
-
-- `GET /api/v1/batches/{id}/traceability`
-- `GET /api/v1/batches/expiring`
-- `GET /api/v1/batches/fifo-recommendations`
-- `GET /api/v1/batches/by-product/{productId}`
-
-Missing delivery quality:
-
-- no Batch controller test found
-- no Batch integration test found
-- no Swagger annotations found on `BatchController`
-- no method-level authorization found on `BatchController`
-
----
-
-## 7. Batch Sync Gaps by Capability
-
-| Capability | Code state | Business/Jira sync | Canonical verdict |
+| # | Method | Endpoint | Current state |
 |---|---|---|---|
-| Create batch | implemented | partial mismatch | keep implemented, fix request contract and auth/doc/test gaps |
-| Get batch by id | implemented | mostly aligned | needs auth/doc/test coverage |
-| List batches | implemented with only `page` and `size` | not aligned with BA filter expectations and unused `SearchBatchRequest` | incomplete |
-| Update batch | implemented | partial mismatch | redundant `id` in body and no auth/swagger/tests |
-| Generic change status | implemented | not clearly aligned with Jira design | high-risk bypass of transition matrix |
-| Quarantine batch | implemented | partial mismatch | missing reason payload, response envelope mismatch, no auth/swagger/controller tests |
-| Release batch | implemented | partial mismatch | missing release notes payload, response envelope mismatch, no auth/swagger/controller tests |
-| Traceability | missing | expected by BA and Jira | open gap |
-| Expiring query | missing | expected by BA and Jira | open gap |
-| FIFO recommendations | missing | expected by BA and Jira but omitted by API inventory doc | open gap plus doc mismatch |
-| Batches by product | missing | expected by BA and Jira | open gap |
+| 1 | `POST` | `/api/v1/batches` | implemented |
+| 2 | `GET` | `/api/v1/batches` | implemented with business filters + quantity summary |
+| 3 | `GET` | `/api/v1/batches/{id}` | implemented with quantity summary |
+| 4 | `PUT` | `/api/v1/batches/{id}` | implemented |
+| 5 | `PATCH` | `/api/v1/batches/{id}/status` | implemented as blocked generic transition (`BATCH_011`) |
+| 6 | `PUT` | `/api/v1/batches/{id}/quarantine` | implemented |
+| 7 | `PUT` | `/api/v1/batches/{id}/release` | implemented |
+| 8 | `GET` | `/api/v1/batches/{id}/traceability` | implemented |
+| 9 | `GET` | `/api/v1/batches/expiring` | implemented |
+| 10 | `GET` | `/api/v1/batches/fifo-recommendations` | implemented |
+| 11 | `GET` | `/api/v1/batches/by-product/{productId}` | implemented |
+
+Canonical conclusion:
+
+`Batch = 11/11 implemented within WHS-35 scope`
 
 ---
 
-## 8. Concrete Mismatches That Must Be Resolved
+## 5. Batch Business Rules Now Locked in Code
 
-## 8.1 Contract mismatches in current code
+### 5.1 Lifecycle rules
 
-| Area | Current state | Canonical issue |
-|---|---|---|
-| `CreateBatchRequest` | requires `status` from client | business says status defaults to `AVAILABLE`; service ignores client value |
-| `UpdateBatchRequest` | requires `id` in request body | path already owns batch ID; body `id` is redundant and drift-prone |
-| `quarantine` and `release` responses | return raw `BatchResponse` | project standard requires `BaseResponse<T>` |
-| `PATCH /status` | directly sets any status from request | bypasses lifecycle rules and weakens state machine control |
-| list query contract | controller only supports `page` and `size` | BA and search DTO imply richer filters |
+- create always defaults status to `AVAILABLE`
+- generic `PATCH /status` is blocked by `BATCH_011`
+- only `AVAILABLE` batches can move to `QUARANTINE`
+- reserved stock blocks quarantine
+- only `QUARANTINE` batches can be released
+- expired or recalled batches cannot be released
 
-## 8.2 Security and documentation gaps
+### 5.2 Query rules
 
-| Area | Current state | Canonical issue |
-|---|---|---|
-| Authorization | no `@PreAuthorize` found on Batch controller | does not satisfy BA/Jira role matrix and security review expectations |
-| Swagger/OpenAPI | no `@Operation` or `@ApiResponse` found | does not satisfy `WHS-41`, `WHS-42`, `WHS-85` acceptance criteria |
-| Response envelope consistency | mixed `BaseResponse<T>` and raw `BatchResponse` | inconsistent public API contract |
+- `GET /api/v1/batches` supports `keyword`, `product_id`, `warehouse_id`, `status`, `manufacturing_date_from/to`, `expiry_date_from/to`
+- list/detail responses include `total_on_hand_quantity`, `total_quarantine_quantity`, `total_reserved_quantity`, `total_available_quantity`
+- FIFO recommendations only return eligible `AVAILABLE` batches with positive available quantity and non-expired date semantics
+- expiring query excludes batches without physical stock
+- traceability reads inbound, outbound, inventory, movement, and workflow notes together
 
-## 8.3 Testing gaps
+### 5.3 Error contract
 
-Observed test coverage:
-
-- create happy path and some create validation
-- quarantine happy path and some quarantine validation
-
-Not covered in current test file:
-
-- controller validation and status code behavior
-- list and get-by-id
-- update path
-- generic status-change path
-- release happy path and failure paths
-- integration coverage for queries and persistence behavior
-
-This means `WHS-86` is correctly still `To Do`.
-
-## 8.4 DB and migration sync gaps
-
-| Area | Current state | Canonical issue |
-|---|---|---|
-| migration file header | header version does not match filename | migration audit drift still exists |
-| query API indexes | migration has base indexes only | no evidence that query/index plan for expiring, FIFO, by-product has been finalized against implementation |
-| DB doc | describes additional query patterns not yet implemented in code | DB design and code are ahead/behind in different places |
+- lifecycle bypass is mapped to `BATCH_011`
+- invalid Batch filter date range is mapped to `BATCH_019`
+- response envelope uses `BaseResponse<T>` on controller layer
 
 ---
 
-## 9. Jira Sync Verdict
+## 6. Verification Baseline
 
-## 9.1 `WHS-41` Lifecycle APIs
+Batch verification currently present:
 
-Current verdict: `Partially implemented in code, not ready for Done`
+- `BatchControllerTest`
+- `BatchQueryControllerTest`
+- `BatchServiceImplTest`
+- `BatchQueryServiceImplTest`
+- `BatchRepositoryQueryIntegrationTest`
+- `InventoryRepositoryBatchQueryIntegrationTest`
+- `BatchTraceabilityRepositoryIntegrationTest`
 
-Reason:
+Current test command used on `WHS-85`:
 
-- update, quarantine, release endpoints exist
-- but acceptance criteria are not met yet because auth, Swagger, response consistency, and test coverage are not complete
-- generic `PATCH /status` also muddies the state machine boundary
+`./mvnw test -DskipITs "-Dtest=org.demo.whs.service.impl.BatchServiceImplTest,org.demo.whs.controller.BatchControllerTest,org.demo.whs.service.impl.BatchQueryServiceImplTest,org.demo.whs.controller.BatchQueryControllerTest,org.demo.whs.repository.BatchRepositoryQueryIntegrationTest,org.demo.whs.repository.InventoryRepositoryBatchQueryIntegrationTest,org.demo.whs.repository.BatchTraceabilityRepositoryIntegrationTest"`
 
-Recommended Jira action:
+Result on 2026-03-15:
 
-- keep `WHS-41` open
-- update description or comment that code is partially present
-- define whether `PATCH /status` is an accepted API or should be removed/restricted
-
-## 9.2 `WHS-42` Traceability APIs
-
-Current verdict: `Correctly open`
-
-Reason:
-
-- all four query APIs are still missing from code
-- FIFO recommendation is also still missing and must be tracked explicitly
-
-## 9.3 `WHS-83` Design contract
-
-Current verdict: `Still needed`
-
-Reason:
-
-- current code contract conflicts with BA expectations in multiple places
-- response envelope, payload ownership, transition control, and auth matrix are not yet canonically locked
-
-## 9.4 `WHS-84` Migration and index plan
-
-Current verdict: `Still needed`
-
-Reason:
-
-- lifecycle code exists, but query-side index and migration decisions for expiring, FIFO, and traceability are not yet reflected as finalized implementation work
-
-## 9.5 `WHS-86` Testing
-
-Current verdict: `Still needed`
-
-Reason:
-
-- only partial service-level unit tests exist
-- controller and integration coverage are missing
-
-## 9.6 `WHS-85` Final review
-
-Current verdict: `Correctly open`
-
-Reason:
-
-- design, migration, query APIs, and testing are not complete yet
+- `41 tests`
+- `0 failures`
+- `0 errors`
 
 ---
 
-## 10. Canonical Batch Completion Backlog
+## 7. Remaining Limits Outside WHS-35 Scope
 
-Use this order to reach business-correct synchronization:
+These are not release blockers for current Batch scope, but must not be confused with completed work:
 
-1. Lock contract decisions in `WHS-83`
-   - remove client-owned `status` from create request
-   - remove body `id` from update request
-   - decide fate of `PATCH /status`
-   - standardize `BaseResponse<T>` for all endpoints
-   - define auth matrix per endpoint
-
-2. Finish lifecycle quality for `WHS-41`
-   - add auth
-   - add Swagger
-   - add reason or notes payload where business requires
-   - add controller tests
-   - add release tests
-
-3. Finalize query plan in `WHS-84`
-   - confirm filter contract for list
-   - confirm index sufficiency for expiring, FIFO, traceability, by-product
-   - fix migration header drift
-
-4. Implement `WHS-42`
-   - traceability
-   - expiring
-   - FIFO recommendations
-   - by-product
-
-5. Execute `WHS-86`
-   - controller tests
-   - service tests
-   - integration tests
-   - verify error-code and response schema behavior
-
-6. Close `WHS-85`
-   - sync Jira statuses
-   - sync `docs/API_INVENTORY_COMPREHENSIVE.md`
-   - close remaining contract drift
+- granular RBAC permission matrix for Batch endpoints is not yet enforced with endpoint-specific authorities; current protection remains authenticated access baseline
+- auto-expiry scheduler and expiry alert delivery from BA feature 3 are not delivered in `WHS-35`
+- Stock Movements analytics/export work remains open
+- outbound foundation is still open, so Batch is complete as a module slice, not as the whole warehouse outbound chain
 
 ---
 
-## 11. Final Canonical Statements
+## 8. Canonical Verdict
 
-Use these statements going forward:
+### Phase 5
 
-- `Phase 5` currently means `Inventory + Inbound hardening`, not `WHS-57` alone.
-- `WHS-57` is core confirm receipt and is already done.
-- Batch lifecycle code exists, but Batch is not business-complete.
-- `WHS-41` should not be closed yet.
-- Batch target scope is currently `11 APIs` unless FIFO is explicitly moved out of the module by decision record.
-- `docs/API_INVENTORY_COMPREHENSIVE.md` should be updated later using this document as the reference baseline.
+- canonical meaning remains `Inventory + Inbound hardening`
+- Batch completion does not close Phase 5 because Inventory `decrease` remains open
 
+### Batch
+
+- Batch module is now functionally complete for `WHS-35` scope
+- code, tests, and API inventory have been aligned to `11/11` APIs
+- the main remaining work is Jira synchronization and the `WHS-85` release-readiness closeout note

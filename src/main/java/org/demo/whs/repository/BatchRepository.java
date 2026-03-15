@@ -3,6 +3,7 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,26 +17,10 @@ import java.util.Optional;
  * Repository interface for Batch entity operations.
  */
 @Repository
-public interface BatchRepository extends JpaRepository<Batch, String> {
+public interface BatchRepository extends JpaRepository<Batch, String>, JpaSpecificationExecutor<Batch> {
 
-    /**
-     * Checks whether a batch exists by its batch number.
-     *
-     * Used to validate uniqueness when creating a new batch.
-     *
-     * @param batchNumber the batch number to check
-     * @return true if batch exists, false otherwise
-     */
     boolean existsByProductIdAndBatchNumber(String productId, String batchNumber);
 
-    /**
-     * Finds a batch by its batch number.
-     *
-     * Used for retrieving batch information or validating batch existence.
-     *
-     * @param batchNumber the batch number
-     * @return Optional containing the batch if found, otherwise empty
-     */
     Optional<Batch> findByBatchNumber(String batchNumber);
 
     boolean existsByProductIdAndBatchNumberAndIdNot(String productId, String batchNumber, String id);

@@ -22,6 +22,7 @@ import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.SearchBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
@@ -49,6 +50,7 @@ import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.SalesOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
+import org.demo.whs.repository.specification.BatchSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
 import org.springframework.data.domain.Page;
@@ -128,7 +130,7 @@ public class BatchServiceImpl implements BatchService {
         setAuditFieldsForCreate(batch, currentUser);
         Batch savedBatch = batchRepository.save(batch);
         log.info("Batch created successfully with ID={} by user={}", savedBatch.getId(), currentUser.getUsername());
-        return batchMapper.toResponse(savedBatch);
+        return enrichBatchResponse(savedBatch, List.of());
     }
 
     @Override
@@ -137,21 +139,26 @@ public class BatchServiceImpl implements BatchService {
         log.info("Fetching batch by ID: {}", id);
         Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
-        return batchMapper.toResponse(batch);
+        List<Inventory> inventories = inventoryRepository.findByBatchIdOrderByLastMovementAtDesc(id);
+        return enrichBatchResponse(batch, inventories);
     }
 
     @Override
     @Transactional
-    public PageResponse<BatchResponse> getAllBatches(Integer page, Integer size) {
-        log.info("Fetching all batches - page={}, size={}", page, size);
+    public PageResponse<BatchResponse> getAllBatches(SearchBatchRequest request, Integer page, Integer size) {
+        log.info("Fetching all batches - request={}, page={}, size={}", request, page, size);
+        validateSearchRequest(request);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Batch> batchPage = batchRepository.findAll(pageable);
+        Page<Batch> batchPage = batchRepository.findAll(BatchSpecification.withFilter(request), pageable);
+        Set<String> batchIds = collectIds(batchPage.getContent(), Batch::getId);
+        Map<String, List<Inventory>> inventoryByBatch = batchIds.isEmpty()
+                ? Collections.emptyMap()
+                : groupInventoriesByBatch(inventoryRepository.findByBatchIdIn(batchIds));
         List<BatchResponse> responses = batchPage.getContent().stream()
-                .map(batchMapper::toResponse)
+                .map(batch -> enrichBatchResponse(batch, inventoryByBatch.getOrDefault(batch.getId(), List.of())))
                 .collect(Collectors.toList());
         return PageResponse.from(batchPage, responses);
     }
-
     @Override
     @Transactional
     public BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request) {
@@ -185,7 +192,8 @@ public class BatchServiceImpl implements BatchService {
         setAuditFieldsForUpdate(batch, currentUser);
         Batch updatedBatch = batchRepository.save(batch);
         log.info("Batch updated successfully with ID={} by user={}", updatedBatch.getId(), currentUser.getUsername());
-        return batchMapper.toResponse(updatedBatch);
+        List<Inventory> inventories = inventoryRepository.findByBatchIdOrderByLastMovementAtDesc(updatedBatch.getId());
+        return enrichBatchResponse(updatedBatch, inventories);
     }
 
     @Override
@@ -200,7 +208,8 @@ public class BatchServiceImpl implements BatchService {
         setAuditFieldsForUpdate(batch, currentUser);
         Batch savedBatch = batchRepository.save(batch);
         log.info("Batch {} moved to QUARANTINE by user {}", batch.getBatchNumber(), currentUser.getUsername());
-        return batchMapper.toResponse(savedBatch);
+        List<Inventory> inventories = inventoryRepository.findByBatchIdOrderByLastMovementAtDesc(savedBatch.getId());
+        return enrichBatchResponse(savedBatch, inventories);
     }
 
     @Override
@@ -215,7 +224,8 @@ public class BatchServiceImpl implements BatchService {
         setAuditFieldsForUpdate(batch, user);
         Batch savedBatch = batchRepository.save(batch);
         log.info("Batch {} released from QUARANTINE by user {}", batch.getBatchNumber(), user.getUsername());
-        return batchMapper.toResponse(savedBatch);
+        List<Inventory> inventories = inventoryRepository.findByBatchIdOrderByLastMovementAtDesc(savedBatch.getId());
+        return enrichBatchResponse(savedBatch, inventories);
     }
 
     @Override
@@ -573,6 +583,31 @@ public class BatchServiceImpl implements BatchService {
                 .urgency(resolveExpiryUrgency(batch.getExpiryDate(), today))
                 .inventorySnapshot(buildInventorySnapshot(inventories, warehouseMap, locationMap))
                 .build();
+    }
+
+    private BatchResponse enrichBatchResponse(Batch batch, List<Inventory> inventories) {
+        BatchResponse baseResponse = batchMapper.toResponse(batch);
+        List<Inventory> safeInventories = inventories == null ? List.of() : inventories;
+        return baseResponse.toBuilder()
+                .totalOnHandQuantity(sumInventories(safeInventories, Inventory::getOnHandQuantity))
+                .totalQuarantineQuantity(sumInventories(safeInventories, Inventory::getQuarantineQuantity))
+                .totalReservedQuantity(sumInventories(safeInventories, Inventory::getReservedQuantity))
+                .totalAvailableQuantity(sumInventories(safeInventories, Inventory::getAvailableQuantity))
+                .build();
+    }
+
+    private void validateSearchRequest(SearchBatchRequest request) {
+        if (request == null) {
+            return;
+        }
+        validateDateRange(request.getManufacturingDateFrom(), request.getManufacturingDateTo());
+        validateDateRange(request.getExpiryDateFrom(), request.getExpiryDateTo());
+    }
+
+    private void validateDateRange(LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new BadRequestException(ErrorCode.BATCH_019);
+        }
     }
 
     private BatchInventorySnapshotResponse buildInventorySnapshot(

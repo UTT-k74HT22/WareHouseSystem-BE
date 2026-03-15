@@ -257,28 +257,29 @@ Storage            ██████████ 100% ✅
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
 | 1 | `POST` | `/api/v1/batches` | Tạo lô hàng mới | ✅ Done |
-| 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng (phân trang) | ✅ Done |
-| 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID | ✅ Done |
+| 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng có filter + quantity summary | ✅ Done |
+| 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID + quantity summary | ✅ Done |
 | 4 | `PUT` | `/api/v1/batches/{id}` | Cập nhật thông tin lô | ✅ Done |
 
 ### 🟣 Advanced APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 5 | `PATCH` | `/api/v1/batches/{id}/status` | Đổi trạng thái lô (AVAILABLE/QUARANTINE/EXPIRED/RECALLED) | ✅ Done 🆕 |
+| 5 | `PATCH` | `/api/v1/batches/{id}/status` | Chặn generic status patch, buộc dùng workflow chuyên biệt | ✅ Done 🆕 |
 | 6 | `PUT` | `/api/v1/batches/{id}/quarantine` | Cách ly lô hàng (vấn đề chất lượng) | ✅ Done |
 | 7 | `PUT` | `/api/v1/batches/{id}/release` | Giải phóng lô khỏi cách ly | ✅ Done |
-| 8 | `GET` | `/api/v1/batches/{id}/traceability` | Truy xuất nguồn gốc lô hàng | ❌ Not Done |
-| 9 | `GET` | `/api/v1/batches/expiring` | Danh sách lô sắp hết hạn | ❌ Not Done |
-| 10 | `GET` | `/api/v1/batches/by-product/{productId}` | Danh sách lô theo sản phẩm | ❌ Not Done |
+| 8 | `GET` | `/api/v1/batches/{id}/traceability` | Truy xuất nguồn gốc lô hàng | ✅ Done |
+| 9 | `GET` | `/api/v1/batches/expiring` | Danh sách lô sắp hết hạn | ✅ Done |
+| 10 | `GET` | `/api/v1/batches/fifo-recommendations` | Đề xuất FIFO theo tồn kho khả dụng | ✅ Done |
+| 11 | `GET` | `/api/v1/batches/by-product/{productId}` | Danh sách lô theo sản phẩm | ✅ Done |
 
-> 🟡 **Đã triển khai 7/10**: create/get/list/update/change-status/quarantine/release.
+> 🟢 **Đã triển khai 11/11**: Batch module đã đủ lifecycle + query APIs theo scope `WHS-35`.
 >
-> ⚠️ `quarantine` và `release` đã có business validation thực tế trong `BatchServiceImpl`, nhưng controller hiện trả trực tiếp `BatchResponse` thay vì `BaseResponse`.
+> ✅ `GET /api/v1/batches` hiện hỗ trợ filter `keyword`, `product_id`, `warehouse_id`, `status`, `manufacturing_date_from/to`, `expiry_date_from/to`.
 >
-> ⚠️ Enum `BatchStatus` hiện tại trong code là `AVAILABLE`, `QUARANTINE`, `EXPIRED`, `RECALLED`.
-> Tài liệu API về batch cần bám đúng bộ status này, chưa có `DEPLETED`.
-
+> ✅ Batch list/detail response đã trả thêm `total_on_hand_quantity`, `total_quarantine_quantity`, `total_reserved_quantity`, `total_available_quantity` để màn Batch phản ánh đúng tồn kho theo lô.
+>
+> ✅ `PATCH /status` được giữ lại với behavior chặn `BATCH_011` để không bypass state machine; status mutation phải đi qua `quarantine/release`.
 ---
 
 ## MODULE 4: INVENTORY MANAGEMENT (`/api/v1/inventories`)
@@ -714,8 +715,8 @@ Storage            ██████████ 100% ✅
 ### 🟡 Phase 8 — Batch + Stock Movements Enhancement
 | Ưu tiên | Task | Chi tiết | Effort |
 |---------|------|----------|--------|
-| 🟡 P1 | Batch hardening + integration tests | Cover lifecycle `AVAILABLE <-> QUARANTINE`, reserved stock guard, expired/recalled guards, response contract consistency | 2 ngày |
-| 🟡 P2 | Batch traceability, expiring, by-product — 3 APIs | Tăng khả năng query/truy vết | 2 ngày |
+| 🟢 P0 | Batch hardening + integration tests | Lifecycle, reserved stock guard, response contract, regression tests | ✅ Done |
+| 🟢 P0 | Batch traceability, expiring, FIFO, by-product — 4 APIs | Query/truy vết read-side cho Batch | ✅ Done |
 | 🟡 P1 | Stock Movements by-product, by-batch — 2 APIs | Query read-side cho điều tra biến động | 2 ngày |
 | 🟡 P2 | Stock Movements traceability + export — 3 APIs | Báo cáo truy vết và export | 3 ngày |
 
@@ -733,15 +734,15 @@ Storage            ██████████ 100% ✅
 
 | Metric | Value |
 |--------|-------|
-| **Tổng API thiết kế** | 170 |
-| **Đã triển khai** | 120 (71%) |
-| **Chưa triển khai** | 50 (29%) |
-| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines |
+| **Tổng API thiết kế** | 171 |
+| **Đã triển khai** | 124 (73%) |
+| **Chưa triển khai** | 47 (27%) |
+| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Batch, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines |
 | **Module 0%** | Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
 | **Module tiếp theo** | **Inventory + inbound hardening**, sau đó mới sang Outbound foundation |
 
-> 💡 **Tiến bộ so với bản 09/03:** inbound receipt lines đã lên 4/4, batch lên 7/10, inbound receipts giữ 7/7, inventory 7/8, PO lines 4/4, auth được ghi nhận đúng thêm 4 endpoint.
+> 💡 **Tiến bộ so với bản 09/03:** batch đã lên `11/11`, inbound receipt lines `4/4`, inbound receipts `7/7`, inventory `7/8`, auth được ghi nhận đúng thêm 4 endpoint.
 >
-> ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Receipt Lines -> Inventory -> Movement`.
+> ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Receipt Lines -> Inventory -> Movement`; batch lifecycle/query side đã đồng bộ với docs và test.
 >
-> ⚠️ **Khoảng trống lớn nhất còn lại:** outbound chain, batch traceability/expiring/by-product, stock movement analytics, reporting.
+> ⚠️ **Khoảng trống lớn nhất còn lại:** inventory decrease, outbound chain, stock movement analytics, reporting.
