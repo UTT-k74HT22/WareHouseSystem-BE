@@ -81,12 +81,15 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
 
+        Account currentUser = getCurrentUser();
+
         Batch batch = batchMapper.createEntity(request);
         batch.setStatus(BatchStatus.AVAILABLE);
+        setAuditFieldsForCreate(batch, currentUser);
 
         Batch savedBatch = batchRepository.save(batch);
 
-        log.info("Batch created successfully with ID={}", savedBatch.getId());
+        log.info("Batch created successfully with ID={} by user={}", savedBatch.getId(), currentUser.getUsername());
 
         return batchMapper.toResponse(savedBatch);
     }
@@ -157,7 +160,12 @@ public class BatchServiceImpl implements BatchService {
 
         batchMapper.updateEntity(request, batch);
 
+        Account currentUser = getCurrentUser();
+        setAuditFieldsForUpdate(batch, currentUser);
+
         Batch updateBatch = batchRepository.save(batch);
+
+        log.info("Batch updated successfully with ID={} by user={}", updateBatch.getId(), currentUser.getUsername());
 
         return batchMapper.toResponse(updateBatch);
     }
@@ -202,6 +210,9 @@ public class BatchServiceImpl implements BatchService {
         setAuditFieldsForUpdate(batch, user);
 
         Batch savedBatch = batchRepository.save(batch);
+
+        log.info("Batch {} released from QUARANTINE by user {}",
+                batch.getBatchNumber(), user.getUsername());
 
         return batchMapper.toResponse(savedBatch);
     }
@@ -277,6 +288,11 @@ public class BatchServiceImpl implements BatchService {
 
     private String buildReleaseAuditNote(ReleaseBatchRequest request) {
         return "[RELEASE] release_notes=" + request.getReleaseNotes();
+    }
+
+    private void setAuditFieldsForCreate(Batch batch, Account user) {
+        batch.setCreatedBy(user.getId());
+        batch.setUpdatedBy(user.getId());
     }
 
     /**
