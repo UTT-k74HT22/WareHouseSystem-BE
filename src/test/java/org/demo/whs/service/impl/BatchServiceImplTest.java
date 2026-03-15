@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
@@ -29,6 +30,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,6 +70,10 @@ class BatchServiceImplTest {
         product.setId("P1");
         product.setRequiresBatchTracking(true);
 
+        Account account = new Account();
+        account.setId("A1");
+        account.setUsername("admin");
+
         Batch batch = new Batch();
         Batch savedBatch = new Batch();
         savedBatch.setId("BATCH_1");
@@ -81,13 +88,20 @@ class BatchServiceImplTest {
         when(batchRepository.save(batch)).thenReturn(savedBatch);
         when(batchMapper.toResponse(savedBatch)).thenReturn(response);
 
-        BatchResponse result = batchService.createBatch(request);
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
 
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo("BATCH_1");
-        assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+            BatchResponse result = batchService.createBatch(request);
 
-        verify(batchRepository).save(batch);
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo("BATCH_1");
+            assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+            assertThat(batch.getCreatedBy()).isEqualTo("A1");
+            assertThat(batch.getUpdatedBy()).isEqualTo("A1");
+
+            verify(batchRepository).save(batch);
+        }
     }
 
     @Test
@@ -185,6 +199,57 @@ class BatchServiceImplTest {
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining(ErrorCode.BATCH_006.getMessage());
+    }
+
+    @Test
+    void updateBatch_success() {
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setProductId("P1");
+        batch.setBatchNumber("B001");
+        batch.setManufacturingDate(LocalDate.now().minusDays(2));
+        batch.setExpiryDate(LocalDate.now().plusDays(20));
+
+        UpdateBatchRequest request = new UpdateBatchRequest();
+        request.setBatchNumber("B002");
+        request.setSupplierBatchNumber("SUP-01");
+        request.setNotes("Updated notes");
+
+        Account account = new Account();
+        account.setId("A1");
+        account.setUsername("admin");
+
+        BatchResponse response = BatchResponse.builder()
+                .id("B1")
+                .batchNumber("B002")
+                .build();
+
+        when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
+        when(batchRepository.existsByProductIdAndBatchNumberAndIdNot("P1", "B002", "B1")).thenReturn(false);
+        doAnswer(invocation -> {
+            UpdateBatchRequest updateRequest = invocation.getArgument(0);
+            Batch target = invocation.getArgument(1);
+            target.setBatchNumber(updateRequest.getBatchNumber());
+            target.setSupplierBatchNumber(updateRequest.getSupplierBatchNumber());
+            target.setNotes(updateRequest.getNotes());
+            return null;
+        }).when(batchMapper).updateEntity(any(UpdateBatchRequest.class), any(Batch.class));
+        when(batchRepository.save(batch)).thenReturn(batch);
+        when(batchMapper.toResponse(batch)).thenReturn(response);
+
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+
+            BatchResponse result = batchService.updateBatch("B1", request);
+
+            assertThat(result).isNotNull();
+            assertThat(batch.getBatchNumber()).isEqualTo("B002");
+            assertThat(batch.getSupplierBatchNumber()).isEqualTo("SUP-01");
+            assertThat(batch.getNotes()).isEqualTo("Updated notes");
+            assertThat(batch.getUpdatedBy()).isEqualTo("A1");
+            assertThat(batch.getUpdatedAt()).isNotNull();
+        }
     }
 
     @Test
