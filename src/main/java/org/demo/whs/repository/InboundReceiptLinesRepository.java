@@ -2,7 +2,6 @@ package org.demo.whs.repository;
 
 import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.InboundReceiptLines;
-import org.demo.whs.entity.enums.InboundReceiptsStatus;
 import org.demo.whs.entity.enums.QualityStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -19,8 +18,10 @@ public interface InboundReceiptLinesRepository extends JpaRepository<InboundRece
 
     List<InboundReceiptLines> findByInboundReceiptIdOrderByLineNumberAsc(String inboundReceiptId);
 
+    List<InboundReceiptLines> findByBatchIdOrderByCreatedAtDesc(String batchId);
+
     @Query(value = "SELECT COUNT(*) FROM inbound_receipt_lines WHERE inbound_receipt_id = :inboundReceiptId", nativeQuery = true)
-    long countByInboundReceiptId(String inboundReceiptId);
+    long countByInboundReceiptId(@Param("inboundReceiptId") String inboundReceiptId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select irl from InboundReceiptLines irl where irl.id = :id")

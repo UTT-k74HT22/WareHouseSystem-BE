@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * Repository interface for StockMovements entity.
  */
@@ -22,4 +24,6 @@ public interface StockMovementsRepository extends JpaRepository<StockMovements, 
     boolean existsByReferenceTypeAndReferenceId(ReferenceType referenceType, String referenceId);
 
     boolean existsByReferenceTypeAndReferenceNumber(ReferenceType referenceType, String referenceNumber);
+
+    List<StockMovements> findByBatchIdOrderByMovementDateDesc(String batchId);
 }

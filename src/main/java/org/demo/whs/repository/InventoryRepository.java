@@ -1,5 +1,6 @@
 package org.demo.whs.repository;
 
+import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.repository.custom.InventoryRepositoryCustom;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,7 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ public interface InventoryRepository extends
         WHERE i.id = :id
     """)
     Optional<Inventory> findByIdForUpdate(@Param("id") String id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT i
@@ -107,8 +109,13 @@ public interface InventoryRepository extends
      * Find inventory by product, warehouse, location, and batch.
      * Used for validation or retrieval when all dimensions are specified.
      */
-    @Query(value = "SELECT i FROM Inventory i WHERE i.productId = :productId AND i.warehouseId = :warehouseId AND i.locationId = :locationId AND i.batchId = :batchId")
-    Optional<Object> findByProductIdAndWarehouseIdAndLocationIdAndBatchId(String productId, String warehouseId, String locationId, String batchId);
+    @Query("SELECT i FROM Inventory i WHERE i.productId = :productId AND i.warehouseId = :warehouseId AND i.locationId = :locationId AND i.batchId = :batchId")
+    Optional<Object> findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId
+    );
 
     @Query("""
            SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
@@ -116,5 +123,15 @@ public interface InventoryRepository extends
            WHERE i.batchId = :batchId
            AND i.reservedQuantity > 0
            """)
-    boolean existsReservedStockByBatchId(String batchId);
+    boolean existsReservedStockByBatchId(@Param("batchId") String batchId);
+
+    List<Inventory> findByBatchIdOrderByLastMovementAtDesc(String batchId);
+
+    List<Inventory> findByBatchIdIn(Collection<String> batchIds);
+
+    List<Inventory> findByWarehouseIdAndBatchIdIn(String warehouseId, Collection<String> batchIds);
+
+    List<Inventory> findByProductIdAndBatchIdIn(String productId, Collection<String> batchIds);
+
+    List<Inventory> findByProductIdAndWarehouseIdAndBatchIdIn(String productId, String warehouseId, Collection<String> batchIds);
 }
