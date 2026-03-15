@@ -21,6 +21,7 @@ import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.LocationService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +47,7 @@ public class LocationServiceImpl implements LocationService {
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
     private final LocationMapper locationMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Creates a new location with comprehensive validation.
@@ -56,14 +58,21 @@ public class LocationServiceImpl implements LocationService {
     @Override
     @Transactional
     public LocationResponse createLocation(CreateLocationRequest request) {
+        Warehouses warehouse = validateWarehouse(request.getWarehouseId());
+        validateWarehouseStatus(warehouse);
+        String locationCode = identifierGenerator.generateSystemManaged(
+                request.getCode(),
+                "Location code",
+                "LOC",
+                50,
+                candidate -> locationRepository.existsByWarehouseIdAndCode(request.getWarehouseId(), candidate)
+        );
         log.info("Creating location with code={} in warehouse={}",
-                request.getCode(), request.getWarehouseId());
+                locationCode, request.getWarehouseId());
+        validateDuplicateLocationCode(request.getWarehouseId(), locationCode);
 
-        //Validate fields
-        Warehouses warehouse = validField(request);
-
-        // Map request to entity
         Locations location = locationMapper.toEntity(request);
+        location.setCode(locationCode);
 
         Account currentUser = getCurrentUser();
         setAuditFieldsForCreate(location, currentUser);
@@ -72,26 +81,28 @@ public class LocationServiceImpl implements LocationService {
         return locationMapper.toResponseWithWarehouse(savedLocation, warehouse);
     }
 
-    private Warehouses validField(CreateLocationRequest request) {
-        Warehouses warehouse = wareHouseRepository.findById(request.getWarehouseId())
+    private Warehouses validateWarehouse(String warehouseId) {
+        return wareHouseRepository.findById(warehouseId)
                 .orElseThrow(() -> {
-                    log.warn("Warehouse not found: {}", request.getWarehouseId());
+                    log.warn("Warehouse not found: {}", warehouseId);
                     return new BadRequestException(ErrorCode.WHS_001);
                 });
+    }
 
+    private void validateWarehouseStatus(Warehouses warehouse) {
         if (warehouse.getStatus() != WareHouseStatus.ACTIVE) {
             log.warn("Warehouse is not active: warehouse={}, status={}",
                     warehouse.getId(), warehouse.getStatus());
             throw new BadRequestException(ErrorCode.LOC_004);
         }
+    }
 
-        if (locationRepository.existsByWarehouseIdAndCode(
-                request.getWarehouseId(), request.getCode())) {
+    private void validateDuplicateLocationCode(String warehouseId, String code) {
+        if (locationRepository.existsByWarehouseIdAndCode(warehouseId, code)) {
             log.warn("Location code already exists: warehouse={}, code={}",
-                    request.getWarehouseId(), request.getCode());
+                    warehouseId, code);
             throw new BadRequestException(ErrorCode.LOC_003);
         }
-        return warehouse;
     }
 
     /**

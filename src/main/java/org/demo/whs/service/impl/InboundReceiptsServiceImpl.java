@@ -27,6 +27,7 @@ import org.demo.whs.repository.*;
 import org.demo.whs.repository.specification.InboundReceiptsSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.InboundReceiptsService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,7 +37,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,6 +62,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
     private final InboundReceiptsMapper inboundReceiptsMapper;
     private final InboundReceiptLinesMapper inboundReceiptLinesMapper;
     private final StockMovementsMapper stockMovementsMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     @Override
     @Transactional
@@ -85,7 +86,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                 .orElseThrow(() -> new NotFoundException("Warehouse not found", ErrorCode.WHS_001));
 
         // Step 3: Create draft receipt
-        String receiptNumber = generateInboundReceiptNumber();
+        String receiptNumber = identifierGenerator.generate("GR", 50, inboundReceiptsRepository::existsByReceiptNumber);
         String actorId = getCurrentActorId();
 
         InboundReceipts receipt = inboundReceiptsMapper.toEntity(request);
@@ -214,17 +215,6 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
                         Collections.emptyList()
                 ))
                 .toList();
-    }
-
-    private String generateInboundReceiptNumber() {
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        while (true) {
-            String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            String receiptNumber = String.format("GR-%s-%s", datePart, suffix);
-            if (!inboundReceiptsRepository.existsByReceiptNumber(receiptNumber)) {
-                return receiptNumber;
-            }
-        }
     }
 
     private String getCurrentActorId() {

@@ -18,10 +18,12 @@ import org.demo.whs.mapper.WareHouseMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.WareHouseService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ public class WareHouseServiceImpl implements WareHouseService {
     private final LocationRepository locationRepository;
     private final WareHouseMapper wareHouseMapper;
     private final InventoryRepository inventoryRepository;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Creates a new warehouse based on the provided request.
@@ -51,13 +54,21 @@ public class WareHouseServiceImpl implements WareHouseService {
     @Override
     @Transactional
     public WareHouseResponse createWH(CreateWarehouseRequest request) {
+        String code = identifierGenerator.generateSystemManaged(
+                request.getCode(),
+                "Warehouse code",
+                "WH",
+                20,
+                wareHouseRepository::existsByCode
+        );
         log.info("Creating warehouse with code={}, name={}",
-                request.getCode(), request.getName());
-        if (wareHouseRepository.existsByCode(request.getCode())) {
-            log.warn("Warehouse code already exists: {}", request.getCode());
+                code, request.getName());
+        if (wareHouseRepository.existsByCode(code)) {
+            log.warn("Warehouse code already exists: {}", code);
             throw new BadRequestException(ErrorCode.WHS_004);
         }
         Warehouses warehouses = wareHouseMapper.toEntity(request);
+        warehouses.setCode(code);
         Account account = getCurrentUser();
         setAuditField(warehouses, account);
         wareHouseRepository.save(warehouses);

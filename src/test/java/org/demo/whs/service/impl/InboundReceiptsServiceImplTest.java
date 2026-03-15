@@ -39,6 +39,7 @@ import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -104,6 +106,9 @@ class InboundReceiptsServiceImplTest {
     private InboundReceiptLinesMapper inboundReceiptLinesMapper;
     @Mock
     private StockMovementsMapper stockMovementsMapper;
+
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
 
     @InjectMocks
     private InboundReceiptsServiceImpl inboundReceiptsService;
@@ -762,3 +767,4 @@ class InboundReceiptsServiceImplTest {
         return account;
     }
 }
+

@@ -22,7 +22,6 @@ public class UnitsOfMeasureMapper {
      */
     public UnitsOfMeasure buildRequest(UnitsOfMeasureRequest request) {
         return UnitsOfMeasure.builder()
-                .code(request.getCode())
                 .name(request.getName())
                 .description(request.getDescription())
                 .type(request.getType())

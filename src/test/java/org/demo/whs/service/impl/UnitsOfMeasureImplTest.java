@@ -10,12 +10,14 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -46,6 +48,9 @@ class UnitsOfMeasureImplTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
     @InjectMocks
     private UnitsOfMeasureImpl unitsOfMeasureService;
 
@@ -54,16 +59,14 @@ class UnitsOfMeasureImplTest {
     class CreateTests {
 
         @Test
-        @DisplayName("Should create unit of measure successfully with valid request")
+        @DisplayName("Should create unit of measure successfully with BE-generated code")
         void create_Success() {
-            // Given
             UnitsOfMeasureRequest request = mock(UnitsOfMeasureRequest.class);
-            when(request.getCode()).thenReturn("KG");
+            when(request.getCode()).thenReturn(null);
             when(request.getName()).thenReturn("Kilogram");
 
             UnitsOfMeasure entity = UnitsOfMeasure.builder()
                     .id("uom-001")
-                    .code("KG")
                     .name("Kilogram")
                     .description("Weight measurement")
                     .type(UnitsOfMeasureType.WEIGHT)
@@ -71,64 +74,88 @@ class UnitsOfMeasureImplTest {
                     .updatedAt(LocalDateTime.now())
                     .build();
 
-            UnitsOfMeasureResponse expectedResponse = UnitsOfMeasureResponse.builder()
-                    .id("uom-001")
-                    .code("KG")
-                    .name("Kilogram")
-                    .description("Weight measurement")
-                    .type(UnitsOfMeasureType.WEIGHT)
-                    .build();
-
-            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode("KG")).thenReturn(false);
+            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
             when(unitsOfMeasureMapper.buildRequest(request)).thenReturn(entity);
             when(unitsOfMeasureRepository.save(any(UnitsOfMeasure.class))).thenReturn(entity);
-            when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenReturn(expectedResponse);
+            when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenAnswer(invocation -> {
+                UnitsOfMeasure persisted = invocation.getArgument(0);
+                return UnitsOfMeasureResponse.builder()
+                        .id(persisted.getId())
+                        .code(persisted.getCode())
+                        .name(persisted.getName())
+                        .description(persisted.getDescription())
+                        .type(persisted.getType())
+                        .build();
+            });
 
-            // When
             UnitsOfMeasureResponse result = unitsOfMeasureService.create(request);
 
-            // Then
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo("uom-001");
-            assertThat(result.getCode()).isEqualTo("KG");
+            assertThat(result.getCode()).startsWith("UOM-");
+            assertThat(result.getCode()).hasSizeLessThanOrEqualTo(10);
             assertThat(result.getName()).isEqualTo("Kilogram");
             assertThat(result.getType()).isEqualTo(UnitsOfMeasureType.WEIGHT);
+            assertThat(entity.getCode()).isEqualTo(result.getCode());
 
-            verify(unitsOfMeasureRepository).existsUnitsOfMeasureByCode("KG");
             verify(unitsOfMeasureMapper).buildRequest(request);
             verify(unitsOfMeasureRepository).save(any(UnitsOfMeasure.class));
             verify(unitsOfMeasureMapper).toResponse(any(UnitsOfMeasure.class));
         }
 
         @Test
-        @DisplayName("Should throw BadRequestException when code already exists")
-        void create_CodeAlreadyExists() {
-            // Given
+        @DisplayName("Should reject when client provides unit of measure code")
+        void create_ShouldReject_When_RequestProvidesCode() {
             UnitsOfMeasureRequest request = mock(UnitsOfMeasureRequest.class);
             when(request.getCode()).thenReturn("KG");
 
-            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode("KG")).thenReturn(true);
-
-            // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.create(request))
                     .isInstanceOf(BadRequestException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_002.getCode());
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
 
-            verify(unitsOfMeasureRepository).existsUnitsOfMeasureByCode("KG");
             verify(unitsOfMeasureRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should generate unit of measure code when code is missing")
+        void create_GenerateCodeWhenMissing() {
+            UnitsOfMeasureRequest request = mock(UnitsOfMeasureRequest.class);
+            when(request.getCode()).thenReturn(null);
+            when(request.getName()).thenReturn("Kilogram");
+
+            UnitsOfMeasure entity = UnitsOfMeasure.builder()
+                    .name("Kilogram")
+                    .type(UnitsOfMeasureType.WEIGHT)
+                    .build();
+
+            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
+            when(unitsOfMeasureMapper.buildRequest(request)).thenReturn(entity);
+            when(unitsOfMeasureRepository.save(any(UnitsOfMeasure.class))).thenReturn(entity);
+            when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenAnswer(invocation -> {
+                UnitsOfMeasure persisted = invocation.getArgument(0);
+                return UnitsOfMeasureResponse.builder()
+                        .code(persisted.getCode())
+                        .name(persisted.getName())
+                        .type(persisted.getType())
+                        .build();
+            });
+
+            UnitsOfMeasureResponse result = unitsOfMeasureService.create(request);
+
+            assertThat(result.getCode()).startsWith("UOM-");
+            assertThat(result.getCode()).hasSizeLessThanOrEqualTo(10);
+            assertThat(entity.getCode()).isEqualTo(result.getCode());
         }
 
         @Test
         @DisplayName("Should throw BadRequestException when name is null")
         void create_NameIsNull() {
-            // Given
             UnitsOfMeasureRequest request = mock(UnitsOfMeasureRequest.class);
-            when(request.getCode()).thenReturn("KG");
+            when(request.getCode()).thenReturn(null);
             when(request.getName()).thenReturn(null);
 
-            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode("KG")).thenReturn(false);
+            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
 
-            // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.create(request))
                     .isInstanceOf(BadRequestException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_003.getCode());
@@ -139,14 +166,12 @@ class UnitsOfMeasureImplTest {
         @Test
         @DisplayName("Should throw BadRequestException when name is blank")
         void create_NameIsBlank() {
-            // Given
             UnitsOfMeasureRequest request = mock(UnitsOfMeasureRequest.class);
-            when(request.getCode()).thenReturn("KG");
+            when(request.getCode()).thenReturn(null);
             when(request.getName()).thenReturn("   ");
 
-            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode("KG")).thenReturn(false);
+            when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
 
-            // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.create(request))
                     .isInstanceOf(BadRequestException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_003.getCode());

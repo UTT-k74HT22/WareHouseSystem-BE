@@ -4,19 +4,22 @@ import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
-import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.CategoryMapper;
 import org.demo.whs.repository.CategoryRepository;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,57 +45,68 @@ class CategoryServiceImplTest {
     @Mock
     private CategoryMapper categoryMapper;
 
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
     @InjectMocks
     private CategoryServiceImpl categoryService;
 
     @Test
-    @DisplayName("should_CreateCategory_When_RequestIsValid")
-    void should_CreateCategory_When_RequestIsValid() {
-        CreateCategoryRequest request = buildCreateRequest("ELEC", "Electronics", CategoryStatus.ACTIVE);
+    @DisplayName("should_GenerateCategoryCode_When_RequestOmitsCode")
+    void should_GenerateCategoryCode_When_RequestOmitsCode() {
+        CreateCategoryRequest request = buildCreateRequest(null, "Electronics", CategoryStatus.ACTIVE);
         Category category = Category.builder()
-                .code("ELEC")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
         Category savedCategory = Category.builder()
-                .code("ELEC")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
         savedCategory.setId("cat-1");
-        CategoryResponse expectedResponse = CategoryResponse.builder()
-                .id("cat-1")
-                .code("ELEC")
-                .name("Electronics")
-                .status(CategoryStatus.ACTIVE)
-                .build();
 
-        when(categoryRepository.existsByCodeIgnoreCase("ELEC")).thenReturn(false);
         when(categoryRepository.existsByNameIgnoreCase("Electronics")).thenReturn(false);
         when(categoryMapper.toEntity(request)).thenReturn(category);
-        when(categoryRepository.save(category)).thenReturn(savedCategory);
-        when(categoryMapper.toResponse(savedCategory)).thenReturn(expectedResponse);
+        when(categoryRepository.save(category)).thenAnswer(invocation -> {
+            Category persisted = invocation.getArgument(0);
+            savedCategory.setCode(persisted.getCode());
+            return savedCategory;
+        });
+        when(categoryMapper.toResponse(savedCategory)).thenAnswer(invocation ->
+                CategoryResponse.builder()
+                        .id("cat-1")
+                        .code(savedCategory.getCode())
+                        .name("Electronics")
+                        .status(CategoryStatus.ACTIVE)
+                        .build()
+        );
 
         CategoryResponse actual = categoryService.createCategory(request);
 
-        assertThat(actual).isNotNull();
-        assertThat(actual.getId()).isEqualTo("cat-1");
-        assertThat(actual.getCode()).isEqualTo("ELEC");
-        verify(categoryRepository).existsByCodeIgnoreCase("ELEC");
-        verify(categoryRepository).existsByNameIgnoreCase("Electronics");
-        verify(categoryRepository).save(category);
+        assertThat(actual.getCode()).startsWith("CAT-");
+        assertThat(actual.getCode()).hasSizeLessThanOrEqualTo(20);
+        assertThat(category.getCode()).isEqualTo(actual.getCode());
     }
 
     @Test
-    @DisplayName("should_ThrowConflictException_When_CodeAlreadyExists")
-    void should_ThrowConflictException_When_CodeAlreadyExists() {
+    @DisplayName("should_ThrowBadRequest_When_CreateRequestContainsCode")
+    void should_ThrowBadRequest_When_CreateRequestContainsCode() {
         CreateCategoryRequest request = buildCreateRequest("ELEC", "Electronics", CategoryStatus.ACTIVE);
 
-        when(categoryRepository.existsByCodeIgnoreCase("ELEC")).thenReturn(true);
+        assertThatThrownBy(() -> categoryService.createCategory(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
+    }
+
+    @Test
+    @DisplayName("should_ThrowConflictException_When_NameAlreadyExists")
+    void should_ThrowConflictException_When_NameAlreadyExists() {
+        CreateCategoryRequest request = buildCreateRequest(null, "Electronics", CategoryStatus.ACTIVE);
+        when(categoryRepository.existsByNameIgnoreCase("Electronics")).thenReturn(true);
 
         assertThatThrownBy(() -> categoryService.createCategory(request))
                 .isInstanceOf(ConflictException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "CAT_002");
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CAT_002.getCode());
     }
 
     @Test
@@ -100,7 +114,7 @@ class CategoryServiceImplTest {
     void should_GetCategories_When_StatusFilterProvided() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
         Category category = Category.builder()
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -109,7 +123,7 @@ class CategoryServiceImplTest {
         Page<Category> page = new PageImpl<>(List.of(category), pageable, 1);
         CategoryResponse mapped = CategoryResponse.builder()
                 .id("cat-1")
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -125,21 +139,11 @@ class CategoryServiceImplTest {
         verify(categoryRepository).findAllByStatus(CategoryStatus.ACTIVE, pageable);
     }
 
-//    @Test
-//    @DisplayName("should_ThrowBadRequest_When_PageSizeExceedsLimit")
-//    void should_ThrowBadRequest_When_PageSizeExceedsLimit() {
-//        Pageable pageable = PageRequest.of(0, 101);
-//
-//        assertThatThrownBy(() -> categoryService.getCategories(null, pageable))
-//                .isInstanceOf(BadRequestException.class)
-//                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
-//    }
-
     @Test
     @DisplayName("should_GetCategoryById_When_CategoryExists")
     void should_GetCategoryById_When_CategoryExists() {
         Category category = Category.builder()
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -147,7 +151,7 @@ class CategoryServiceImplTest {
 
         CategoryResponse mapped = CategoryResponse.builder()
                 .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -168,7 +172,7 @@ class CategoryServiceImplTest {
 
         assertThatThrownBy(() -> categoryService.getCategoryById("7c9e6679-7425-40de-944b-e07fc1f90ae7"))
                 .isInstanceOf(NotFoundException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CAT_001.getCode());
     }
 
     @Test
@@ -176,7 +180,6 @@ class CategoryServiceImplTest {
     void should_UpdateCategory_When_RequestIsValid() {
         UpdateCategoryRequest request = new UpdateCategoryRequest();
         try {
-            setField(request, "code", "ELEC-NEW");
             setField(request, "name", "Electronics New");
             setField(request, "description", "Updated desc");
         } catch (ReflectiveOperationException ex) {
@@ -184,14 +187,14 @@ class CategoryServiceImplTest {
         }
 
         Category existing = Category.builder()
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
         existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
 
         Category updated = Category.builder()
-                .code("ELEC-NEW")
+                .code("CAT-1234")
                 .name("Electronics New")
                 .description("Updated desc")
                 .status(CategoryStatus.ACTIVE)
@@ -200,13 +203,12 @@ class CategoryServiceImplTest {
 
         CategoryResponse mapped = CategoryResponse.builder()
                 .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
-                .code("ELEC-NEW")
+                .code("CAT-1234")
                 .name("Electronics New")
                 .status(CategoryStatus.ACTIVE)
                 .build();
 
         when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
-        when(categoryRepository.existsByCodeIgnoreCaseAndIdNot("ELEC-NEW", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(false);
         when(categoryRepository.existsByNameIgnoreCaseAndIdNot("Electronics New", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(false);
         when(categoryRepository.save(existing)).thenReturn(updated);
         when(categoryMapper.toResponse(updated)).thenReturn(mapped);
@@ -214,33 +216,32 @@ class CategoryServiceImplTest {
         CategoryResponse actual = categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request);
 
         assertThat(actual).isNotNull();
-        assertThat(actual.getCode()).isEqualTo("ELEC-NEW");
+        assertThat(actual.getCode()).isEqualTo("CAT-1234");
         verify(categoryMapper).updateEntity(existing, request);
     }
 
     @Test
-    @DisplayName("should_ThrowConflictException_When_UpdatingToDuplicatedCode")
-    void should_ThrowConflictException_When_UpdatingToDuplicatedCode() {
+    @DisplayName("should_ThrowBadRequest_When_UpdateRequestContainsCode")
+    void should_ThrowBadRequest_When_UpdateRequestContainsCode() {
         UpdateCategoryRequest request = new UpdateCategoryRequest();
         try {
-            setField(request, "code", "ELEC");
+            setField(request, "code", "CAT-NEW");
         } catch (ReflectiveOperationException ex) {
             throw new IllegalStateException(ex);
         }
 
         Category existing = Category.builder()
-                .code("OLD")
+                .code("CAT-1234")
                 .name("Old Name")
                 .status(CategoryStatus.ACTIVE)
                 .build();
         existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
 
         when(categoryRepository.findById("7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(Optional.of(existing));
-        when(categoryRepository.existsByCodeIgnoreCaseAndIdNot("ELEC", "7c9e6679-7425-40de-944b-e07fc1f90ae7")).thenReturn(true);
 
         assertThatThrownBy(() -> categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
-                .isInstanceOf(ConflictException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "CAT_002");
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
     }
 
     @Test
@@ -248,7 +249,7 @@ class CategoryServiceImplTest {
     void should_ThrowBadRequest_When_UpdatePayloadHasNoFields() {
         UpdateCategoryRequest request = new UpdateCategoryRequest();
         Category existing = Category.builder()
-                .code("OLD")
+                .code("CAT-1234")
                 .name("Old Name")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -257,7 +258,7 @@ class CategoryServiceImplTest {
 
         assertThatThrownBy(() -> categoryService.updateCategory("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
                 .isInstanceOf(BadRequestException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
     }
 
     @Test
@@ -271,14 +272,14 @@ class CategoryServiceImplTest {
         }
 
         Category existing = Category.builder()
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
         existing.setId("7c9e6679-7425-40de-944b-e07fc1f90ae7");
 
         Category updated = Category.builder()
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.INACTIVE)
                 .build();
@@ -286,7 +287,7 @@ class CategoryServiceImplTest {
 
         CategoryResponse mapped = CategoryResponse.builder()
                 .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.INACTIVE)
                 .build();
@@ -315,7 +316,7 @@ class CategoryServiceImplTest {
 
         assertThatThrownBy(() -> categoryService.updateCategoryStatus("7c9e6679-7425-40de-944b-e07fc1f90ae7", request))
                 .isInstanceOf(NotFoundException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "CAT_001");
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CAT_001.getCode());
     }
 
     private CreateCategoryRequest buildCreateRequest(String code, String name, CategoryStatus status) {

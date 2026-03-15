@@ -1,8 +1,10 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Employee;
+import org.demo.whs.entity.Role;
 import org.demo.whs.entity.UserProfile;
 import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
@@ -17,12 +19,14 @@ import org.demo.whs.repository.EmployeeRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.repository.WareHouseRepository;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -68,8 +72,71 @@ class EmployeeServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
     @InjectMocks
     private EmployeeServiceImpl employeeService;
+
+    @Test
+    @DisplayName("Should generate employee code when request does not provide one")
+    void create_ShouldGenerateEmployeeCode_When_RequestDoesNotProvideOne() {
+        CreateEmployeeRequest request = CreateEmployeeRequest.builder()
+                .username("john.doe")
+                .password("Password1!")
+                .role(org.demo.whs.entity.enums.RoleType.ADMIN)
+                .firstName("John")
+                .lastName("Doe")
+                .email("john@example.com")
+                .build();
+
+        Role role = new Role();
+        role.setId("role-1");
+        role.setName(request.getRole().name());
+
+        Employee employee = new Employee();
+        employee.setAccountId("acc-1");
+
+        when(roleRepository.findByName(request.getRole())).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode(request.getPassword())).thenReturn("hashed-password");
+        when(employeeMapper.toEntity(request, "acc-1")).thenReturn(employee);
+        when(employeeMapper.toResponse(eq(employee), any(UserProfile.class))).thenAnswer(invocation ->
+                EmployeeResponse.builder()
+                        .employeeCode(employee.getEmployeeCode())
+                        .accountId(employee.getAccountId())
+                        .build());
+        when(accountRepository.save(any())).thenAnswer(invocation -> {
+            org.demo.whs.entity.Account account = invocation.getArgument(0);
+            account.setId("acc-1");
+            return account;
+        });
+
+        EmployeeResponse response = employeeService.create(request);
+
+        assertThat(response.getEmployeeCode()).startsWith("EMP-");
+        assertThat(response.getEmployeeCode()).hasSizeLessThanOrEqualTo(20);
+        verify(employeeRepository).save(employee);
+    }
+
+    @Test
+    @DisplayName("Should reject create request when employee code is provided")
+    void create_ShouldReject_When_RequestProvidesEmployeeCode() {
+        CreateEmployeeRequest request = CreateEmployeeRequest.builder()
+                .username("john.doe")
+                .password("Password1!")
+                .role(org.demo.whs.entity.enums.RoleType.ADMIN)
+                .firstName("John")
+                .lastName("Doe")
+                .email("john@example.com")
+                .employeeCode("EMP-001")
+                .build();
+
+        assertThatThrownBy(() -> employeeService.create(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
+
+        verify(employeeRepository, never()).save(any(Employee.class));
+    }
 
     @Nested
     @DisplayName("Get By Id Tests")

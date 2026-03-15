@@ -8,7 +8,6 @@ import org.demo.whs.entity.dto.request.Product.UpdateProductRequest;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,6 @@ public class ProductMapper {
      */
     public Products toEntity(CreateProductRequest request) {
         return Products.builder()
-                .sku(request.getSku().toUpperCase()) // Normalize SKU to uppercase
                 .name(request.getName())
                 .description(request.getDescription())
                 .categoryId(request.getCategoryId())

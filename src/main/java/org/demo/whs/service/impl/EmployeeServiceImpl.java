@@ -15,6 +15,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.EmployeeMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.service.EmployeeService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,6 +52,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final WareHouseRepository wareHouseRepository;
     private final EmployeeMapper employeeMapper;
     private final PasswordEncoder passwordEncoder;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Create and onboard a new warehouse employee.
@@ -74,10 +76,16 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     @Transactional
     public EmployeeResponse create(CreateEmployeeRequest request) {
-        log.info("Creating employee with employeeCode={}", request.getEmployeeCode());
+        String employeeCode = identifierGenerator.generateSystemManaged(
+                request.getEmployeeCode(),
+                "Employee code",
+                "EMP",
+                20,
+                employeeRepository::existsByEmployeeCode
+        );
+        log.info("Creating employee with employeeCode={}", employeeCode);
 
-        // 1. Validate uniqueness of username and employeeCode
-        validateRequest(request);
+        validateRequest(request, employeeCode);
 
         // 2. Validate role exists
         Role role = roleRepository.findByName(request.getRole())
@@ -103,11 +111,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         );
         userProfileRepository.save(userProfile);
 
-        // 6. Create employee record
         Employee employee = employeeMapper.toEntity(request, account.getId());
+        employee.setEmployeeCode(employeeCode);
         employeeRepository.save(employee);
 
-        log.info("Employee created successfully with id={}, employeeCode={}", employee.getId(), request.getEmployeeCode());
+        log.info("Employee created successfully with id={}, employeeCode={}", employee.getId(), employeeCode);
         return employeeMapper.toResponse(employee, userProfile);
     }
 
@@ -182,12 +190,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         return PageResponse.from(employeePage, responses);
     }
 
-    private void validateRequest(CreateEmployeeRequest request) {
+    private void validateRequest(CreateEmployeeRequest request, String employeeCode) {
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException(ErrorCode.COM_005);
         }
 
-        if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
+        if (employeeRepository.existsByEmployeeCode(employeeCode)) {
             throw new BadRequestException(ErrorCode.EMP_002);
         }
     }

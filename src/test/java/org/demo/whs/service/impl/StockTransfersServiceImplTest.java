@@ -23,6 +23,7 @@ import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -92,7 +93,8 @@ class StockTransfersServiceImplTest {
                 batchRepository,
                 accountRepository,
                 new StockTransfersMapper(),
-                new StockMovementsMapper()
+                new StockMovementsMapper(),
+                new IdentifierGenerator()
         );
 
         SecurityContextHolder.getContext().setAuthentication(
@@ -407,3 +409,4 @@ class StockTransfersServiceImplTest {
         }
     }
 }
+

@@ -7,7 +7,6 @@ import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
 import org.springframework.stereotype.Component;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -34,7 +33,6 @@ public class EmployeeMapper {
         Employee employee = new Employee();
 
         employee.setAccountId(accountId);
-        employee.setEmployeeCode(request.getEmployeeCode());
         employee.setDepartment(request.getDepartment());
         employee.setPosition(request.getPosition());
         employee.setHireDate(request.getHireDate());

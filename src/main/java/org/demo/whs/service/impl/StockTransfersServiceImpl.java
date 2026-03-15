@@ -28,6 +28,7 @@ import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockTransfersService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,12 +36,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -56,6 +54,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     private final AccountRepository accountRepository;
     private final StockTransfersMapper stockTransfersMapper;
     private final StockMovementsMapper stockMovementsMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     @Override
     @Transactional
@@ -65,7 +64,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         validateTransferRequest(request);
 
         String actorId = getCurrentActorId();
-        StockTransfers transfer = stockTransfersMapper.toEntity(request, generateTransferNumber(), actorId);
+        String transferNumber = identifierGenerator.generate("TRF", 50, stockTransfersRepository::existsByTransferNumber);
+        StockTransfers transfer = stockTransfersMapper.toEntity(request, transferNumber, actorId);
         StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
         return stockTransfersMapper.toResponse(savedTransfer);
     }
@@ -319,17 +319,6 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("User account not found", ErrorCode.AUTH_002));
         return account.getId();
-    }
-
-    private String generateTransferNumber() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        for (int i = 0; i < 10; i++) {
-            String candidate = "TRF-" + timestamp + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            if (!stockTransfersRepository.existsByTransferNumber(candidate)) {
-                return candidate;
-            }
-        }
-        throw new BadRequestException("Unable to generate unique transfer number", ErrorCode.STF_002);
     }
 
     private BigDecimal defaultZero(BigDecimal v) {

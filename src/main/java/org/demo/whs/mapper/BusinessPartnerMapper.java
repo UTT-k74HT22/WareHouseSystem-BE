@@ -30,7 +30,6 @@ public class BusinessPartnerMapper {
         if (request == null) return null;
 
         BusinessPartners bp = new BusinessPartners();
-        bp.setCode(request.getCode());
         bp.setName(request.getName());
         bp.setType(parseType(request.getType()));
         bp.setContactPerson(request.getContactPerson());

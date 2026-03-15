@@ -16,6 +16,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.StockAdjustmentsMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -73,7 +74,8 @@ class StockAdjustmentsServiceImplTest {
                 accountRepository,
                 new StockAdjustmentsMapper(),
                 new StockMovementsMapper(),
-                roleRepository
+                roleRepository,
+                new IdentifierGenerator()
         );
 
         // Set up security context with authenticated user
@@ -256,7 +258,7 @@ class StockAdjustmentsServiceImplTest {
             StockAdjustmentsResponse response = stockAdjustmentsService.createAdjustment(request);
 
             assertThat(response.getAdjustmentNumber()).startsWith("ADJ-");
-            assertThat(response.getAdjustmentNumber()).hasSize(27); // "ADJ-" + 14 timestamp + "-" + 8 UUID
+            assertThat(response.getAdjustmentNumber()).hasSizeLessThanOrEqualTo(50);
         }
     }
 
@@ -408,7 +410,7 @@ class StockAdjustmentsServiceImplTest {
 
             assertThatThrownBy(() -> stockAdjustmentsService.createAdjustment(request))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Unable to generate unique adjustment number");
+                    .hasMessageContaining("Unable to generate unique identifier for prefix ADJ");
         }
 
         @Test
@@ -1474,3 +1476,5 @@ class StockAdjustmentsServiceImplTest {
         }
     }
 }
+
+
