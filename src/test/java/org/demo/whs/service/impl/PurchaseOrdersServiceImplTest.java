@@ -24,6 +24,7 @@ import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.repository.PurchaseOrderLinesRepository;
 import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.WareHouseRepository;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -88,7 +89,8 @@ class PurchaseOrdersServiceImplTest {
                 businessPartnersRepository,
                 wareHouseRepository,
                 accountRepository,
-                new PurchaseOrdersMapper()
+                new PurchaseOrdersMapper(),
+                new IdentifierGenerator()
         );
 
         SecurityContextHolder.getContext().setAuthentication(
@@ -557,3 +559,4 @@ class PurchaseOrdersServiceImplTest {
         return purchaseOrderLine;
     }
 }
+

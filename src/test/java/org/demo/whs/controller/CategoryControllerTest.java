@@ -64,13 +64,12 @@ class CategoryControllerTest {
     @DisplayName("should_CreateCategory_When_RequestIsValid")
     void should_CreateCategory_When_RequestIsValid() throws Exception {
         CreateCategoryRequest request = new CreateCategoryRequest();
-        setField(request, "code", "ELEC");
         setField(request, "name", "Electronics");
         setField(request, "status", CategoryStatus.ACTIVE);
 
         CategoryResponse response = CategoryResponse.builder()
                 .id("cat-1")
-                .code("ELEC")
+                .code("CAT-1234")
                 .name("Electronics")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -83,7 +82,7 @@ class CategoryControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value("cat-1"))
-                .andExpect(jsonPath("$.data.code").value("ELEC"));
+                .andExpect(jsonPath("$.data.code").value("CAT-1234"));
     }
 
     @Test
@@ -91,7 +90,6 @@ class CategoryControllerTest {
     void should_ReturnBadRequest_When_CreatePayloadMissingRequiredFields() throws Exception {
         String invalidPayload = """
                 {
-                  "code": "",
                   "name": "",
                   "status": null
                 }
@@ -188,13 +186,12 @@ class CategoryControllerTest {
     @DisplayName("should_UpdateCategory_When_RequestIsValid")
     void should_UpdateCategory_When_RequestIsValid() throws Exception {
         UpdateCategoryRequest request = new UpdateCategoryRequest();
-        setField(request, "code", "ELEC-NEW");
         setField(request, "name", "Electronics New");
         setField(request, "description", "Updated desc");
 
         CategoryResponse response = CategoryResponse.builder()
                 .id("7c9e6679-7425-40de-944b-e07fc1f90ae7")
-                .code("ELEC-NEW")
+                .code("CAT-1234")
                 .name("Electronics New")
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -206,14 +203,14 @@ class CategoryControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("ELEC-NEW"));
+                .andExpect(jsonPath("$.data.code").value("CAT-1234"));
     }
 
     @Test
     @DisplayName("should_ReturnConflict_When_UpdateCategoryDuplicated")
     void should_ReturnConflict_When_UpdateCategoryDuplicated() throws Exception {
         UpdateCategoryRequest request = new UpdateCategoryRequest();
-        setField(request, "code", "ELEC");
+        setField(request, "name", "Electronics");
 
         when(categoryService.updateCategory(any(), any(UpdateCategoryRequest.class)))
                 .thenThrow(new ConflictException(ErrorCode.CAT_002));

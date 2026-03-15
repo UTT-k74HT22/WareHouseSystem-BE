@@ -18,6 +18,7 @@ import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockAdjustmentsService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,9 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 import static java.math.BigDecimal.*;
 
 @Service
@@ -44,6 +43,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     private final StockAdjustmentsMapper stockAdjustmentsMapper;
     private final StockMovementsMapper stockMovementsMapper;
     private final RoleRepository roleRepository;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Creates a new stock adjustment request.
@@ -80,7 +80,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         StockAdjustments stockAdjustments = stockAdjustmentsMapper.toEntity(
                 request,
                 inventory,
-                generateAdjustmentNumber(),
+                identifierGenerator.generate("ADJ", 50, stockAdjustmentsRepository::existsByAdjustmentNumber),
                 actorId,
                 requiresApproval,
                 status
@@ -393,17 +393,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("User account not found", ErrorCode.AUTH_002));
         return account.getId();
-    }
-
-    private String generateAdjustmentNumber() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        for (int i = 0; i < 5; i++) {
-            String candidate = "ADJ-" + timestamp + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            if (!stockAdjustmentsRepository.existsByAdjustmentNumber(candidate)) {
-                return candidate;
-            }
-        }
-        throw new BadRequestException("Unable to generate unique adjustment number after retries", ErrorCode.STA_001);
     }
 
     private String appendNote(String existing, String key, String value) {

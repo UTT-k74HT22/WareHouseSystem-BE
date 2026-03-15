@@ -27,7 +27,6 @@ public class LocationMapper {
 
         return Locations.builder()
                 .warehouseId(request.getWarehouseId())
-                .code(request.getCode())
                 .name(request.getName())
                 .zone(request.getZone())
                 .type(request.getType())

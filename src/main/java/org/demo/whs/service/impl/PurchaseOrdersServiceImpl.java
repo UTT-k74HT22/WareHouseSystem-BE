@@ -28,17 +28,15 @@ import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.repository.specification.PurchaseOrdersSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.PurchaseOrdersService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Implementation of the PurchaseOrdersService.
@@ -54,6 +52,7 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
     private final PurchaseOrdersMapper purchaseOrdersMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     @Override
     @Transactional
@@ -69,7 +68,11 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
         validateWarehouse(request.getWarehouseId());
 
         // Step 3: Create purchase order draft
-        String purchaseOrderNumber = generatePurchaseOrderNumber();
+        String purchaseOrderNumber = identifierGenerator.generate(
+                "PO",
+                50,
+                purchaseOrdersRepository::existsByPurchaseOrderNumber
+        );
         PurchaseOrders purchaseOrders = purchaseOrdersMapper.toEntity(request);
         purchaseOrders.setPurchaseOrderNumber(purchaseOrderNumber);
         purchaseOrders.setPaymentTerms(resolvePaymentTerms(request.getPaymentTerms(), supplier.getPaymentTerms()));
@@ -196,19 +199,6 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
         );
 
         return purchaseOrdersMapper.toResponse(confirmedPurchaseOrder);
-    }
-
-    private String generatePurchaseOrderNumber() {
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        while (true) {
-            String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            String poNumber = String.format("PO-%s-%s", datePart, suffix);
-            if (!purchaseOrdersRepository.existsByPurchaseOrderNumber(poNumber)) {
-                log.debug("Generated purchase order number: {}", poNumber);
-                return poNumber;
-            }
-            log.warn("Generated purchase order number {} already exists, regenerating...", poNumber);
-        }
     }
 
     private void normalizeAndValidateFilter(PurchaseOrdersFilterRequest filter) {

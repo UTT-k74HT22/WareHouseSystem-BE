@@ -17,13 +17,13 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.BusinessPartnerMapper;
 import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.service.BusinessPartnerService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 /**
@@ -42,6 +42,7 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
 
     private final BusinessPartnersRepository repository;
     private final BusinessPartnerMapper mapper;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Retrieve all business partners.
@@ -89,14 +90,17 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
     @Override
     @Transactional
     public BusinessPartnerResponse create(BusinessPartnerRequest request) {
-        log.info("[SERVICE][CREATE] Start, code={}", request.getCode());
-
-        if (repository.existsByCode(request.getCode())) {
-            log.warn("[SERVICE][CREATE] Code already exists, code={}", request.getCode());
-            throw new ConflictException(ErrorCode.BP_002);
-        }
+        String code = identifierGenerator.generateSystemManaged(
+                request.getCode(),
+                "Business partner code",
+                resolveBusinessPartnerPrefix(request.getType()),
+                20,
+                repository::existsByCode
+        );
+        log.info("[SERVICE][CREATE] Start, code={}", code);
 
         BusinessPartners entity = mapper.toEntity(request);
+        entity.setCode(code);
         repository.save(entity);
 
         log.info("[SERVICE][CREATE] Success, id={}, code={}",
@@ -240,6 +244,22 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
                         .toList();
 
         return PageResponse.from(partnerPage, responses);
+    }
+
+    private String resolveBusinessPartnerPrefix(String type) {
+        if (type == null) {
+            return "BP";
+        }
+
+        try {
+            return switch (BusinessPartnerType.valueOf(type.trim().toUpperCase())) {
+                case SUPPLIER -> "SUP";
+                case CUSTOMER -> "CUS";
+                case BOTH -> "BP";
+            };
+        } catch (IllegalArgumentException ex) {
+            return "BP";
+        }
     }
 
 }

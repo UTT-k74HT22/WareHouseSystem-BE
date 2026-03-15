@@ -23,6 +23,7 @@ import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.ProductService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final UnitsOfMeasureRepository unitsOfMeasureRepository;
     private final AccountRepository accountRepository;
     private final ProductMapper productMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Create a new product with validation.
@@ -59,13 +61,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse createProduct(CreateProductRequest request) {
-        log.info("Creating product with SKU={}", request.getSku());
-
-        // 1. Validate SKU uniqueness (case-insensitive)
-        if (productRepository.existsBySkuIgnoreCase(request.getSku())) {
-            log.warn("Product SKU already exists: {}", request.getSku());
-            throw new BadRequestException(ErrorCode.PROD_002);
-        }
+        String sku = identifierGenerator.generateSystemManaged(
+                request.getSku(),
+                "SKU",
+                "SKU",
+                50,
+                productRepository::existsBySkuIgnoreCase
+        );
+        log.info("Creating product with generated SKU={}", sku);
 
         // 2. Validate Category exists and is ACTIVE
         Category category = validateCategory(request.getCategoryId());
@@ -76,10 +79,9 @@ public class ProductServiceImpl implements ProductService {
         // 4. Validate stock level constraints
         validateStockLevels(request.getMinStockLevel(), request.getMaxStockLevel(), request.getReorderPoint());
 
-        // 5. Map to entity
         Products product = productMapper.toEntity(request);
+        product.setSku(sku);
 
-        // 6. Set audit fields
         Account currentUser = getCurrentUser();
         setAuditFields(product, currentUser, true);
 

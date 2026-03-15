@@ -22,10 +22,12 @@ import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +42,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mockStatic;
@@ -67,11 +70,13 @@ class BatchServiceImplTest {
     @Mock
     private AccountRepository accountRepository;
 
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
     @Test
     void createBatch_success() {
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
-        request.setBatchNumber("B001");
         request.setManufacturingDate(LocalDate.now().minusDays(1));
         request.setExpiryDate(LocalDate.now().plusDays(10));
 
@@ -87,15 +92,21 @@ class BatchServiceImplTest {
         Batch savedBatch = new Batch();
         savedBatch.setId("BATCH_1");
 
-        BatchResponse response = BatchResponse.builder()
-                .id("BATCH_1")
-                .build();
-
         when(productRepository.findById("P1")).thenReturn(Optional.of(product));
-        when(batchRepository.existsByProductIdAndBatchNumber("P1", "B001")).thenReturn(false);
         when(batchMapper.createEntity(request)).thenReturn(batch);
-        when(batchRepository.save(batch)).thenReturn(savedBatch);
-        when(batchMapper.toResponse(savedBatch)).thenReturn(response);
+        when(batchRepository.existsByProductIdAndBatchNumber(org.mockito.ArgumentMatchers.eq("P1"), anyString()))
+                .thenReturn(false);
+        when(batchRepository.save(batch)).thenAnswer(invocation -> {
+            Batch persisted = invocation.getArgument(0);
+            savedBatch.setBatchNumber(persisted.getBatchNumber());
+            return savedBatch;
+        });
+        when(batchMapper.toResponse(savedBatch)).thenAnswer(invocation ->
+                BatchResponse.builder()
+                        .id("BATCH_1")
+                        .batchNumber(savedBatch.getBatchNumber())
+                        .build()
+        );
 
         try (var mocked = mockStatic(SecurityUtils.class)) {
             mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
@@ -105,7 +116,10 @@ class BatchServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo("BATCH_1");
+            assertThat(result.getBatchNumber()).startsWith("BAT-");
+            assertThat(result.getBatchNumber()).hasSizeLessThanOrEqualTo(50);
             assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+            assertThat(batch.getBatchNumber()).isEqualTo(result.getBatchNumber());
             assertThat(batch.getCreatedBy()).isEqualTo("A1");
             assertThat(batch.getUpdatedBy()).isEqualTo("A1");
             assertThat(result.getTotalOnHandQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -113,6 +127,17 @@ class BatchServiceImplTest {
 
             verify(batchRepository).save(batch);
         }
+    }
+
+    @Test
+    void createBatch_shouldReject_When_RequestProvidesBatchNumber() {
+        CreateBatchRequest request = new CreateBatchRequest();
+        request.setProductId("P1");
+        request.setBatchNumber("B001");
+
+        assertThatThrownBy(() -> batchService.createBatch(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
     }
 
     @Test
@@ -145,30 +170,9 @@ class BatchServiceImplTest {
     }
 
     @Test
-    void createBatch_duplicateBatchNumber() {
-        CreateBatchRequest request = new CreateBatchRequest();
-        request.setProductId("P1");
-        request.setBatchNumber("B001");
-
-        Products product = new Products();
-        product.setRequiresBatchTracking(true);
-
-        when(productRepository.findById("P1"))
-                .thenReturn(Optional.of(product));
-
-        when(batchRepository.existsByProductIdAndBatchNumber("P1", "B001"))
-                .thenReturn(true);
-
-        assertThatThrownBy(() -> batchService.createBatch(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining(ErrorCode.BATCH_002.getMessage());
-    }
-
-    @Test
     void createBatch_invalidManufacturingDate() {
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
-        request.setBatchNumber("B001");
         request.setManufacturingDate(LocalDate.now().plusDays(1));
 
         Products product = new Products();
@@ -176,9 +180,6 @@ class BatchServiceImplTest {
 
         when(productRepository.findById("P1"))
                 .thenReturn(Optional.of(product));
-
-        when(batchRepository.existsByProductIdAndBatchNumber("P1", "B001"))
-                .thenReturn(false);
 
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
@@ -189,7 +190,6 @@ class BatchServiceImplTest {
     void createBatch_invalidExpiryDate() {
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
-        request.setBatchNumber("B001");
         request.setManufacturingDate(LocalDate.now());
         request.setExpiryDate(LocalDate.now().minusDays(1));
 
@@ -198,9 +198,6 @@ class BatchServiceImplTest {
 
         when(productRepository.findById("P1"))
                 .thenReturn(Optional.of(product));
-
-        when(batchRepository.existsByProductIdAndBatchNumber("P1", "B001"))
-                .thenReturn(false);
 
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
@@ -267,7 +264,6 @@ class BatchServiceImplTest {
         batch.setExpiryDate(LocalDate.now().plusDays(20));
 
         UpdateBatchRequest request = new UpdateBatchRequest();
-        request.setBatchNumber("B002");
         request.setSupplierBatchNumber("SUP-01");
         request.setNotes("Updated notes");
 
@@ -277,15 +273,13 @@ class BatchServiceImplTest {
 
         BatchResponse response = BatchResponse.builder()
                 .id("B1")
-                .batchNumber("B002")
+                .batchNumber("B001")
                 .build();
 
         when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
-        when(batchRepository.existsByProductIdAndBatchNumberAndIdNot("P1", "B002", "B1")).thenReturn(false);
         doAnswer(invocation -> {
             UpdateBatchRequest updateRequest = invocation.getArgument(0);
             Batch target = invocation.getArgument(1);
-            target.setBatchNumber(updateRequest.getBatchNumber());
             target.setSupplierBatchNumber(updateRequest.getSupplierBatchNumber());
             target.setNotes(updateRequest.getNotes());
             return null;
@@ -300,12 +294,28 @@ class BatchServiceImplTest {
             BatchResponse result = batchService.updateBatch("B1", request);
 
             assertThat(result).isNotNull();
-            assertThat(batch.getBatchNumber()).isEqualTo("B002");
+            assertThat(batch.getBatchNumber()).isEqualTo("B001");
             assertThat(batch.getSupplierBatchNumber()).isEqualTo("SUP-01");
             assertThat(batch.getNotes()).isEqualTo("Updated notes");
             assertThat(batch.getUpdatedBy()).isEqualTo("A1");
             assertThat(batch.getUpdatedAt()).isNotNull();
         }
+    }
+
+    @Test
+    void updateBatch_shouldReject_When_RequestProvidesBatchNumber() {
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setBatchNumber("B001");
+
+        UpdateBatchRequest request = new UpdateBatchRequest();
+        request.setBatchNumber("B002");
+
+        when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
+
+        assertThatThrownBy(() -> batchService.updateBatch("B1", request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.COM_001.getCode());
     }
 
     @Test

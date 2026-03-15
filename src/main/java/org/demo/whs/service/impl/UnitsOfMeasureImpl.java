@@ -13,10 +13,10 @@ import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.service.UnitsOfMeasureService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,6 +32,7 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
     private final UnitsOfMeasureRepository unitsOfMeasureRepository;
     private final ProductRepository productRepository;
     private final UnitsOfMeasureMapper unitsOfMeasureMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     /**
      * Creates a new unit of measure.
@@ -42,15 +43,21 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
     @Override
     @CacheEvict(cacheNames = "uom_list", key = "'all'")
     public UnitsOfMeasureResponse create(UnitsOfMeasureRequest request) {
-        log.info("Creating unit of measure with code: {}", request.getCode());
+        String code = identifierGenerator.generateSystemManaged(
+                request.getCode(),
+                "Unit of measure code",
+                "UOM",
+                10,
+                unitsOfMeasureRepository::existsUnitsOfMeasureByCode
+        );
+        log.info("Creating unit of measure with code: {}", code);
 
-        //Step validate
-        validateRequest(request);
+        validateRequest(request, code);
 
-        //Step build and save
         UnitsOfMeasure unitsOfMeasure = unitsOfMeasureMapper.buildRequest(request);
+        unitsOfMeasure.setCode(code);
         unitsOfMeasureRepository.save(unitsOfMeasure);
-        log.info("Unit of measure with code {} created successfully", request.getCode());
+        log.info("Unit of measure with code {} created successfully", code);
         return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
     }
 
@@ -144,9 +151,9 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         log.info("Unit of measure with id {} deleted successfully (hard delete)", id);
     }
 
-    private void validateRequest(UnitsOfMeasureRequest request) {
-        if (request.getCode() != null && unitsOfMeasureRepository.existsUnitsOfMeasureByCode(request.getCode())) {
-            log.error("Unit of measure with code {} already exists", request.getCode());
+    private void validateRequest(UnitsOfMeasureRequest request, String code) {
+        if (unitsOfMeasureRepository.existsUnitsOfMeasureByCode(code)) {
+            log.error("Unit of measure with code {} already exists", code);
             throw new BadRequestException(ErrorCode.UOM_002);
         }
 

@@ -6,7 +6,6 @@ import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.springframework.stereotype.Component;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,12 +13,17 @@ import java.util.Map;
 @Component
 public class WareHouseMapper {
 
+    /**
+     * Converts a CreateWarehouseRequest DTO to a Warehouses entity.
+     *
+     * @param request the CreateWarehouseRequest containing warehouse details
+     * @return a Warehouses entity populated with data from the request
+     */
     public Warehouses toEntity(CreateWarehouseRequest request) {
         if (request == null) {
             return null;
         }
         return Warehouses.builder()
-                .code(request.getCode())
                 .name(request.getName())
                 .address(request.getAddress())
                 .phone(request.getPhone())

@@ -2,14 +2,19 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.mapper.WareHouseMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
+import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.utils.IdentifierGenerator;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,8 +22,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -41,6 +48,15 @@ class WareHouseServiceImplTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private UserProfileRepository userProfileRepository;
+
+    @Mock
+    private WareHouseMapper wareHouseMapper;
+
+    @Spy
+    private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
 
     @Test
     void deleteWarehouse_shouldThrowException_whenWarehouseNotFound() {
@@ -139,5 +155,46 @@ class WareHouseServiceImplTest {
 
             verify(wareHouseRepository).save(warehouse);
         }
+    }
+
+    @Test
+    void createWH_shouldGenerateCode_whenRequestCodeMissing() {
+        CreateWarehouseRequest request = mock(CreateWarehouseRequest.class);
+        when(request.getName()).thenReturn("Main Warehouse");
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setManagerId("M1");
+
+        Account account = new Account();
+        account.setId("USER1");
+
+        when(wareHouseMapper.toEntity(request)).thenReturn(warehouse);
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+        when(userProfileRepository.getAccountsByIds(List.of("M1"))).thenReturn(List.of());
+        when(wareHouseMapper.toResponse(warehouse, null)).thenAnswer(invocation -> WareHouseResponse.builder()
+                .code(warehouse.getCode())
+                .name("Main Warehouse")
+                .build());
+
+        try (MockedStatic<SecurityUtils> utilities = mockStatic(SecurityUtils.class)) {
+            utilities.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+
+            WareHouseResponse response = wareHouseService.createWH(request);
+
+            assertNotNull(response);
+            assertTrue(response.getCode().startsWith("WH-"));
+            assertTrue(response.getCode().length() <= 20);
+            verify(wareHouseRepository).save(warehouse);
+        }
+    }
+
+    @Test
+    void createWH_shouldReject_whenRequestProvidesCode() {
+        CreateWarehouseRequest request = mock(CreateWarehouseRequest.class);
+        when(request.getCode()).thenReturn("WH-001");
+
+        assertThrows(BadRequestException.class, () -> wareHouseService.createWH(request));
+
+        verify(wareHouseRepository, never()).save(any(Warehouses.class));
     }
 }

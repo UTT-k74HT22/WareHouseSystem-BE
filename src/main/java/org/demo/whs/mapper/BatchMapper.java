@@ -21,7 +21,6 @@ public class BatchMapper {
         }
 
         return Batch.builder()
-                .batchNumber(request.getBatchNumber())
                 .productId(request.getProductId())
                 .manufacturingDate(request.getManufacturingDate())
                 .expiryDate(request.getExpiryDate())
@@ -37,10 +36,6 @@ public class BatchMapper {
 
         if (batch == null || request == null) {
             return;
-        }
-
-        if (request.getBatchNumber() != null) {
-            batch.setBatchNumber(request.getBatchNumber());
         }
 
         if ( request.getManufacturingDate() != null) {

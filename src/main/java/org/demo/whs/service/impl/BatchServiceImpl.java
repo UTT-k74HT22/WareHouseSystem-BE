@@ -53,12 +53,12 @@ import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.repository.specification.BatchSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
+import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -100,19 +100,23 @@ public class BatchServiceImpl implements BatchService {
     private final BusinessPartnersRepository businessPartnersRepository;
     private final LocationRepository locationRepository;
     private final WareHouseRepository wareHouseRepository;
+    private final IdentifierGenerator identifierGenerator;
 
     @Override
     @Transactional
     public BatchResponse createBatch(CreateBatchRequest request) {
-        log.info("Creating batch for productId={} with batchNumber={}", request.getProductId(), request.getBatchNumber());
+        String batchNumber = identifierGenerator.generateSystemManaged(
+                request.getBatchNumber(),
+                "Batch number",
+                "BAT",
+                50,
+                candidate -> batchRepository.existsByProductIdAndBatchNumber(request.getProductId(), candidate)
+        );
+        log.info("Creating batch for productId={} with batchNumber={}", request.getProductId(), batchNumber);
         Products product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
         if (!Boolean.TRUE.equals(product.getRequiresBatchTracking())) {
             throw new BadRequestException(ErrorCode.BATCH_009);
-        }
-        if (batchRepository.existsByProductIdAndBatchNumber(request.getProductId(), request.getBatchNumber())) {
-            log.warn("Batch already exists: productId={}, batchNumber={}", request.getProductId(), request.getBatchNumber());
-            throw new BadRequestException(ErrorCode.BATCH_002);
         }
         if (request.getManufacturingDate() != null && request.getManufacturingDate().isAfter(LocalDate.now())) {
             throw new BadRequestException(ErrorCode.BATCH_005);
@@ -124,6 +128,7 @@ public class BatchServiceImpl implements BatchService {
         }
         Account currentUser = getCurrentUser();
         Batch batch = batchMapper.createEntity(request);
+        batch.setBatchNumber(batchNumber);
         batch.setStatus(BatchStatus.AVAILABLE);
         setAuditFieldsForCreate(batch, currentUser);
         Batch savedBatch = batchRepository.save(batch);
@@ -169,10 +174,7 @@ public class BatchServiceImpl implements BatchService {
     public BatchResponse updateBatch(String id, UpdateBatchRequest request) {
         Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
-        if (request.getBatchNumber() != null
-                && batchRepository.existsByProductIdAndBatchNumberAndIdNot(batch.getProductId(), request.getBatchNumber(), id)) {
-            throw new BadRequestException(ErrorCode.BATCH_002);
-        }
+        identifierGenerator.assertSystemManagedFieldNotProvided(request.getBatchNumber(), "Batch number");
         LocalDate manufacturingDate = request.getManufacturingDate() != null
                 ? request.getManufacturingDate()
                 : batch.getManufacturingDate();
