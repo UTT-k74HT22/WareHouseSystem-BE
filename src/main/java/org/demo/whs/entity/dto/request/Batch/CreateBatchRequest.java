@@ -6,9 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
-
 import lombok.Setter;
-import org.demo.whs.entity.enums.BatchStatus;
 
 import java.time.LocalDate;
 
@@ -35,8 +33,6 @@ public class CreateBatchRequest {
     @Size(max = 50)
     private String supplierBatchNumber;
 
+    @Size(max = 1000)
     private String notes;
-
-    @NotNull(message = "Status is required")
-    private BatchStatus status;
 }
