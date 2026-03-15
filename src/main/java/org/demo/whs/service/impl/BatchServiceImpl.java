@@ -7,30 +7,29 @@ import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
+import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
+import org.demo.whs.entity.dto.response.Batch.BatchResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.BatchStatus;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.mapper.BatchMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
-import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
-import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
-import org.demo.whs.entity.dto.response.Batch.BatchResponse;
-import org.demo.whs.mapper.BatchMapper;
-import org.demo.whs.entity.dto.response.PageResponse;
-import org.demo.whs.entity.enums.BatchStatus;
-import org.demo.whs.exception.BadRequestException;
-import org.demo.whs.exception.ErrorCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.beans.Transient;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -71,14 +70,14 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_002);
         }
 
-        if (request.getManufacturingDate() != null &&
-                request.getManufacturingDate().isAfter(LocalDate.now())) {
+        if (request.getManufacturingDate() != null
+                && request.getManufacturingDate().isAfter(LocalDate.now())) {
             throw new BadRequestException(ErrorCode.BATCH_005);
         }
 
-        if (request.getManufacturingDate() != null &&
-                request.getExpiryDate() != null &&
-                request.getExpiryDate().isBefore(request.getManufacturingDate())) {
+        if (request.getManufacturingDate() != null
+                && request.getExpiryDate() != null
+                && request.getExpiryDate().isBefore(request.getManufacturingDate())) {
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
 
@@ -94,16 +93,15 @@ public class BatchServiceImpl implements BatchService {
 
     @Override
     @Transactional
-    public BatchResponse getBatchById(String Id) {
-        log.info("Fetching batch by ID: {}", Id);
-        Batch batch = batchRepository.findById(Id)
+    public BatchResponse getBatchById(String id) {
+        log.info("Fetching batch by ID: {}", id);
+        Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Fetching batch by ID: {}", Id);
-                    return new BadRequestException(ErrorCode.BATCH_001);
+                    log.warn("Batch not found with id={}", id);
+                    return new NotFoundException(ErrorCode.BATCH_001);
                 });
 
         return batchMapper.toResponse(batch);
-
     }
 
     @Override
@@ -113,7 +111,8 @@ public class BatchServiceImpl implements BatchService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Batch> batchPage = batchRepository.findAll(pageable);
         List<BatchResponse> responses = batchPage.getContent()
-                .stream().map(batchMapper::toResponse)
+                .stream()
+                .map(batchMapper::toResponse)
                 .collect(Collectors.toList());
 
         return PageResponse.from(batchPage, responses);
@@ -122,20 +121,13 @@ public class BatchServiceImpl implements BatchService {
     @Override
     @Transactional
     public BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request) {
-
-        Batch batch = batchRepository.findById(id)
-                .orElseThrow(() ->
-                        new BadRequestException(ErrorCode.BATCH_001));
-
-        batch.setStatus(request.getStatus());
-        Batch updateStatus = batchRepository.save(batch);
-        log.info("Batch status changed successfully with ID={}", updateStatus.getId());
-        return batchMapper.toResponse(updateStatus);
+        log.warn("Blocked generic batch status change for batchId={} targetStatus={}", id, request.getStatus());
+        throw new BadRequestException(ErrorCode.BATCH_011);
     }
 
     @Override
     @Transactional
-    public BatchResponse updateBatch (String id, UpdateBatchRequest request) {
+    public BatchResponse updateBatch(String id, UpdateBatchRequest request) {
         Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
 
@@ -156,7 +148,7 @@ public class BatchServiceImpl implements BatchService {
                 : batch.getExpiryDate();
 
         if (manufacturingDate != null && manufacturingDate.isAfter(LocalDate.now())) {
-            throw new BadRequestException(ErrorCode.BATCH_003);
+            throw new BadRequestException(ErrorCode.BATCH_005);
         }
 
         if (expiryDate != null && manufacturingDate != null && expiryDate.isBefore(manufacturingDate)) {
@@ -172,7 +164,7 @@ public class BatchServiceImpl implements BatchService {
 
     @Override
     @Transactional
-    public BatchResponse quarantineBatch(String id) {
+    public BatchResponse quarantineBatch(String id, QuarantineBatchRequest request) {
         Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
 
@@ -181,6 +173,7 @@ public class BatchServiceImpl implements BatchService {
         Account currentUser = getCurrentUser();
 
         batch.setStatus(BatchStatus.QUARANTINE);
+        batch.setNotes(appendWorkflowNote(batch.getNotes(), buildQuarantineAuditNote(request)));
 
         setAuditFieldsForUpdate(batch, currentUser);
 
@@ -190,12 +183,11 @@ public class BatchServiceImpl implements BatchService {
                 batch.getBatchNumber(), currentUser.getUsername());
 
         return batchMapper.toResponse(saveBatch);
-
     }
 
     @Override
     @Transactional
-    public BatchResponse releaseBatch(String id) {
+    public BatchResponse releaseBatch(String id, ReleaseBatchRequest request) {
 
         Batch batch = batchRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
@@ -205,6 +197,7 @@ public class BatchServiceImpl implements BatchService {
         Account user = getCurrentUser();
 
         batch.setStatus(BatchStatus.AVAILABLE);
+        batch.setNotes(appendWorkflowNote(batch.getNotes(), buildReleaseAuditNote(request)));
 
         setAuditFieldsForUpdate(batch, user);
 
@@ -234,8 +227,7 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_015);
         }
 
-        boolean hasReservedStock =
-                inventoryRepository.existsReservedStockByBatchId(batch.getId());
+        boolean hasReservedStock = inventoryRepository.existsReservedStockByBatchId(batch.getId());
 
         if (hasReservedStock) {
             throw new BadRequestException(ErrorCode.BATCH_007);
@@ -255,11 +247,36 @@ public class BatchServiceImpl implements BatchService {
             throw new BadRequestException(ErrorCode.BATCH_016);
         }
 
-        if (batch.getExpiryDate() != null &&
-                batch.getExpiryDate().isBefore(LocalDate.now())) {
-
+        if (batch.getExpiryDate() != null
+                && !batch.getExpiryDate().isAfter(LocalDate.now())) {
             throw new BadRequestException(ErrorCode.BATCH_017);
         }
+    }
+
+    private String appendWorkflowNote(String existingNotes, String workflowNote) {
+        if (workflowNote == null || workflowNote.isBlank()) {
+            return existingNotes;
+        }
+        if (existingNotes == null || existingNotes.isBlank()) {
+            return workflowNote;
+        }
+        return existingNotes + System.lineSeparator() + workflowNote;
+    }
+
+    private String buildQuarantineAuditNote(QuarantineBatchRequest request) {
+        StringBuilder note = new StringBuilder("[QUARANTINE] reason=")
+                .append(request.getReason());
+
+        if (request.getExpectedResolutionDate() != null) {
+            note.append("; expected_resolution_date=").append(request.getExpectedResolutionDate());
+        }
+
+        note.append("; notify_manager=").append(Boolean.TRUE.equals(request.getNotifyManager()));
+        return note.toString();
+    }
+
+    private String buildReleaseAuditNote(ReleaseBatchRequest request) {
+        return "[RELEASE] release_notes=" + request.getReleaseNotes();
     }
 
     /**
