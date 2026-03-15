@@ -127,6 +127,6 @@ Nếu đọc code mà chưa biết entity nào thuộc lớp nào, hãy nhớ:
 ## 10. Tài liệu đọc tiếp
 
 - `FLOW_NGHIEP_VU_CUA_HE_THONG_20260312.md`
+- `WHS-58_INBOUND_RECEIPT_LINES_DESIGN_20260313.md`
 - `WHS-56_INBOUND_RECEIPTS_CRUD_DESIGN_20260309.md`
 - `WHS-57_CONFIRM_RECEIPT_DESIGN_20260309.md`
-

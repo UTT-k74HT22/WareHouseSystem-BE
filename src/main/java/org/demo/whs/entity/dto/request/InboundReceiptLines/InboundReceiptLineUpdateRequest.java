@@ -21,13 +21,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class InboundReceiptLinesRequest {
-
-    @NotBlank(message = "Inbound receipt ID is required")
-    private String inboundReceiptId;
-
-    @NotBlank(message = "Purchase order line ID is required")
-    private String purchaseOrderLineId;
+public class InboundReceiptLineUpdateRequest {
 
     @NotBlank(message = "Location ID is required")
     private String locationId;

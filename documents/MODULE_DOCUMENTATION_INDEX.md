@@ -92,6 +92,7 @@ Each module follows this consistent structure:
 - **DB**: `/documents/Inbound/DB_MODULE_05_INBOUND.md`
 - **Review**: `/documents/Inbound/INBOUND_MODULE_REVIEW_AND_PLAN_20260307.md`
 - **Roadmap**: `/documents/Inbound/INBOUND_IMPLEMENTATION_ROADMAP_20260309.md` 🆕
+- **Task Design**: `/documents/Inbound/WHS-58_INBOUND_RECEIPT_LINES_DESIGN_20260313.md` 🆕
 
 **Key Features:**
 - Purchase order management

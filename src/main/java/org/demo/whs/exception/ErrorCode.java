@@ -155,6 +155,24 @@ public enum ErrorCode {
     BATCH_017("BATCH_017", "Batch cannot be released because it is expired"),
     BATCH_018("BATCH_018", "Recalled batch cannot be released"),
 
+    // Inbound Receipt Line errors
+    IRL_001("IRL_001", "Inbound receipt line not found"),
+    IRL_002("IRL_002", "Inbound receipt not found"),
+    IRL_003("IRL_003", "Inbound receipt is not in DRAFT status - cannot modify lines"),
+    IRL_004("IRL_004", "Purchase order line does not belong to this receipt"),
+    IRL_005("IRL_005", "Product is inactive"),
+    IRL_006("IRL_006", "Location does not belong to receipt warehouse"),
+    IRL_007("IRL_007", "Location is not usable - status is INACTIVE or MAINTENANCE"),
+    IRL_008("IRL_008", "Batch is required for batch-tracked product"),
+    IRL_009("IRL_009", "Batch is not allowed for non-batch tracked product"),
+    IRL_010("IRL_010", "Batch is not compatible with quality status"),
+    IRL_011("IRL_011", "Batch is EXPIRED or RECALLED - cannot be used"),
+    IRL_012("IRL_012", "Quantity exceeds remaining quantity available for this purchase order line"),
+    IRL_013("IRL_013", "Duplicate split dimension already exists in this receipt"),
+    IRL_014("IRL_014", "Quarantine status requires notes"),
+    IRL_015("IRL_015", "Invalid quality status"),
+    IRL_016("IRL_016", "Purchase order line not found"),
+
     // Rate limiting errors
     RATE_LIMIT_EXCEEDED("RATE_001", "Rate limit exceeded - too many requests"),
 

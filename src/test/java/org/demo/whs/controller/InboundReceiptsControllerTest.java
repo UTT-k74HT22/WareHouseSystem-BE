@@ -341,10 +341,34 @@ class InboundReceiptsControllerTest {
     }
 
     @Test
+    @DisplayName("Should confirm inbound receipt")
+    void should_ConfirmInboundReceipt_When_RequestIsValid() throws Exception {
+        InboundReceiptsResponse response = buildResponse("rec-1", "CONFIRMED");
+
+        when(inboundReceiptsService.confirm("rec-1")).thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/inbound-receipts/{id}/confirm", "rec-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("rec-1"))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+
+        verify(inboundReceiptsService).confirm("rec-1");
+    }
+
+    @Test
     @WithAnonymousUser
     @DisplayName("Should return 401 when delete is called without authentication")
     void should_Return401_When_DeleteWithoutAuthentication() throws Exception {
         mockMvc.perform(delete("/api/v1/inbound-receipts/{id}", "rec-1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithAnonymousUser
+    @DisplayName("Should return 401 when confirm is called without authentication")
+    void should_Return401_When_ConfirmWithoutAuthentication() throws Exception {
+        mockMvc.perform(put("/api/v1/inbound-receipts/{id}/confirm", "rec-1"))
                 .andExpect(status().isUnauthorized());
     }
 
