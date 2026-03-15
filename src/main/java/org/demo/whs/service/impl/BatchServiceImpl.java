@@ -82,10 +82,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BatchServiceImpl implements BatchService {
 
-    private static final List<BatchStatus> EXPIRING_BATCH_STATUSES = List.of(
-            BatchStatus.AVAILABLE,
-            BatchStatus.QUARANTINE
-    );
+    private static final List<BatchStatus> EXPIRING_BATCH_STATUSES = List.of(BatchStatus.AVAILABLE, BatchStatus.QUARANTINE);
     private static final String NO_LOCATION_KEY = "__NO_LOCATION__";
 
     private final AccountRepository accountRepository;
@@ -107,6 +104,7 @@ public class BatchServiceImpl implements BatchService {
     @Override
     @Transactional
     public BatchResponse createBatch(CreateBatchRequest request) {
+        log.info("Creating batch for productId={} with batchNumber={}", request.getProductId(), request.getBatchNumber());
         Products product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
         if (!Boolean.TRUE.equals(product.getRequiresBatchTracking())) {

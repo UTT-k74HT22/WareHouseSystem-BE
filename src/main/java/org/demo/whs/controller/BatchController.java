@@ -37,7 +37,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -52,6 +51,12 @@ public class BatchController {
 
     private final BatchService batchService;
 
+    /**
+     * Create a new batch for a product that requires batch tracking.
+     *
+     * @param request the request containing the details of the batch to be created
+     * @return the response containing the details of the created batch
+     */
     @PostMapping
     @Operation(summary = "Create batch", description = "Create a new batch for a product that requires batch tracking")
     public ResponseEntity<BaseResponse<BatchResponse>> createBatch(
@@ -63,6 +68,12 @@ public class BatchController {
                 .body(BaseResponse.success(response, "Batch created successfully"));
     }
 
+    /**
+     * Get batch details by its identifier.
+     *
+     * @param id the identifier of the batch to be retrieved
+     * @return the response containing the details of the batch with the specified identifier
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get batch by id", description = "Fetch a batch by its identifier")
     public ResponseEntity<BaseResponse<BatchResponse>> getBatchesById(
@@ -74,6 +85,21 @@ public class BatchController {
         return ResponseEntity.ok(baseResponse);
     }
 
+    /**
+     * List batches with business filters and pagination.
+     *
+     * @param keyword                 optional search keyword for batch number or product name
+     * @param productId               optional filter by product identifier
+     * @param warehouseId             optional filter by warehouse identifier
+     * @param status                  optional filter by batch status
+     * @param manufacturingDateFrom   optional filter for manufacturing date range start
+     * @param manufacturingDateTo     optional filter for manufacturing date range end
+     * @param expiryDateFrom         optional filter for expiry date range start
+     * @param expiryDateTo           optional filter for expiry date range end
+     * @param page                    page number for pagination (default: 0)
+     * @param size                    page size for pagination (default: 10, max: 100)
+     * @return paginated response containing the list of batches matching the filters
+     */
     @GetMapping
     @Operation(summary = "List batches", description = "List batches with business filters and pagination")
     public ResponseEntity<BaseResponse<PageResponse<BatchResponse>>> getAllBatches(
@@ -109,6 +135,12 @@ public class BatchController {
         return ResponseEntity.ok(baseResponse);
     }
 
+    /**
+     * Get complete traceability of a batch from receipt to shipment.
+     *
+     * @param id the identifier of the batch to retrieve traceability for
+     * @return the response containing the complete traceability information of the batch
+     */
     @GetMapping("/{id}/traceability")
     @Operation(summary = "Get batch traceability", description = "Display complete batch traceability from receipt to shipment")
     public ResponseEntity<BaseResponse<BatchTraceabilityResponse>> getBatchTraceability(@PathVariable String id) {
@@ -116,6 +148,13 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "Batch traceability retrieved successfully"));
     }
 
+    /**
+     * List batches approaching expiry that still have stock.
+     *
+     * @param thresholdDays the number of days until expiry to consider a batch as expiring (default: 30)
+     * @param warehouseId   optional filter by warehouse identifier
+     * @return the response containing the list of expiring batches
+     */
     @GetMapping("/expiring")
     @Operation(summary = "Get expiring batches", description = "List batches approaching expiry that still have stock")
     public ResponseEntity<BaseResponse<List<BatchExpiringResponse>>> getExpiringBatches(
@@ -125,6 +164,14 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "Expiring batches retrieved successfully"));
     }
 
+    /**
+     * Recommend oldest eligible batches for outbound picking based on FIFO principle.
+     *
+     * @param productId   the identifier of the product to get batch recommendations for
+     * @param warehouseId the identifier of the warehouse to filter batches by
+     * @param limit       the maximum number of batch recommendations to return (default: 5, max: 50)
+     * @return the response containing the list of FIFO batch recommendations
+     */
     @GetMapping("/fifo-recommendations")
     @Operation(summary = "Get FIFO recommendations", description = "Recommend oldest eligible batches for outbound picking")
     public ResponseEntity<BaseResponse<List<BatchFifoRecommendationResponse>>> getFifoRecommendations(
@@ -135,6 +182,13 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "FIFO recommendations retrieved successfully"));
     }
 
+    /**
+     * List all batches for a product with inventory summary.
+     *
+     * @param productId   the identifier of the product to list batches for
+     * @param warehouseId optional filter by warehouse identifier
+     * @return the response containing the list of batches for the product with inventory summary
+     */
     @GetMapping("/by-product/{productId}")
     @Operation(summary = "Get batches by product", description = "List all batches for a product with inventory summary")
     public ResponseEntity<BaseResponse<List<BatchByProductResponse>>> getBatchesByProduct(
@@ -144,6 +198,13 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "Batches retrieved successfully"));
     }
 
+    /**
+     * Change the status of a batch with generic status transitions.
+     *
+     * @param id      the identifier of the batch to change status for
+     * @param request the request containing the new status and optional reason
+     * @return the response containing the details of the batch with updated status
+     */
     @PatchMapping("/{id}/status")
     @Operation(summary = "Change batch status", description = "Generic status changes are blocked. Use dedicated workflow endpoints instead")
     public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
@@ -155,6 +216,13 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "Batch status changed successfully"));
     }
 
+    /**
+     * Update mutable batch master data such as manufacturing date, expiry date, and quantity.
+     *
+     * @param id      the identifier of the batch to be updated
+     * @param request the request containing the updated batch details
+     * @return the response containing the details of the updated batch
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update batch", description = "Update mutable batch master data")
     public ResponseEntity<BaseResponse<BatchResponse>> updateBatch(
@@ -168,6 +236,13 @@ public class BatchController {
         );
     }
 
+    /**
+     * Move an AVAILABLE batch to QUARANTINE with required reason.
+     *
+     * @param id      the identifier of the batch to be quarantined
+     * @param request the request containing the reason for quarantine
+     * @return the response containing the details of the quarantined batch
+     */
     @PutMapping("/{id}/quarantine")
     @Operation(summary = "Quarantine batch", description = "Move an AVAILABLE batch to QUARANTINE with required reason")
     public ResponseEntity<BaseResponse<BatchResponse>> quarantineBatch(
@@ -177,6 +252,13 @@ public class BatchController {
         return ResponseEntity.ok(BaseResponse.success(response, "Batch quarantined successfully"));
     }
 
+    /**
+     * Release a QUARANTINE batch back to AVAILABLE with required release notes.
+     *
+     * @param id      the identifier of the batch to be released
+     * @param request the request containing the release notes
+     * @return the response containing the details of the released batch
+     */
     @PutMapping("/{id}/release")
     @Operation(summary = "Release batch", description = "Release a QUARANTINE batch back to AVAILABLE with required release notes")
     public ResponseEntity<BaseResponse<BatchResponse>> releaseBatch(
