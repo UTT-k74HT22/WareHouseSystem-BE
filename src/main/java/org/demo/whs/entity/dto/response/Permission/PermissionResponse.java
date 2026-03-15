@@ -19,5 +19,10 @@ public class PermissionResponse {
     private String resource;
     private ActionType action;
     private String description;
+
+    private String createdBy;
     private LocalDateTime createdAt;
+    private String updatedBy;
+    private LocalDateTime updatedAt;
+
 }
