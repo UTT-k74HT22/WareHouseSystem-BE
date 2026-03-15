@@ -2,7 +2,6 @@ package org.demo.whs.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.demo.whs.entity.enums.RoleType;
 
 @Entity
 @Table(name = "roles")
@@ -16,10 +15,13 @@ public class Role extends BaseEntity {
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "name", nullable = false, unique = true, columnDefinition = "enum('ADMIN', 'USER')")
-    private RoleType name;
+    @Column(name = "name", nullable = false, unique = true, length = 100)
+    private String name;
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "is_default", nullable = false)
+    @Builder.Default
+    private Boolean isDefault = false;
 }
