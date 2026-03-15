@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 12/03/2026 — Đồng bộ lại theo controller + service implementation thực tế
-> **Phiên bản:** 2.1
+> **Cập nhật lần cuối:** 15/03/2026 — Rescan lại toàn bộ controller + service implementation thực tế
+> **Phiên bản:** 2.2
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -18,14 +18,14 @@
 | 5 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
 | 6 | **Business Partner** | 8 | 7 | 1 | 88% |
 | 7 | **Category** | 5 | 5 | 0 | ✅ 100% |
-| 8 | **Batch** | 10 | 4 | 6 | 40% |
+| 8 | **Batch** | 10 | 7 | 3 | 70% |
 | 9 | **Inventory** | 8 | 7 | 1 | 88% |
 | 10 | **Stock Adjustments** | 5 | 5 | 0 | ✅ 100% |
 | 11 | **Stock Transfers** | 5 | 5 | 0 | ✅ 100% |
 | 12 | **Purchase Orders** | 6 | 6 | 0 | ✅ 100% |
 | 13 | **Purchase Order Lines** | 4 | 4 | 0 | ✅ 100% |
 | 14 | **Inbound Receipts** | 7 | 7 | 0 | ✅ 100% |
-| 15 | **Inbound Receipt Lines** | 3 | 0 | 3 | 🔴 0% |
+| 15 | **Inbound Receipt Lines** | 4 | 4 | 0 | ✅ 100% |
 | 16 | **Sales Orders** | 7 | 0 | 7 | 🔴 0% |
 | 17 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
 | 18 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
@@ -35,7 +35,7 @@
 | 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **169** | **113** | **56** | **67%** |
+| | **TỔNG CỘNG** | **170** | **120** | **50** | **71%** |
 
 ---
 
@@ -49,14 +49,14 @@ Product            ████████░░ 82%
 UOM                ██████████ 100% ✅
 Business Partner   █████████░ 88%
 Category           ██████████ 100% ✅
-Batch              ████░░░░░░ 40%
+Batch              ███████░░░ 70%
 Inventory          █████████░ 88%
 Stock Adjustments  ██████████ 100% ✅
 Stock Transfers    ██████████ 100% ✅
 Purchase Orders    ██████████ 100% ✅  🆕
 PO Lines           ██████████ 100% ✅
 Inbound Receipts   ██████████ 100% ✅  🆕
-IR Lines           ░░░░░░░░░░ 0%  🔴
+IR Lines           ██████████ 100% ✅
 Sales Orders       ░░░░░░░░░░ 0%  🔴
 SO Lines           ░░░░░░░░░░ 0%  🔴
 Outbound Shipments ░░░░░░░░░░ 0%  🔴
@@ -70,17 +70,16 @@ Storage            ██████████ 100% ✅
 
 ---
 
-## 🔄 Đồng Bộ Jira/GitHub (12/03/2026)
+## 🔄 Đồng Bộ Jira/GitHub (15/03/2026)
 
-- **12/03/2026** — Full code scan lại theo `controller + service implementation`, không chỉ nhìn endpoint shell.
-- `AuthController.java` hiện đã có thêm `forgot-password`, `verify-forgot-password-otp`, `reset-password`, `change-password` → module `Auth & Users` tăng lên **11/13**.
-- `PurchaseOrderLinesController.java` có thêm `GET /purchase-order/{purchaseOrderId}` → module `Purchase Order Lines` cập nhật thành **4/4**.
-- `InventoryController.java` hiện đã expose đầy đủ `check-availability`, `reserve`, `unreserve`, `increase`; `InventoryServiceImpl` đã có implementation tương ứng → module `Inventory` tăng lên **7/8**.
-- `InboundReceiptsController.java` và `InboundReceiptsServiceImpl.java` hiện đã có full `7/7` endpoints/use cases, bao gồm `confirm` → module `Inbound Receipts` cập nhật thành **100% Done**.
-- `InboundReceiptLinesController.java` vẫn mới là controller shell, `InboundReceiptLinesService` vẫn rỗng → module `Inbound Receipt Lines` giữ nguyên **0/3**.
-- `BatchController.java` vẫn ở **4/10**; tài liệu cập nhật lại mô tả status đúng với enum hiện tại: `AVAILABLE`, `QUARANTINE`, `EXPIRED`, `RECALLED`.
-- `StockMovementsController.java` vẫn ở **3/8** với `list`, `detail`, `reference lookup`.
-- `WHS-57` confirm receipt đã merge vào `develop`; hardening mới nhất đã đồng bộ quarantine vào `Inventory.available`.
+- **15/03/2026** — Rescan lại toàn bộ theo `controller + service implementation`, ưu tiên route thực tế thay vì assumption từ backlog cũ.
+- `BatchController.java` + `BatchServiceImpl.java` hiện đã có đủ `update`, `quarantine`, `release` → module `Batch` tăng lên **7/10**.
+- `InboundReceiptLinesController.java` + `InboundReceiptLinesServiceImpl.java` hiện đã có full `create`, `update`, `delete`, `list by inboundReceiptId` → module `Inbound Receipt Lines` lên **4/4**.
+- `InboundReceiptsController.java` route thực tế là `GET /api/v1/inbound-receipts/by-po/{purchaseOrderId}`; tài liệu đã sync lại đúng path variable.
+- `StorageController.java` hiện support delete theo query param `DELETE /api/v1/storage?objectName=...` và vẫn giữ wildcard path legacy để backward compatibility.
+- `SalesOrdersController.java`, `SalesOrderLinesController.java`, `OutboundShipmentsController.java`, `OutboundShipmentLinesController.java` vẫn chỉ là shell controller với class-level mapping, chưa có method handlers.
+- `StockMovementsController.java` vẫn ở **3/8** với `list`, `detail`, `reference lookup`; chưa có `by-product`, `by-batch`, `traceability`, `export`.
+- `AuthController.java` vẫn giữ **11/13**; chưa có `verify-email` và `resend-verification`.
 
 ---
 
@@ -260,19 +259,23 @@ Storage            ██████████ 100% ✅
 | 1 | `POST` | `/api/v1/batches` | Tạo lô hàng mới | ✅ Done |
 | 2 | `GET` | `/api/v1/batches` | Danh sách lô hàng (phân trang) | ✅ Done |
 | 3 | `GET` | `/api/v1/batches/{id}` | Chi tiết lô hàng theo ID | ✅ Done |
-| 4 | `PUT` | `/api/v1/batches/{id}` | Cập nhật thông tin lô | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/batches/{id}` | Cập nhật thông tin lô | ✅ Done |
 
 ### 🟣 Advanced APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
 | 5 | `PATCH` | `/api/v1/batches/{id}/status` | Đổi trạng thái lô (AVAILABLE/QUARANTINE/EXPIRED/RECALLED) | ✅ Done 🆕 |
-| 6 | `PUT` | `/api/v1/batches/{id}/quarantine` | Cách ly lô hàng (vấn đề chất lượng) | ❌ Not Done |
-| 7 | `PUT` | `/api/v1/batches/{id}/release` | Giải phóng lô khỏi cách ly | ❌ Not Done |
+| 6 | `PUT` | `/api/v1/batches/{id}/quarantine` | Cách ly lô hàng (vấn đề chất lượng) | ✅ Done |
+| 7 | `PUT` | `/api/v1/batches/{id}/release` | Giải phóng lô khỏi cách ly | ✅ Done |
 | 8 | `GET` | `/api/v1/batches/{id}/traceability` | Truy xuất nguồn gốc lô hàng | ❌ Not Done |
 | 9 | `GET` | `/api/v1/batches/expiring` | Danh sách lô sắp hết hạn | ❌ Not Done |
 | 10 | `GET` | `/api/v1/batches/by-product/{productId}` | Danh sách lô theo sản phẩm | ❌ Not Done |
 
+> 🟡 **Đã triển khai 7/10**: create/get/list/update/change-status/quarantine/release.
+>
+> ⚠️ `quarantine` và `release` đã có business validation thực tế trong `BatchServiceImpl`, nhưng controller hiện trả trực tiếp `BatchResponse` thay vì `BaseResponse`.
+>
 > ⚠️ Enum `BatchStatus` hiện tại trong code là `AVAILABLE`, `QUARANTINE`, `EXPIRED`, `RECALLED`.
 > Tài liệu API về batch cần bám đúng bộ status này, chưa có `DEPLETED`.
 
@@ -454,7 +457,7 @@ Storage            ██████████ 100% ✅
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
 | 6 | `PUT` | `/api/v1/inbound-receipts/{id}/confirm` | Xác nhận nhập kho → cập nhật inventory + movement + PO progress | ✅ Done 🆕 |
-| 7 | `GET` | `/api/v1/inbound-receipts/by-po/{poId}` | Phiếu nhập theo PO | ✅ Done 🆕 |
+| 7 | `GET` | `/api/v1/inbound-receipts/by-po/{purchaseOrderId}` | Phiếu nhập theo PO | ✅ Done 🆕 |
 
 > ✅ **Module này đã hoàn thành 100%** (7/7 APIs)
 >
@@ -476,11 +479,21 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/inbound-receipt-lines` | Thêm dòng vào phiếu nhập | ❌ Not Done |
-| 2 | `PUT` | `/api/v1/inbound-receipt-lines/{id}` | Cập nhật dòng phiếu nhập | ❌ Not Done |
-| 3 | `DELETE` | `/api/v1/inbound-receipt-lines/{id}` | Xóa dòng phiếu nhập | ❌ Not Done |
+| 1 | `GET` | `/api/v1/inbound-receipt-lines?inboundReceiptId={id}` | Danh sách line theo phiếu nhập | ✅ Done |
+| 2 | `POST` | `/api/v1/inbound-receipt-lines` | Thêm dòng vào phiếu nhập | ✅ Done |
+| 3 | `PUT` | `/api/v1/inbound-receipt-lines/{id}` | Cập nhật dòng phiếu nhập | ✅ Done |
+| 4 | `DELETE` | `/api/v1/inbound-receipt-lines/{id}` | Xóa dòng phiếu nhập | ✅ Done |
 
-> 🔴 **Controller rỗng**
+> ✅ **Module này đã hoàn thành 100%** (4/4 APIs)
+>
+> **Đã verify trong code:** `InboundReceiptLinesController.java` và `InboundReceiptLinesServiceImpl.java` đều đã có implementation thực tế, không còn là controller/service shell.
+>
+> **Business rules đang được enforce trong service thực tế:**
+> - Chỉ cho phép mutate khi `InboundReceipt.status = DRAFT`
+> - `PurchaseOrderLine` phải thuộc đúng `PurchaseOrder` của receipt
+> - `quantityReceived > 0` và không được vượt remaining quantity của PO line
+> - `location` phải thuộc cùng warehouse với receipt và ở trạng thái usable
+> - Có kiểm tra batch tracking, quality status, duplicate split dimension và quarantine note bắt buộc
 
 ---
 
@@ -657,28 +670,30 @@ Storage            ██████████ 100% ✅
 |---|--------|----------|--------|--------|
 | 1 | `POST` | `/api/v1/storage/upload` | Upload 1 file | ✅ Done |
 | 2 | `POST` | `/api/v1/storage/upload/batch` | Upload nhiều file | ✅ Done |
-| 3 | `DELETE` | `/api/v1/storage/{objectName}` | Xóa file | ✅ Done |
+| 3 | `DELETE` | `/api/v1/storage?objectName={objectName}` | Xóa file | ✅ Done |
 | 4 | `GET` | `/api/v1/storage/presigned-url` | Tạo presigned URL | ✅ Done |
 | 5 | `GET` | `/api/v1/storage/exists` | Kiểm tra file tồn tại | ✅ Done |
 
 > ✅ **Module này đã hoàn thành 100%**
+>
+> **Ghi chú route thực tế:** controller hiện dùng query-param delete làm route khuyến nghị và vẫn giữ `DELETE /api/v1/storage/{*objectName}` như endpoint legacy để tương thích ngược.
 
 ---
 
 ---
 
-# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 12/03/2026)
+# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 15/03/2026)
 
 ### ✅ Phase 1–4 — ĐÃ HOÀN THÀNH PHẦN LÕI
 - Master Data: Warehouse, Location, Product, UOM, Business Partner, Category, Employee
 - Inventory Core: read-side, availability, reserve, unreserve, increase, stock adjustments, stock transfers
-- Inbound foundation: Purchase Orders, Purchase Order Lines, Inbound Receipts, Confirm Receipt
+- Inbound foundation: Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines, Confirm Receipt
 
 ### 🔴 Phase 5 — Harden Inventory + Inbound còn thiếu
 | Ưu tiên | Task | Chi tiết | Effort |
 |---------|------|----------|--------|
-| 🔴 P0 | Inbound Receipt Lines CRUD — 3 APIs | Hoàn thiện `WHS-58`, line create/update/delete, validate lineNumber, binding tới receipt draft | 2 ngày |
 | 🔴 P0 | Inbound integration test hardening | Cover full flow `PO -> IR -> confirm`, partial receipt, quarantine, rollback, race condition | 2 ngày |
+| 🔴 P0 | Inbound Receipt Lines regression hardening | Cover split lines, duplicate dimension guard, remaining quantity, batch/quality validation, draft-only mutation | 2 ngày |
 | 🟡 P1 | Inventory hardening | Chốt scope public/internal cho `increase`, thiết kế `decrease`, rà auth + idempotency cho reserve/unreserve | 2 ngày |
 | 🟡 P1 | API/doc contract sync | Đồng bộ Swagger, docs, error code matrix, request/response examples cho inventory + inbound | 1 ngày |
 
@@ -699,7 +714,7 @@ Storage            ██████████ 100% ✅
 ### 🟡 Phase 8 — Batch + Stock Movements Enhancement
 | Ưu tiên | Task | Chi tiết | Effort |
 |---------|------|----------|--------|
-| 🟡 P1 | Batch update + quarantine/release — 3 APIs | Hoàn thiện lifecycle batch sau inbound quality flow | 2 ngày |
+| 🟡 P1 | Batch hardening + integration tests | Cover lifecycle `AVAILABLE <-> QUARANTINE`, reserved stock guard, expired/recalled guards, response contract consistency | 2 ngày |
 | 🟡 P2 | Batch traceability, expiring, by-product — 3 APIs | Tăng khả năng query/truy vết | 2 ngày |
 | 🟡 P1 | Stock Movements by-product, by-batch — 2 APIs | Query read-side cho điều tra biến động | 2 ngày |
 | 🟡 P2 | Stock Movements traceability + export — 3 APIs | Báo cáo truy vết và export | 3 ngày |
@@ -714,19 +729,19 @@ Storage            ██████████ 100% ✅
 
 ---
 
-# 📊 TỔNG KẾT (12/03/2026)
+# 📊 TỔNG KẾT (15/03/2026)
 
 | Metric | Value |
 |--------|-------|
-| **Tổng API thiết kế** | 169 |
-| **Đã triển khai** | 113 (67%) |
-| **Chưa triển khai** | 56 (33%) |
-| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts |
-| **Module 0%** | Inbound Receipt Lines, Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
-| **Module tiếp theo** | **Inbound hardening + Inbound Receipt Lines**, sau đó mới sang Outbound foundation |
+| **Tổng API thiết kế** | 170 |
+| **Đã triển khai** | 120 (71%) |
+| **Chưa triển khai** | 50 (29%) |
+| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines |
+| **Module 0%** | Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
+| **Module tiếp theo** | **Inventory + inbound hardening**, sau đó mới sang Outbound foundation |
 
-> 💡 **Tiến bộ so với bản 09/03:** inbound receipts đã lên 7/7, inventory lên 7/8, PO lines lên 4/4, auth được ghi nhận đúng thêm 4 endpoint.
+> 💡 **Tiến bộ so với bản 09/03:** inbound receipt lines đã lên 4/4, batch lên 7/10, inbound receipts giữ 7/7, inventory 7/8, PO lines 4/4, auth được ghi nhận đúng thêm 4 endpoint.
 >
-> ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Inventory -> Movement`.
+> ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Receipt Lines -> Inventory -> Movement`.
 >
-> ⚠️ **Khoảng trống lớn nhất còn lại:** `InboundReceiptLines` CRUD, outbound chain, batch traceability, reporting.
+> ⚠️ **Khoảng trống lớn nhất còn lại:** outbound chain, batch traceability/expiring/by-product, stock movement analytics, reporting.
