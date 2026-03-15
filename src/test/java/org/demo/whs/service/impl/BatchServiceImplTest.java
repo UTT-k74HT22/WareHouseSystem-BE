@@ -2,13 +2,16 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.SearchBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -24,13 +27,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -59,7 +69,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_success() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
         request.setBatchNumber("B001");
@@ -99,6 +108,8 @@ class BatchServiceImplTest {
             assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
             assertThat(batch.getCreatedBy()).isEqualTo("A1");
             assertThat(batch.getUpdatedBy()).isEqualTo("A1");
+            assertThat(result.getTotalOnHandQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(result.getTotalAvailableQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
 
             verify(batchRepository).save(batch);
         }
@@ -106,7 +117,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_productNotFound() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
 
@@ -120,7 +130,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_productBatchTrackingDisabled() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
 
@@ -137,7 +146,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_duplicateBatchNumber() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
         request.setBatchNumber("B001");
@@ -158,7 +166,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_invalidManufacturingDate() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
         request.setBatchNumber("B001");
@@ -180,7 +187,6 @@ class BatchServiceImplTest {
 
     @Test
     void createBatch_invalidExpiryDate() {
-
         CreateBatchRequest request = new CreateBatchRequest();
         request.setProductId("P1");
         request.setBatchNumber("B001");
@@ -199,6 +205,56 @@ class BatchServiceImplTest {
         assertThatThrownBy(() -> batchService.createBatch(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining(ErrorCode.BATCH_006.getMessage());
+    }
+
+    @Test
+    void getAllBatches_shouldReturnQuantitySummary() {
+        Batch batch = new Batch();
+        batch.setId("B1");
+        batch.setBatchNumber("B001");
+        batch.setProductId("P1");
+        batch.setStatus(BatchStatus.AVAILABLE);
+
+        Inventory inventory = new Inventory();
+        inventory.setBatchId("B1");
+        inventory.setOnHandQuantity(new BigDecimal("10"));
+        inventory.setQuarantineQuantity(new BigDecimal("2"));
+        inventory.setReservedQuantity(new BigDecimal("3"));
+
+        BatchResponse mappedResponse = BatchResponse.builder()
+                .id("B1")
+                .batchNumber("B001")
+                .productId("P1")
+                .status(BatchStatus.AVAILABLE)
+                .build();
+
+        when(batchRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(batch), PageRequest.of(0, 10), 1));
+        when(inventoryRepository.findByBatchIdIn(anySet())).thenReturn(List.of(inventory));
+        when(batchMapper.toResponse(batch)).thenReturn(mappedResponse);
+
+        SearchBatchRequest request = new SearchBatchRequest();
+        request.setStatus(BatchStatus.AVAILABLE);
+
+        PageResponse<BatchResponse> result = batchService.getAllBatches(request, 0, 10);
+
+        assertThat(result.getContent()).hasSize(1);
+        BatchResponse batchResponse = result.getContent().get(0);
+        assertThat(batchResponse.getTotalOnHandQuantity()).isEqualByComparingTo("10");
+        assertThat(batchResponse.getTotalQuarantineQuantity()).isEqualByComparingTo("2");
+        assertThat(batchResponse.getTotalReservedQuantity()).isEqualByComparingTo("3");
+        assertThat(batchResponse.getTotalAvailableQuantity()).isEqualByComparingTo("5");
+    }
+
+    @Test
+    void getAllBatches_shouldThrow_WhenDateRangeInvalid() {
+        SearchBatchRequest request = new SearchBatchRequest();
+        request.setManufacturingDateFrom(LocalDate.of(2026, 2, 1));
+        request.setManufacturingDateTo(LocalDate.of(2026, 1, 1));
+
+        assertThatThrownBy(() -> batchService.getAllBatches(request, 0, 10))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining(ErrorCode.BATCH_019.getMessage());
     }
 
     @Test
@@ -254,7 +310,6 @@ class BatchServiceImplTest {
 
     @Test
     void quarantineBatch_success() {
-
         Batch batch = new Batch();
         batch.setId("B1");
         batch.setBatchNumber("BATCH_01");
@@ -278,12 +333,8 @@ class BatchServiceImplTest {
         when(inventoryRepository.existsReservedStockByBatchId("B1")).thenReturn(false);
 
         try (var mocked = mockStatic(SecurityUtils.class)) {
-
             mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-
-            when(accountRepository.findByUsername("admin"))
-                    .thenReturn(Optional.of(account));
-
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
             when(batchRepository.save(batch)).thenReturn(batch);
             when(batchMapper.toResponse(batch)).thenReturn(response);
 
@@ -300,7 +351,6 @@ class BatchServiceImplTest {
 
     @Test
     void quarantineBatch_batchNotFound() {
-
         QuarantineBatchRequest request = new QuarantineBatchRequest();
         request.setReason("Quality issue");
 
@@ -314,7 +364,6 @@ class BatchServiceImplTest {
 
     @Test
     void quarantineBatch_alreadyQuarantine() {
-
         Batch batch = new Batch();
         batch.setId("B1");
         batch.setStatus(BatchStatus.QUARANTINE);
@@ -332,7 +381,6 @@ class BatchServiceImplTest {
 
     @Test
     void quarantineBatch_hasReservedStock() {
-
         Batch batch = new Batch();
         batch.setId("B1");
         batch.setStatus(BatchStatus.AVAILABLE);

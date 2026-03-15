@@ -4,6 +4,7 @@ import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
+import org.demo.whs.entity.dto.request.Batch.SearchBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.UpdateBatchRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
@@ -23,7 +24,7 @@ public interface BatchService {
 
     BatchResponse getBatchById(String id);
 
-    PageResponse<BatchResponse> getAllBatches(Integer page, Integer size);
+    PageResponse<BatchResponse> getAllBatches(SearchBatchRequest request, Integer page, Integer size);
 
     BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request);
 

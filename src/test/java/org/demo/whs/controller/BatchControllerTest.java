@@ -1,7 +1,9 @@
 package org.demo.whs.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.demo.whs.entity.dto.request.Batch.SearchBatchRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -10,6 +12,7 @@ import org.demo.whs.service.BatchService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
@@ -27,15 +30,19 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,6 +66,48 @@ class BatchControllerTest {
 
     @MockitoBean
     private RateLimitService rateLimitService;
+
+    @Test
+    @DisplayName("Should get batches with filters when request is valid")
+    void should_GetAllBatches_When_FiltersAreProvided() throws Exception {
+        PageResponse<BatchResponse> pageResponse = PageResponse.<BatchResponse>builder()
+                .content(List.of(buildResponse("batch-1", BatchStatus.AVAILABLE)))
+                .page(0)
+                .size(10)
+                .totalElements(1L)
+                .totalPages(1)
+                .isFirst(true)
+                .isLast(true)
+                .build();
+        when(batchService.getAllBatches(any(SearchBatchRequest.class), eq(0), eq(10))).thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/batches")
+                        .param("keyword", "BATCH-001")
+                        .param("product_id", "prod-1")
+                        .param("warehouse_id", "wh-1")
+                        .param("status", "AVAILABLE")
+                        .param("manufacturing_date_from", "2026-01-01")
+                        .param("manufacturing_date_to", "2026-01-31")
+                        .param("expiry_date_from", "2026-02-01")
+                        .param("expiry_date_to", "2026-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].id").value("batch-1"))
+                .andExpect(jsonPath("$.data.content[0].total_available_quantity").value(7));
+
+        ArgumentCaptor<SearchBatchRequest> requestCaptor = ArgumentCaptor.forClass(SearchBatchRequest.class);
+        verify(batchService).getAllBatches(requestCaptor.capture(), eq(0), eq(10));
+
+        SearchBatchRequest capturedRequest = requestCaptor.getValue();
+        assertThat(capturedRequest.getKeyword()).isEqualTo("BATCH-001");
+        assertThat(capturedRequest.getProductId()).isEqualTo("prod-1");
+        assertThat(capturedRequest.getWarehouseId()).isEqualTo("wh-1");
+        assertThat(capturedRequest.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+        assertThat(capturedRequest.getManufacturingDateFrom()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(capturedRequest.getManufacturingDateTo()).isEqualTo(LocalDate.of(2026, 1, 31));
+        assertThat(capturedRequest.getExpiryDateFrom()).isEqualTo(LocalDate.of(2026, 2, 1));
+        assertThat(capturedRequest.getExpiryDateTo()).isEqualTo(LocalDate.of(2026, 12, 31));
+    }
 
     @Test
     @DisplayName("Should update batch when request is valid")
@@ -185,6 +234,10 @@ class BatchControllerTest {
                 .manufacturingDate(LocalDate.now().minusDays(5))
                 .expiryDate(LocalDate.now().plusDays(30))
                 .status(status)
+                .totalOnHandQuantity(new BigDecimal("10"))
+                .totalQuarantineQuantity(new BigDecimal("1"))
+                .totalReservedQuantity(new BigDecimal("2"))
+                .totalAvailableQuantity(new BigDecimal("7"))
                 .createdBy("user-1")
                 .createdAt(LocalDateTime.now())
                 .updatedBy("user-1")

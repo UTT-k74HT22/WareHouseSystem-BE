@@ -4,9 +4,11 @@ import lombok.Getter;
 import lombok.Setter;
 import org.demo.whs.entity.enums.BatchStatus;
 
+import java.time.LocalDate;
+
 /**
- * Request DTO for searching batch with multiple filters.
- * All fields are optional.
+ * Request DTO for searching batches with business filters.
+ * All fields are optional and map to GET /api/v1/batches query parameters.
  */
 @Getter
 @Setter
@@ -14,9 +16,17 @@ public class SearchBatchRequest {
 
     private String keyword;
 
+    private String productId;
+
+    private String warehouseId;
+
     private BatchStatus status;
 
-    private int page = 1;
+    private LocalDate manufacturingDateFrom;
 
-    private int size = 10;
+    private LocalDate manufacturingDateTo;
+
+    private LocalDate expiryDateFrom;
+
+    private LocalDate expiryDateTo;
 }
