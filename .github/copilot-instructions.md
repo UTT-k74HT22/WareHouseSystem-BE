@@ -14,7 +14,7 @@
     - Flyway for DB migration
     - Redis for caching / token / rate limiting
     - RabbitMQ for async tasks (export report, heavy jobs)
-    - MySQL 8 or PostgreSQL 16
+    - MySQL 8 or PostgreSQL 16 or SQL Server 2019 (depending on the environment)
 
 - Database rules:
     - Every table must have `created_at` and `updated_at`.
