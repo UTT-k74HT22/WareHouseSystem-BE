@@ -48,6 +48,7 @@ public class WareHouseMapper {
                 .email(warehouses.getEmail())
                 .status(warehouses.getStatus().name())
                 .wareHouseType(warehouses.getType().name())
+                .managerId(warehouses.getManagerId())
                 .manager(accountResponse)
                 .build();
     }
@@ -102,10 +103,6 @@ public class WareHouseMapper {
 
         if (request.getCapacity() != null) {
             warehouse.setCapacity(request.getCapacity());
-        }
-
-        if (request.getManagerId() != null) {
-            warehouse.setManagerId(request.getManagerId());
         }
     }
 

@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 15/03/2026 — Rescan lại toàn bộ controller + service implementation thực tế
-> **Phiên bản:** 2.2
+> **Cập nhật lần cuối:** 16/03/2026 — Re-audit Jira + controller + service, bổ sung trạng thái thực của RBAC
+> **Phiên bản:** 2.4
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -12,30 +12,31 @@
 | # | Module | Planned | ✅ Done | ❌ Not Done | Coverage |
 |---|--------|---------|--------|-------------|----------|
 | 1 | **Auth & Users** | 13 | 11 | 2 | 85% |
-| 2 | **Warehouse** | 7 | 7 | 0 | ✅ 100% |
-| 3 | **Location** | 9 | 8 | 1 | 89% |
-| 4 | **Product** | 11 | 9 | 2 | 82% |
-| 5 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
-| 6 | **Business Partner** | 8 | 7 | 1 | 88% |
-| 7 | **Category** | 5 | 5 | 0 | ✅ 100% |
-| 8 | **Batch** | 10 | 7 | 3 | 70% |
-| 9 | **Inventory** | 8 | 7 | 1 | 88% |
-| 10 | **Stock Adjustments** | 5 | 5 | 0 | ✅ 100% |
-| 11 | **Stock Transfers** | 5 | 5 | 0 | ✅ 100% |
-| 12 | **Purchase Orders** | 6 | 6 | 0 | ✅ 100% |
-| 13 | **Purchase Order Lines** | 4 | 4 | 0 | ✅ 100% |
-| 14 | **Inbound Receipts** | 7 | 7 | 0 | ✅ 100% |
-| 15 | **Inbound Receipt Lines** | 4 | 4 | 0 | ✅ 100% |
-| 16 | **Sales Orders** | 7 | 0 | 7 | 🔴 0% |
-| 17 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
-| 18 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
-| 19 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
-| 20 | **Stock Movements** | 8 | 3 | 5 | 38% |
-| 21 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
-| 22 | **Employee** | 5 | 5 | 0 | ✅ 100% |
-| 23 | **Email** | 10 | 10 | 0 | ✅ 100% |
-| 24 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **170** | **120** | **50** | **71%** |
+| 2 | **RBAC & Authorization** | 19 | 0 | 19 | 🔴 0% |
+| 3 | **Warehouse** | 7 | 7 | 0 | ✅ 100% |
+| 4 | **Location** | 9 | 8 | 1 | 89% |
+| 5 | **Product** | 11 | 9 | 2 | 82% |
+| 6 | **UOM (Units of Measure)** | 5 | 5 | 0 | ✅ 100% |
+| 7 | **Business Partner** | 8 | 7 | 1 | 88% |
+| 8 | **Category** | 5 | 5 | 0 | ✅ 100% |
+| 9 | **Batch** | 11 | 11 | 0 | ✅ 100% |
+| 10 | **Inventory** | 8 | 7 | 1 | 88% |
+| 11 | **Stock Adjustments** | 5 | 5 | 0 | ✅ 100% |
+| 12 | **Stock Transfers** | 5 | 5 | 0 | ✅ 100% |
+| 13 | **Purchase Orders** | 6 | 6 | 0 | ✅ 100% |
+| 14 | **Purchase Order Lines** | 4 | 4 | 0 | ✅ 100% |
+| 15 | **Inbound Receipts** | 7 | 7 | 0 | ✅ 100% |
+| 16 | **Inbound Receipt Lines** | 4 | 4 | 0 | ✅ 100% |
+| 17 | **Sales Orders** | 7 | 0 | 7 | 🔴 0% |
+| 18 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
+| 19 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
+| 20 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
+| 21 | **Stock Movements** | 8 | 3 | 5 | 38% |
+| 22 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
+| 23 | **Employee** | 5 | 5 | 0 | ✅ 100% |
+| 24 | **Email** | 10 | 10 | 0 | ✅ 100% |
+| 25 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
+| | **TỔNG CỘNG** | **190** | **124** | **66** | **65%** |
 
 ---
 
@@ -43,19 +44,20 @@
 
 ```
 Auth & Users       ████████░░ 85%
+RBAC & Authz       ░░░░░░░░░░ 0%  🔴
 Warehouse          ██████████ 100% ✅
 Location           █████████░ 89%
 Product            ████████░░ 82%
 UOM                ██████████ 100% ✅
 Business Partner   █████████░ 88%
 Category           ██████████ 100% ✅
-Batch              ███████░░░ 70%
+Batch              ██████████ 100% ✅
 Inventory          █████████░ 88%
 Stock Adjustments  ██████████ 100% ✅
 Stock Transfers    ██████████ 100% ✅
-Purchase Orders    ██████████ 100% ✅  🆕
+Purchase Orders    ██████████ 100% ✅
 PO Lines           ██████████ 100% ✅
-Inbound Receipts   ██████████ 100% ✅  🆕
+Inbound Receipts   ██████████ 100% ✅
 IR Lines           ██████████ 100% ✅
 Sales Orders       ░░░░░░░░░░ 0%  🔴
 SO Lines           ░░░░░░░░░░ 0%  🔴
@@ -70,16 +72,20 @@ Storage            ██████████ 100% ✅
 
 ---
 
-## 🔄 Đồng Bộ Jira/GitHub (15/03/2026)
+## 🔄 Đồng Bộ Jira/GitHub (16/03/2026)
 
-- **15/03/2026** — Rescan lại toàn bộ theo `controller + service implementation`, ưu tiên route thực tế thay vì assumption từ backlog cũ.
-- `BatchController.java` + `BatchServiceImpl.java` hiện đã có đủ `update`, `quarantine`, `release` → module `Batch` tăng lên **7/10**.
-- `InboundReceiptLinesController.java` + `InboundReceiptLinesServiceImpl.java` hiện đã có full `create`, `update`, `delete`, `list by inboundReceiptId` → module `Inbound Receipt Lines` lên **4/4**.
-- `InboundReceiptsController.java` route thực tế là `GET /api/v1/inbound-receipts/by-po/{purchaseOrderId}`; tài liệu đã sync lại đúng path variable.
-- `StorageController.java` hiện support delete theo query param `DELETE /api/v1/storage?objectName=...` và vẫn giữ wildcard path legacy để backward compatibility.
-- `SalesOrdersController.java`, `SalesOrderLinesController.java`, `OutboundShipmentsController.java`, `OutboundShipmentLinesController.java` vẫn chỉ là shell controller với class-level mapping, chưa có method handlers.
-- `StockMovementsController.java` vẫn ở **3/8** với `list`, `detail`, `reference lookup`; chưa có `by-product`, `by-batch`, `traceability`, `export`.
-- `AuthController.java` vẫn giữ **11/13**; chưa có `verify-email` và `resend-verification`.
+- **16/03/2026** — Re-audit theo `Jira issue status + controller routes + service implementation`, ưu tiên trạng thái chạy được trong code thay vì chỉ nhìn annotation/controller shell.
+- Context audit chi tiết đã được lưu tại `docs/SESSION_API_JIRA_SYNC_20260316.md`.
+
+| Scope Jira | Trạng thái trên Jira | Đối chiếu code thực tế | Kết luận sync |
+|---|---|---|---|
+| `WHS-35`, `WHS-41`, `WHS-42`, `WHS-83`, `WHS-84`, `WHS-85`, `WHS-86` | `Done` | `BatchController` + service + test/doc đã khớp | ✅ Aligned |
+| `WHS-19`, `WHS-10..17` | Parent `In Progress`, child `WHS-10..16` `Done`, `WHS-17` `In Progress` | Inventory public API hiện đủ `list/summary/by-location/check-availability/reserve/unreserve/increase`, còn thiếu `decrease` | ✅ Aligned |
+| `WHS-43..46`, `WHS-53..58` | `Done` | Purchase Orders + PO Lines + Inbound Receipts + Receipt Lines đã có controller/service thực thi | ✅ Aligned |
+| `WHS-47..50`, `WHS-59..65` | `In Progress` / `To Do` | `SalesOrdersController`, `SalesOrderLinesController`, `OutboundShipmentsController`, `OutboundShipmentLinesController` vẫn là shell, chưa có route methods | ✅ Aligned |
+| `WHS-144..148`, `WHS-149..167` | Chủ yếu `In Progress` / `To Do` | Có route ở controller nhưng `PermissionServiceImpl` và `RoleServiceImpl` vẫn là stub `return null/List.of()`; `check-permission` và `my-permissions` chưa tồn tại | ✅ Jira đang phản ánh đúng hơn docs cũ |
+
+> ⚠️ Kết luận quan trọng nhất của đợt sync này: **RBAC chưa phải implemented module**. Docs cũ chưa ghi module này nên dễ gây hiểu nhầm khi nhìn thấy controller đã tồn tại.
 
 ---
 
@@ -115,6 +121,47 @@ Storage            ██████████ 100% ✅
 > ✅ **Module này hiện ở 11/13 APIs**.
 >
 > **Utility endpoints không tính coverage:** `GET /api/v1/home/test`, `GET /api/v1/home/me`
+
+---
+
+## MODULE 1B: RBAC & AUTHORIZATION (`/api/v1/permissions`, `/api/v1/roles`, `/api/v1/users/{userId}/roles`, `/api/v1/auth`)
+
+### 🔵 Core CRUD & lookup APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 1 | `POST` | `/api/v1/permissions` | Tạo permission | ❌ Not Done |
+| 2 | `GET` | `/api/v1/permissions` | Danh sách permissions | ❌ Not Done |
+| 3 | `GET` | `/api/v1/permissions/{id}` | Chi tiết permission | ❌ Not Done |
+| 4 | `PUT` | `/api/v1/permissions/{id}` | Cập nhật permission | ❌ Not Done |
+| 5 | `DELETE` | `/api/v1/permissions/{id}` | Xóa permission | ❌ Not Done |
+| 6 | `POST` | `/api/v1/roles` | Tạo role | ❌ Not Done |
+| 7 | `GET` | `/api/v1/roles` | Danh sách roles | ❌ Not Done |
+| 8 | `GET` | `/api/v1/roles/{id}` | Chi tiết role | ❌ Not Done |
+| 9 | `PUT` | `/api/v1/roles/{id}` | Cập nhật role | ❌ Not Done |
+| 10 | `DELETE` | `/api/v1/roles/{id}` | Xóa role | ❌ Not Done |
+
+### 🟣 Assignment & authorization APIs
+
+| # | Method | Endpoint | Mô tả | Status |
+|---|--------|----------|--------|--------|
+| 11 | `POST` | `/api/v1/roles/{id}/permissions` | Gán permission vào role | ❌ Not Done |
+| 12 | `DELETE` | `/api/v1/roles/{id}/permissions/{permId}` | Gỡ permission khỏi role | ❌ Not Done |
+| 13 | `GET` | `/api/v1/roles/{id}/permissions` | Danh sách permissions của role | ❌ Not Done |
+| 14 | `POST` | `/api/v1/users/{userId}/roles` | Gán roles cho user | ❌ Not Done |
+| 15 | `DELETE` | `/api/v1/users/{userId}/roles/{roleId}` | Thu hồi role của user | ❌ Not Done |
+| 16 | `GET` | `/api/v1/users/{userId}/roles` | Danh sách roles của user | ❌ Not Done |
+| 17 | `GET` | `/api/v1/roles/{id}/users` | Danh sách users theo role | ❌ Not Done |
+| 18 | `POST` | `/api/v1/auth/check-permission` | Kiểm tra quyền truy cập | ❌ Not Done |
+| 19 | `GET` | `/api/v1/auth/my-permissions` | Lấy quyền hiệu lực của user hiện tại | ❌ Not Done |
+
+> 🔴 **Module này hiện ở 0/19 APIs theo trạng thái thực thi.**
+>
+> ⚠️ `PermissionController`, `RoleController`, `UserRoleController` đã có route annotations nhưng `PermissionServiceImpl` và `RoleServiceImpl` hiện vẫn là stub (`return null`, `return List.of()`), nên chưa thể tính là implemented.
+>
+> ⚠️ Hai endpoint authorization tracking theo Jira `WHS-149` và `WHS-167` chưa tồn tại trong `AuthController`.
+>
+> **Jira map:** `WHS-144`, `WHS-145`, `WHS-146`, `WHS-147`, `WHS-148` và child `WHS-149..167`.
 
 ---
 
@@ -683,20 +730,21 @@ Storage            ██████████ 100% ✅
 
 ---
 
-# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 15/03/2026)
+# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 16/03/2026)
 
 ### ✅ Phase 1–4 — ĐÃ HOÀN THÀNH PHẦN LÕI
 - Master Data: Warehouse, Location, Product, UOM, Business Partner, Category, Employee
 - Inventory Core: read-side, availability, reserve, unreserve, increase, stock adjustments, stock transfers
 - Inbound foundation: Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines, Confirm Receipt
 
-### 🔴 Phase 5 — Harden Inventory + Inbound còn thiếu
+### 🔴 Phase 5 — Security + Inventory hardening còn thiếu
 | Ưu tiên | Task | Chi tiết | Effort |
 |---------|------|----------|--------|
+| 🔴 P0 | RBAC implementation thực tế | Hoàn thiện `PermissionServiceImpl`, `RoleServiceImpl`, repository flow, business rules, unit/integration tests; chỉ khi đó mới xét move Jira `WHS-144..147` | 3 ngày |
 | 🔴 P0 | Inbound integration test hardening | Cover full flow `PO -> IR -> confirm`, partial receipt, quarantine, rollback, race condition | 2 ngày |
 | 🔴 P0 | Inbound Receipt Lines regression hardening | Cover split lines, duplicate dimension guard, remaining quantity, batch/quality validation, draft-only mutation | 2 ngày |
 | 🟡 P1 | Inventory hardening | Chốt scope public/internal cho `increase`, thiết kế `decrease`, rà auth + idempotency cho reserve/unreserve | 2 ngày |
-| 🟡 P1 | API/doc contract sync | Đồng bộ Swagger, docs, error code matrix, request/response examples cho inventory + inbound | 1 ngày |
+| 🟡 P1 | API/doc contract sync | Đồng bộ Swagger, docs, error code matrix, request/response examples cho inventory + inbound + RBAC | 1 ngày |
 
 ### 🔴 Phase 6 — Outbound foundation
 | Ưu tiên | Task | Chi tiết | Effort |
@@ -730,19 +778,19 @@ Storage            ██████████ 100% ✅
 
 ---
 
-# 📊 TỔNG KẾT (15/03/2026)
+# 📊 TỔNG KẾT (16/03/2026)
 
 | Metric | Value |
 |--------|-------|
-| **Tổng API thiết kế** | 171 |
-| **Đã triển khai** | 124 (73%) |
-| **Chưa triển khai** | 47 (27%) |
+| **Tổng API thiết kế** | 190 |
+| **Đã triển khai** | 124 (65%) |
+| **Chưa triển khai** | 66 (35%) |
 | **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Batch, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines |
-| **Module 0%** | Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
-| **Module tiếp theo** | **Inventory + inbound hardening**, sau đó mới sang Outbound foundation |
+| **Module 0%** | RBAC & Authorization, Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
+| **Module tiếp theo** | **RBAC implementation + inventory/inbound hardening**, sau đó mới sang Outbound foundation |
 
-> 💡 **Tiến bộ so với bản 09/03:** batch đã lên `11/11`, inbound receipt lines `4/4`, inbound receipts `7/7`, inventory `7/8`, auth được ghi nhận đúng thêm 4 endpoint.
+> 💡 **Kết luận lớn nhất của đợt re-audit 16/03:** batch/inbound/inventory đã khớp Jira, nhưng RBAC phải được phân loại lại về `0/19` vì service layer vẫn là stub dù controller đã tồn tại.
 >
 > ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Receipt Lines -> Inventory -> Movement`; batch lifecycle/query side đã đồng bộ với docs và test.
 >
-> ⚠️ **Khoảng trống lớn nhất còn lại:** inventory decrease, outbound chain, stock movement analytics, reporting.
+> ⚠️ **Khoảng trống lớn nhất còn lại:** RBAC implementation thực tế, inventory decrease, outbound chain, stock movement analytics, reporting.

@@ -18,5 +18,6 @@ public class WareHouseResponse {
     private String email;
     private String status;
     private String wareHouseType;
-    AccountResponse manager;
+    private String managerId;
+    private AccountResponse manager;
 }
