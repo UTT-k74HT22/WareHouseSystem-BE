@@ -10,11 +10,11 @@ import java.util.UUID;
 public interface PermissionRepository extends JpaRepository<Permission, String> {
 
     /**
-     * Checks whether a permission already exists by its unique code.
+     * Checks whether a permission already exists by its unique Name.
      *
-     * @param code permission code
+     * @param Name permission Name
      * @return true if permission exists, false otherwise
      */
-    boolean existsByCode(String code);
+    boolean existsByName(String Name);
 
 }

@@ -1,8 +1,6 @@
 package org.demo.whs.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -12,11 +10,13 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoleHasPermission extends BaseEntity {
+public class RoleHasPermission {
 
+    @Id
     @Column(name = "role_id")
     private String roleId;
 
+    @Id
     @Column(name = "permission_id")
     private String permissionId;
 }
