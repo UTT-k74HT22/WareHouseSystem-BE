@@ -44,8 +44,6 @@ opencode.json
 .mvn/
 
 .github/
-mvnw
-mvnw.cmd
 
 /bin/.env.example
 /bin/.gitignore
