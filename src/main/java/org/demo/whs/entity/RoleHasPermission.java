@@ -1,6 +1,8 @@
 package org.demo.whs.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.*;
 
 @Entity
@@ -12,11 +14,7 @@ import lombok.*;
 @Builder
 public class RoleHasPermission {
 
-    @Id
-    @Column(name = "role_id")
-    private String roleId;
+    @EmbeddedId
+    private RolePermissionId id;
 
-    @Id
-    @Column(name = "permission_id")
-    private String permissionId;
 }

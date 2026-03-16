@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.request.Permission.CreatePermissionRequest;
 import org.demo.whs.entity.dto.request.Permission.UpdatePermissionRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
+import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.PermissionMapper;

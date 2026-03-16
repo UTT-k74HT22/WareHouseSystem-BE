@@ -10,6 +10,7 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.service.RoleService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,8 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
+
+    private final RoleRepository roleRepository;
 
     @Override
     public RoleResponse createRole(CreateRoleRequest request) {
