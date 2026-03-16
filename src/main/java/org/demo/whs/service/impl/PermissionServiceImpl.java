@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.request.Permission.CreatePermissionRequest;
 import org.demo.whs.entity.dto.request.Permission.UpdatePermissionRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
+import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.service.PermissionService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @RequiredArgsConstructor
 public class PermissionServiceImpl implements PermissionService {
+
+    private final PermissionRepository permissionRepository;
+
     @Override
     public PermissionResponse createPermission(CreatePermissionRequest request) {
         return null;

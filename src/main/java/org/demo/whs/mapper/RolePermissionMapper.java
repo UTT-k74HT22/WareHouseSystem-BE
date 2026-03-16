@@ -21,10 +21,7 @@ public class RolePermissionMapper {
             return null;
         }
 
-        return RoleHasPermission.builder()
-                .roleId(roleId)
-                .permissionId(permissionId)
-                .build();
+        return RoleHasPermission.builder().build();
     }
 
     /**
