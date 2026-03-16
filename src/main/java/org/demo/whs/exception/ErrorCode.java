@@ -187,7 +187,22 @@ public enum ErrorCode {
     STORAGE_003("STORAGE_003", "File deletion failed"),
     STORAGE_004("STORAGE_004", "Failed to generate presigned URL"),
     STORAGE_005("STORAGE_005", "File type not allowed"),
-    STORAGE_006("STORAGE_006", "File size exceeds maximum allowed limit");
+    STORAGE_006("STORAGE_006", "File size exceeds maximum allowed limit"),
+
+    // Permission errors
+    PERM_001("PERM_001", "Permission not found"),
+    PERM_002("PERM_002", "Permission name already exists"),
+    PERM_003("PERM_003", "Permission already assigned to role"),
+    PERM_004("PERM_004", "Invalid permission data"),
+
+    PERM_005("PERM_005", "Permission code already exists"),
+    PERM_006("PERM_006", "Permission already exists for resource and action"),
+    PERM_007("PERM_007", "Permission is currently used by roles"),
+    PERM_008("PERM_008", "Permission not assigned to role"),
+    PERM_009("PERM_009", "Invalid resource"),
+    PERM_010("PERM_010", "Invalid action"),
+    PERM_011("PERM_011", "Permission code cannot be changed"),
+    PERM_012("PERM_012", "Permission resource cannot be changed");
 
     private final String code;
     private final String message;
