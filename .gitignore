@@ -41,6 +41,7 @@ gha-creds-*.json
 .opencode/
 opencode.json
 
+.mvn/
 
 /bin/.env.example
 /bin/.gitignore
