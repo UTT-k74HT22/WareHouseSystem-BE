@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.service.RoleService;
+import org.demo.whs.service.UserRoleService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -32,7 +33,7 @@ public class UserRoleController {
     private static final String UUID_PATTERN =
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
-    private final RoleService roleService;
+    private final UserRoleService userRoleService;
 
     /**
      * Assign roles to user.
@@ -51,7 +52,7 @@ public class UserRoleController {
 
         log.info("Assign roles to user {}", userId);
 
-        List<RoleResponse> response = roleService.assignRolesToUser(userId, request);
+        List<RoleResponse> response = userRoleService.assignRolesToUser(userId, request);
 
         return ResponseEntity.ok(
                 BaseResponse.success(response, "Roles assigned successfully")
@@ -77,7 +78,7 @@ public class UserRoleController {
 
         log.info("Remove role {} from user {}", roleId, userId);
 
-        roleService.removeRoleFromUser(userId, roleId);
+        userRoleService.removeRoleFromUser(userId, roleId);
 
         return ResponseEntity.ok(
                 BaseResponse.success(null, "Role removed successfully")
@@ -102,7 +103,7 @@ public class UserRoleController {
 
         log.info("Get roles of user {}", userId);
 
-        PageResponse<RoleResponse> response = roleService.getUserRoles(userId, pageable);
+        PageResponse<RoleResponse> response = userRoleService.getUserRoles(userId, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
     }
