@@ -22,7 +22,6 @@ public class PermissionMapper {
         }
 
         return Permission.builder()
-                .code(request.getCode())
                 .name(request.getName())
                 .resource(request.getResource())
                 .action(request.getAction())
@@ -37,10 +36,6 @@ public class PermissionMapper {
 
         if (permission == null || request == null) {
             return;
-        }
-
-        if (request.getCode() != null) {
-            permission.setCode(request.getCode());
         }
 
         if (request.getName() != null) {
