@@ -14,6 +14,7 @@ import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.WareHouseMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
@@ -54,6 +55,7 @@ public class WareHouseServiceImpl implements WareHouseService {
     @Override
     @Transactional
     public WareHouseResponse createWH(CreateWarehouseRequest request) {
+        log.info("Create Warehouse request: {}", request);
         String code = identifierGenerator.generateSystemManaged(
                 request.getCode(),
                 "Warehouse code",
@@ -61,20 +63,40 @@ public class WareHouseServiceImpl implements WareHouseService {
                 20,
                 wareHouseRepository::existsByCode
         );
-        log.info("Creating warehouse with code={}, name={}",
-                code, request.getName());
-        if (wareHouseRepository.existsByCode(code)) {
-            log.warn("Warehouse code already exists: {}", code);
-            throw new BadRequestException(ErrorCode.WHS_004);
+
+        String managerId = normalizeOptionalId(request.getManagerId());
+        if (managerId == null) {
+            throw new BadRequestException(ErrorCode.AUTH_002);
         }
+
+        if (!accountRepository.existsById(managerId)) {
+            throw new NotFoundException(ErrorCode.AUTH_002);
+        }
+
+        log.info("Creating warehouse with code={}, name={}", code, request.getName());
+
         Warehouses warehouses = wareHouseMapper.toEntity(request);
         warehouses.setCode(code);
+        warehouses.setManagerId(managerId);
+
         Account account = getCurrentUser();
         setAuditField(warehouses, account);
+
         wareHouseRepository.save(warehouses);
 
-        AccountResponse manager = fetchSingleManager(warehouses.getManagerId());
+        AccountResponse manager = fetchSingleManager(managerId);
         return wareHouseMapper.toResponse(warehouses, manager);
+    }
+
+    private String normalizeOptionalId(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()
+                || "undefined".equalsIgnoreCase(trimmed)
+                || "null".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+        return trimmed;
     }
 
     private static void setAuditField(Warehouses warehouses, Account account) {
@@ -145,6 +167,19 @@ public class WareHouseServiceImpl implements WareHouseService {
                 .orElseThrow(() -> new BadRequestException(ErrorCode.WHS_001));
 
         wareHouseMapper.updateEntity(warehouse, request);
+
+        if (request.getManagerId() != null) {
+            String managerId = normalizeOptionalId(request.getManagerId());
+            if (managerId == null) {
+                throw new BadRequestException(ErrorCode.AUTH_002);
+            }
+
+            if (!accountRepository.existsById(managerId)) {
+                throw new NotFoundException(ErrorCode.AUTH_002);
+            }
+
+            warehouse.setManagerId(managerId);
+        }
 
         Account currentUser = getCurrentUser();
         warehouse.setUpdatedBy(currentUser.getId());

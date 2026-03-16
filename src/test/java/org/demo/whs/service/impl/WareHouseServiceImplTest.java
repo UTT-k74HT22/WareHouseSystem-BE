@@ -3,6 +3,7 @@ package org.demo.whs.service.impl;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Warehouses;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
+import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
@@ -161,6 +162,7 @@ class WareHouseServiceImplTest {
     void createWH_shouldGenerateCode_whenRequestCodeMissing() {
         CreateWarehouseRequest request = mock(CreateWarehouseRequest.class);
         when(request.getName()).thenReturn("Main Warehouse");
+        when(request.getManagerId()).thenReturn("M1");
 
         Warehouses warehouse = new Warehouses();
         warehouse.setManagerId("M1");
@@ -169,6 +171,7 @@ class WareHouseServiceImplTest {
         account.setId("USER1");
 
         when(wareHouseMapper.toEntity(request)).thenReturn(warehouse);
+        when(accountRepository.existsById("M1")).thenReturn(true);
         when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
         when(userProfileRepository.getAccountsByIds(List.of("M1"))).thenReturn(List.of());
         when(wareHouseMapper.toResponse(warehouse, null)).thenAnswer(invocation -> WareHouseResponse.builder()
@@ -196,5 +199,63 @@ class WareHouseServiceImplTest {
         assertThrows(BadRequestException.class, () -> wareHouseService.createWH(request));
 
         verify(wareHouseRepository, never()).save(any(Warehouses.class));
+    }
+
+    @Test
+    void updateWareHouse_shouldRejectUndefinedManagerId() {
+        UpdateWarehouseRequest request = mock(UpdateWarehouseRequest.class);
+        when(request.getName()).thenReturn("Main Warehouse");
+        when(request.getManagerId()).thenReturn("undefined");
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setId("WH1");
+        warehouse.setManagerId("M1");
+
+        when(wareHouseRepository.findById("WH1"))
+                .thenReturn(Optional.of(warehouse));
+
+        assertThrows(BadRequestException.class,
+                () -> wareHouseService.updateWareHouse("WH1", request));
+
+        verify(accountRepository, never()).existsById(anyString());
+        verify(wareHouseRepository, never()).save(any(Warehouses.class));
+    }
+
+    @Test
+    void updateWareHouse_shouldNormalizeAndPersistManagerId() {
+        UpdateWarehouseRequest request = mock(UpdateWarehouseRequest.class);
+        when(request.getName()).thenReturn("Main Warehouse");
+        when(request.getManagerId()).thenReturn("  M2  ");
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setId("WH1");
+        warehouse.setManagerId("M1");
+
+        Account account = new Account();
+        account.setId("USER1");
+
+        when(wareHouseRepository.findById("WH1"))
+                .thenReturn(Optional.of(warehouse));
+        when(accountRepository.existsById("M2"))
+                .thenReturn(true);
+        when(accountRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(account));
+        when(userProfileRepository.getAccountsByIds(List.of("M2")))
+                .thenReturn(List.of());
+        when(wareHouseMapper.toResponse(warehouse, null)).thenAnswer(invocation -> WareHouseResponse.builder()
+                .id(warehouse.getId())
+                .managerId(warehouse.getManagerId())
+                .build());
+
+        try (MockedStatic<SecurityUtils> utilities = mockStatic(SecurityUtils.class)) {
+            utilities.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+
+            WareHouseResponse response = wareHouseService.updateWareHouse("WH1", request);
+
+            assertNotNull(response);
+            assertEquals("M2", warehouse.getManagerId());
+            assertEquals("M2", response.getManagerId());
+            verify(wareHouseRepository).save(warehouse);
+        }
     }
 }
