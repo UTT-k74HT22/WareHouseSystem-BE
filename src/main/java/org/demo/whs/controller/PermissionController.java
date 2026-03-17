@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.request.Permission.UpdatePermissionRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
+import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.service.PermissionService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -17,14 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/api/v1/permissions")
 @RestController
@@ -52,9 +46,14 @@ public class PermissionController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getPermissions(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @RequestParam(required = false) String resource,
+            @RequestParam(required = false) ActionType action,
+            @RequestParam(required = false) String search,
+
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
     ) {
-        PageResponse<PermissionResponse> response = permissionService.getPermissions(pageable);
+        PageResponse<PermissionResponse> response = permissionService.getPermissions(resource, action, search, pageable);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

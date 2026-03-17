@@ -10,9 +10,6 @@ import org.demo.whs.entity.enums.ActionType;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdatePermissionRequest {
 
-    @Size(max = 100, message = "Permission code must not exceed 100 characters")
-    private String code;
-
     @Size(max = 100, message = "Permission name must not exceed 100 characters")
     private String name;
 

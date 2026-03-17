@@ -6,15 +6,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.Setter;
 import org.demo.whs.entity.enums.ActionType;
 
+@Setter
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreatePermissionRequest {
-
-    @NotBlank(message = "Permission code is required")
-    @Size(max = 100, message = "Permission code must not exceed 100 characters")
-    private String code;
 
     @NotBlank(message = "Permission name is required")
     @Size(max = 100, message = "Permission name must not exceed 100 characters")
