@@ -227,4 +227,50 @@ class PermissionServiceImplTest {
 
         assertThat(result.getContent()).hasSize(1);
     }
+
+    @Test
+    @DisplayName("getPermissionById_shouldReturnPermission_WhenFound")
+    void getPermissionById_shouldReturnPermission_WhenFound() {
+
+        String id = "perm-id-1";
+
+        Permission permission = new Permission();
+        permission.setId(id);
+        permission.setName("Inventory Read");
+
+        PermissionResponse response = new PermissionResponse();
+        response.setId(id);
+        response.setName("Inventory Read");
+
+        when(permissionRepository.findById(id))
+                .thenReturn(java.util.Optional.of(permission));
+
+        when(permissionMapper.toResponse(permission))
+                .thenReturn(response);
+
+        PermissionResponse result = permissionService.getPermissionById(id);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getName()).isEqualTo("Inventory Read");
+
+        verify(permissionRepository).findById(id);
+        verify(permissionMapper).toResponse(permission);
+    }
+
+    @Test
+    @DisplayName("getPermissionById_shouldThrowNotFound_WhenNotExist")
+    void getPermissionById_shouldThrowNotFound_WhenNotExist() {
+
+        String id = "not-found-id";
+
+        when(permissionRepository.findById(id))
+                .thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> permissionService.getPermissionById(id))
+                .isInstanceOf(org.demo.whs.exception.NotFoundException.class);
+
+        verify(permissionRepository).findById(id);
+        verify(permissionMapper, never()).toResponse(any());
+    }
 }

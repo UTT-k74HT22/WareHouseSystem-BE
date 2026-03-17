@@ -11,6 +11,9 @@ import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.PermissionMapper;
+import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.service.PermissionService;
 import org.springframework.data.domain.Page;
@@ -77,9 +80,19 @@ public class PermissionServiceImpl implements PermissionService {
         return PageResponse.from(page);
     }
 
+    /**
+     * Get a permission by its ID.
+     *
+     * @param id the ID of the permission
+     * @return the permission response
+     */
     @Override
     public PermissionResponse getPermissionById(String id) {
-        return null;
+
+        Permission permission = permissionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PERM_001));
+
+        return permissionMapper.toResponse(permission);
     }
 
     @Override
