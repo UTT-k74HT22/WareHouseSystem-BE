@@ -1,7 +1,7 @@
 package org.demo.whs.mapper;
 
-import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.StockMovements;
+import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -67,6 +67,30 @@ public class StockMovementsMapper {
                 request.getLocationId(),
                 request.getBatchId(),
                 request.getQuantity(),
+                quantityBefore,
+                quantityAfter,
+                request.getReferenceType(),
+                request.getReferenceId(),
+                request.getReferenceNumber(),
+                request.getNotes(),
+                actorId
+        );
+    }
+
+    public StockMovements toEntity(
+            StockMovementsType movementType,
+            InventoryDecreaseRequest request,
+            BigDecimal quantityBefore,
+            BigDecimal quantityAfter,
+            String actorId
+    ) {
+        return toEntity(
+                movementType,
+                request.getProductId(),
+                request.getWarehouseId(),
+                request.getLocationId(),
+                request.getBatchId(),
+                request.getQuantity().negate(), // Decrease is negative change
                 quantityBefore,
                 quantityAfter,
                 request.getReferenceType(),

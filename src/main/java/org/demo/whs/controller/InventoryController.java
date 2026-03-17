@@ -131,4 +131,17 @@ public class InventoryController {
             @Valid @RequestBody InventoryIncreaseRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.increase(request)));
     }
+
+    /**
+     * Decrease inventory on-hand quantity.
+     *
+     * @param request The decrease request
+     * @return Updated inventory data
+     */
+    @PostMapping("/decrease")
+    @Operation(summary = "Decrease inventory", description = "Decrease on-hand stock from outbound or adjustment")
+    public ResponseEntity<BaseResponse<InventoryResponse>> decrease(
+            @Valid @RequestBody org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.decrease(request)));
+    }
 }

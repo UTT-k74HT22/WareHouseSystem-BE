@@ -102,6 +102,29 @@ public class StockMovementsServiceImpl implements StockMovementsService {
     }
 
     @Override
+    @Transactional
+    public StockMovementsResponse recordDecrease(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request, BigDecimal quantityBefore, BigDecimal quantityAfter) {
+        StockMovementsType movementType;
+        if (request.getReferenceType() == ReferenceType.STOCK_ADJUSTMENT) {
+            movementType = StockMovementsType.ADJUSTMENT_DECREASE;
+        } else if (request.getReferenceType() == ReferenceType.OUTBOUND_SHIPMENT) {
+            movementType = StockMovementsType.OUTBOUND;
+        } else {
+            movementType = StockMovementsType.OUTBOUND; // Default for other types
+        }
+
+        StockMovements movement = stockMovementsMapper.toEntity(
+                movementType,
+                request,
+                quantityBefore,
+                quantityAfter,
+                null // actorId
+        );
+
+        return recordMovement(movement);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean existsByReference(ReferenceType referenceType, String referenceId) {
         if (referenceId == null || referenceId.isBlank()) {
