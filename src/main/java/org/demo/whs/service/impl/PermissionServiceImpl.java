@@ -8,13 +8,15 @@ import org.demo.whs.entity.dto.request.Permission.UpdatePermissionRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.enums.ActionType;
-import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.PermissionMapper;
+import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.service.PermissionService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.demo.whs.repository.specification.PermissionSpecification;
 
 import javax.swing.*;
 
@@ -51,9 +53,28 @@ public class PermissionServiceImpl implements PermissionService {
         return permissionMapper.toResponse(savePermission);
     }
 
+    /**
+     * Get permissions with pagination.
+     *
+     * @param pageable pagination information
+     * @return paginated list of permissions
+     */
     @Override
-    public PageResponse<PermissionResponse> getPermissions(Pageable pageable) {
-        return null;
+    public PageResponse<PermissionResponse> getPermissions(
+            String resource,
+            ActionType action,
+            String search,
+            Pageable pageable
+    ) {
+
+        Page<PermissionResponse> page = permissionRepository
+                .findAll(
+                        PermissionSpecification.filter(resource, action, search),
+                        pageable
+                )
+                .map(permissionMapper::toResponse);
+
+        return PageResponse.from(page);
     }
 
     @Override

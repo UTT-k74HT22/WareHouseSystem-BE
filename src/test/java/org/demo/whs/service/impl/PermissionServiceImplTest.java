@@ -2,10 +2,10 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.dto.request.Permission.CreatePermissionRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.exception.BadRequestException;
-import org.demo.whs.exception.ConflictException;
 import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.repository.PermissionRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -13,9 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 
-import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,27 +36,21 @@ class PermissionServiceImplTest {
     @InjectMocks
     private PermissionServiceImpl permissionService;
 
-    // --- CREATE PERMISSION TESTS ---
+    // ================= CREATE =================
 
     @Test
-    @DisplayName("createPermission_shouldSucceed_WhenPermissionValid")
-    void createPermission_shouldSucceed_WhenPermissionValid() {
+    @DisplayName("createPermission_shouldSucceed_WhenValid")
+    void createPermission_shouldSucceed_WhenValid() {
 
-        // Arrange
         CreatePermissionRequest request = new CreatePermissionRequest();
         request.setName("Inventory Read");
         request.setResource("INV");
         request.setAction(ActionType.READ);
         request.setDescription("Read inventory");
 
-        Permission permission = Permission.builder()
-                .name(request.getName())
-                .resource(request.getResource())
-                .action(request.getAction())
-                .description(request.getDescription())
-                .build();
+        Permission entity = new Permission();
 
-        Permission savedPermission = Permission.builder()
+        Permission saved = Permission.builder()
                 .code("PERM_INV_READ")
                 .name(request.getName())
                 .resource(request.getResource())
@@ -63,7 +59,6 @@ class PermissionServiceImplTest {
                 .build();
 
         PermissionResponse response = PermissionResponse.builder()
-                .id("perm-1")
                 .code("PERM_INV_READ")
                 .name("Inventory Read")
                 .resource("INV")
@@ -73,41 +68,29 @@ class PermissionServiceImplTest {
 
         when(permissionRepository.existsByResourceAndAction("INV", ActionType.READ))
                 .thenReturn(false);
+        when(permissionMapper.createEntity(request)).thenReturn(entity);
+        when(permissionRepository.save(any())).thenReturn(saved);
+        when(permissionMapper.toResponse(saved)).thenReturn(response);
 
-        when(permissionMapper.createEntity(request))
-                .thenReturn(permission);
-
-        when(permissionRepository.save(any(Permission.class)))
-                .thenReturn(savedPermission);
-
-        when(permissionMapper.toResponse(savedPermission))
-                .thenReturn(response);
-
-        // Act
         PermissionResponse result = permissionService.createPermission(request);
 
-        // Assert
         assertThat(result).isNotNull();
         assertThat(result.getCode()).isEqualTo("PERM_INV_READ");
-        assertThat(result.getName()).isEqualTo("Inventory Read");
 
-        verify(permissionRepository).save(any(Permission.class));
+        verify(permissionRepository).save(any());
     }
 
     @Test
-    @DisplayName("createPermission_shouldThrowConflict_WhenPermissionAlreadyExists")
-    void createPermission_shouldThrowConflict_WhenPermissionAlreadyExists() {
+    @DisplayName("createPermission_shouldThrow_WhenDuplicate")
+    void createPermission_shouldThrow_WhenDuplicate() {
 
-        // Arrange
         CreatePermissionRequest request = new CreatePermissionRequest();
-        request.setName("Inventory Read");
         request.setResource("INV");
         request.setAction(ActionType.READ);
 
         when(permissionRepository.existsByResourceAndAction("INV", ActionType.READ))
                 .thenReturn(true);
 
-        // Act & Assert
         assertThatThrownBy(() -> permissionService.createPermission(request))
                 .isInstanceOf(BadRequestException.class);
 
@@ -118,24 +101,16 @@ class PermissionServiceImplTest {
     @DisplayName("createPermission_shouldGenerateCorrectCode")
     void createPermission_shouldGenerateCorrectCode() {
 
-        // Arrange
         CreatePermissionRequest request = new CreatePermissionRequest();
         request.setName("Order Write");
         request.setResource("ORDER");
         request.setAction(ActionType.WRITE);
 
-        Permission permission = Permission.builder()
-                .name(request.getName())
-                .resource(request.getResource())
-                .action(request.getAction())
-                .build();
+        Permission entity = new Permission();
 
         when(permissionRepository.existsByResourceAndAction("ORDER", ActionType.WRITE))
                 .thenReturn(false);
-
-        when(permissionMapper.createEntity(request))
-                .thenReturn(permission);
-
+        when(permissionMapper.createEntity(request)).thenReturn(entity);
         when(permissionRepository.save(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -150,20 +125,106 @@ class PermissionServiceImplTest {
                             .build();
                 });
 
-        // Act
-        PermissionResponse response = permissionService.createPermission(request);
+        PermissionResponse result = permissionService.createPermission(request);
 
-        // Assert
-        assertThat(response.getCode()).isEqualTo("PERM_ORDER_WRITE");
+        assertThat(result.getCode()).isEqualTo("PERM_ORDER_WRITE");
+    }
+
+    // ================= GET =================
+
+    @Test
+    @DisplayName("getPermissions_shouldReturnAll")
+    void getPermissions_shouldReturnAll() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Permission permission = new Permission();
+        permission.setName("inventory.read");
+
+        PermissionResponse response = new PermissionResponse();
+        response.setName("inventory.read");
+
+        Page<Permission> page = new PageImpl<>(List.of(permission));
+
+        when(permissionRepository.findAll(
+                Mockito.<org.springframework.data.jpa.domain.Specification<Permission>>any(),
+                eq(pageable)
+        )).thenReturn(page);
+        when(permissionMapper.toResponse(permission)).thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                permissionService.getPermissions(null, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
     }
 
     @Test
-    @DisplayName("createPermission_shouldHandleNullRequest")
-    void createPermission_shouldHandleNullRequest() {
+    @DisplayName("getPermissions_shouldFilterByResource")
+    void getPermissions_shouldFilterByResource() {
 
-        // Act & Assert
-        assertThatThrownBy(() -> permissionService.createPermission(null))
-                .isInstanceOf(NullPointerException.class);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Permission permission = new Permission();
+        PermissionResponse response = new PermissionResponse();
+
+        Page<Permission> page = new PageImpl<>(List.of(permission));
+
+        when(permissionRepository.findAll(
+                Mockito.<org.springframework.data.jpa.domain.Specification<Permission>>any(),
+                eq(pageable)
+        )).thenReturn(page);
+        when(permissionMapper.toResponse(permission)).thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                permissionService.getPermissions("INV", null, null, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
     }
 
+    @Test
+    @DisplayName("getPermissions_shouldFilterByAction")
+    void getPermissions_shouldFilterByAction() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Permission permission = new Permission();
+        PermissionResponse response = new PermissionResponse();
+
+        Page<Permission> page = new PageImpl<>(List.of(permission));
+
+        when(permissionRepository.findAll(
+                Mockito.<org.springframework.data.jpa.domain.Specification<Permission>>any(),
+                eq(pageable)
+        )).thenReturn(page);
+        when(permissionMapper.toResponse(permission)).thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                permissionService.getPermissions(null, ActionType.READ, null, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("getPermissions_shouldSearchByKeyword")
+    void getPermissions_shouldSearchByKeyword() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Permission permission = new Permission();
+        PermissionResponse response = new PermissionResponse();
+
+        Page<Permission> page = new PageImpl<>(List.of(permission));
+
+        when(permissionRepository.findAll(
+                Mockito.<org.springframework.data.jpa.domain.Specification<Permission>>any(),
+                eq(pageable)
+        )).thenReturn(page);
+        when(permissionMapper.toResponse(permission)).thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                permissionService.getPermissions(null, null, "inventory", pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+    }
 }

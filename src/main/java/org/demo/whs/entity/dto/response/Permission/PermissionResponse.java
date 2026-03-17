@@ -2,14 +2,16 @@ package org.demo.whs.entity.dto.response.Permission;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 import org.demo.whs.entity.enums.ActionType;
 
 import java.time.LocalDateTime;
 
+@Setter
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class PermissionResponse {
 
