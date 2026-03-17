@@ -1,6 +1,7 @@
 package org.demo.whs.repository;
 
 import org.demo.whs.entity.Permission;
+import org.demo.whs.entity.enums.ActionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -12,11 +13,12 @@ public interface PermissionRepository extends JpaRepository<Permission, String>,
         JpaSpecificationExecutor<Permission> {
 
     /**
-     * Checks whether a permission already exists by its unique code.
+     * Checks whether a permission already exists by its unique name.
      *
-     * @param code permission code
+     * @param Name permission name
      * @return true if permission exists, false otherwise
      */
-    boolean existsByCode(String code);
+    boolean existsByName(String Name);
 
+    boolean existsByResourceAndAction(String resource, ActionType action);
 }

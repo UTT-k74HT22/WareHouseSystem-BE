@@ -38,7 +38,6 @@ public class PermissionMapper {
             return;
         }
 
-
         if (request.getName() != null) {
             permission.setName(request.getName());
         }
