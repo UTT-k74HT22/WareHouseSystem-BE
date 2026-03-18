@@ -20,5 +20,19 @@ public interface PermissionRepository extends JpaRepository<Permission, String>,
      */
     boolean existsByName(String Name);
 
+    /**
+     *
+     * @param resource
+     * @param action
+     * @return
+     */
     boolean existsByResourceAndAction(String resource, ActionType action);
+
+    /**
+     *
+     * @param name
+     * @param id
+     * @return
+     */
+    boolean existsByNameAndIdNot(String name, String id);
 }

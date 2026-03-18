@@ -42,14 +42,6 @@ public class PermissionMapper {
             permission.setName(request.getName());
         }
 
-        if (request.getResource() != null) {
-            permission.setResource(request.getResource());
-        }
-
-        if (request.getAction() != null) {
-            permission.setAction(request.getAction());
-        }
-
         if (request.getDescription() != null) {
             permission.setDescription(request.getDescription());
         }

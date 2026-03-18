@@ -8,11 +8,9 @@ import org.demo.whs.entity.dto.request.Permission.UpdatePermissionRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.enums.ActionType;
-import org.demo.whs.exception.BadRequestException;
-import org.demo.whs.exception.ConflictException;
-import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.*;
 import org.demo.whs.mapper.PermissionMapper;
-import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.service.PermissionService;
@@ -96,9 +94,34 @@ public class PermissionServiceImpl implements PermissionService {
         return permissionMapper.toResponse(permission);
     }
 
+    /**
+     * Update an existing permission.
+     *
+     * @param id      the ID of the permission to update
+     * @param request the request containing updated permission details
+     * @return the updated permission response
+     */
     @Override
     public PermissionResponse updatePermission(String id, UpdatePermissionRequest request) {
-        return null;
+
+        Permission permission = permissionRepository.findById(id)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.PERM_001));
+
+        validateUpdatePermission(request, permission);
+
+        if (request.getName() != null) {
+            permission.setName(request.getName());
+        }
+
+        if (request.getDescription() != null) {
+            permission.setDescription(request.getDescription());
+        }
+
+        Permission update = permissionRepository.save(permission);
+
+        log.info("Permission updated successfully with id: {}", update.getId());
+
+        return permissionMapper.toResponse(update);
     }
 
     /**
@@ -181,6 +204,31 @@ public class PermissionServiceImpl implements PermissionService {
                 resource.toUpperCase() +
                 "_" +
                 action.name();
+    }
+
+    private void validateDuplicateName(String name, String id) {
+        if (permissionRepository.existsByNameAndIdNot(name, id)) {
+            throw new BadRequestException(ErrorCode.PERM_002);
+        }
+    }
+
+    private void validateUpdatePermission(UpdatePermissionRequest request, Permission permission) {
+
+        if (request == null) {
+            throw new BadRequestException(ErrorCode.PERM_004);
+        }
+
+        if (request.getAction() != null) {
+            throw new BadRequestException(ErrorCode.PERM_010);
+        }
+
+        if (request.getResource() != null) {
+            throw new BadRequestException(ErrorCode.PERM_012);
+        }
+
+        if (request.getName() != null) {
+            validateDuplicateName(request.getName(), permission.getId());
+        }
     }
 
     private Permission findPermissionOrThrow(String id) {
