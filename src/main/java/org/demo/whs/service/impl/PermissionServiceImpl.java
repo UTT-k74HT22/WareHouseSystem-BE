@@ -12,11 +12,14 @@ import org.demo.whs.exception.*;
 import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.repository.PermissionRepository;
+import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.service.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.demo.whs.repository.specification.PermissionSpecification;
+
+import java.util.List;
 
 @Service
 @Slf4j
@@ -24,6 +27,7 @@ import org.demo.whs.repository.specification.PermissionSpecification;
 public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final PermissionMapper permissionMapper;
 
     /**
@@ -120,9 +124,22 @@ public class PermissionServiceImpl implements PermissionService {
         return permissionMapper.toResponse(update);
     }
 
+    /**
+     * Delete a permission by its ID.
+     *
+     * @param id the ID of the permission to delete
+     */
     @Override
     public void deletePermission(String id) {
+        log.info("Start deleting permission with id: {}", id);
 
+        Permission permission = findPermissionOrThrow(id);
+
+        validatePermissionNotInUse(id);
+
+        permissionRepository.delete(permission);
+
+        log.info("Permission deleted successfully, id: {}", id);
     }
 
     /**
@@ -211,6 +228,19 @@ public class PermissionServiceImpl implements PermissionService {
 
         if (request.getName() != null) {
             validateDuplicateName(request.getName(), permission.getId());
+        }
+    }
+
+    private Permission findPermissionOrThrow(String id) {
+        return permissionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PERM_001));
+    }
+
+    private void validatePermissionNotInUse(String permissionId) {
+        List<String> roleIds = rolePermissionRepository.findRoleIdsByPermissionId(permissionId);
+
+        if (!roleIds.isEmpty()) {
+            throw new ConflictException(ErrorCode.PERM_007);
         }
     }
 }

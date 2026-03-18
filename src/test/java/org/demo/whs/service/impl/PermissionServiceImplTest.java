@@ -6,8 +6,11 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.repository.PermissionRepository;
+import org.demo.whs.repository.RolePermissionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +32,9 @@ class PermissionServiceImplTest {
 
     @Mock
     private PermissionRepository permissionRepository;
+
+    @Mock
+    private RolePermissionRepository rolePermissionRepository;
 
     @Mock
     private PermissionMapper permissionMapper;
@@ -272,5 +278,77 @@ class PermissionServiceImplTest {
 
         verify(permissionRepository).findById(id);
         verify(permissionMapper, never()).toResponse(any());
+    }
+
+    @Test
+    @DisplayName("deletePermission_shouldSucceed_WhenNotInUse")
+    void deletePermission_shouldSucceed_WhenNotInUse() {
+
+        String id = "perm-id-1";
+
+        Permission permission = new Permission();
+        permission.setId(id);
+
+        when(permissionRepository.findById(id))
+                .thenReturn(java.util.Optional.of(permission));
+
+        when(rolePermissionRepository.findRoleIdsByPermissionId(id))
+                .thenReturn(List.of());
+
+        doNothing().when(permissionRepository).delete(permission);
+
+        permissionService.deletePermission(id);
+
+        verify(permissionRepository).findById(id);
+        verify(rolePermissionRepository).findRoleIdsByPermissionId(id);
+        verify(permissionRepository).delete(permission);
+    }
+
+    @Test
+    @DisplayName("deletePermission_shouldThrowNotFound_WhenNotExist")
+    void deletePermission_shouldThrowNotFound_WhenNotExist() {
+
+        String id = "not-found-id";
+
+        when(permissionRepository.findById(id))
+                .thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> permissionService.deletePermission(id))
+                .isInstanceOf(org.demo.whs.exception.NotFoundException.class);
+
+        verify(permissionRepository).findById(id);
+        verify(rolePermissionRepository, never()).findRoleIdsByPermissionId(any());
+        verify(permissionRepository, never()).delete(any(Permission.class));
+    }
+
+    @Test
+    @DisplayName("deletePermission_shouldThrowConflict_WhenInUse")
+    void deletePermission_shouldThrowConflict_WhenInUse() {
+
+        String id = "perm-id-1";
+
+        Permission permission = new Permission();
+        permission.setId(id);
+
+        when(permissionRepository.findById(id))
+                .thenReturn(java.util.Optional.of(permission));
+
+        when(rolePermissionRepository.findRoleIdsByPermissionId(id))
+                .thenReturn(List.of("ROLE_ADMIN", "ROLE_USER"));
+
+        assertThatThrownBy(() -> permissionService.deletePermission(id))
+                .isInstanceOf(org.demo.whs.exception.ConflictException.class);
+
+        verify(permissionRepository).findById(id);
+        verify(rolePermissionRepository).findRoleIdsByPermissionId(id);
+        verify(permissionRepository, never()).delete(any(Permission.class));
+    }
+
+    private void validatePermissionNotInUse(String permissionId) {
+        List<String> roleIds = rolePermissionRepository.findRoleIdsByPermissionId(permissionId);
+
+        if (!roleIds.isEmpty()) {
+            throw new ConflictException(ErrorCode.PERM_007);
+        }
     }
 }
