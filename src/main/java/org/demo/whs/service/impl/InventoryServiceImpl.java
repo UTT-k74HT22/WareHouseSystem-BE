@@ -482,6 +482,12 @@ public class InventoryServiceImpl implements InventoryService {
                     if (request.getBatchId() != null) {
                         batch = batchRepository.findById(request.getBatchId())
                                 .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
+                        if (!batch.getProductId().equals(request.getProductId())) {
+                            throw new ConflictException(
+                                    String.format("Batch %s belongs to product %s, but request is for product %s",
+                                            batch.getId(), batch.getProductId(), request.getProductId()),
+                                    ErrorCode.COM_001);
+                        }
                     }
 
                     // 3. Find or Create Inventory Record with Locking

@@ -13,6 +13,7 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.StockMovementsRepository;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockMovementsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -90,12 +91,14 @@ public class StockMovementsServiceImpl implements StockMovementsService {
                 ? StockMovementsType.ADJUSTMENT_INCREASE
                 : StockMovementsType.INBOUND;
 
+        String actorId = SecurityUtils.getCurrentAccountId();
+
         StockMovements movement = stockMovementsMapper.toEntity(
                 movementType,
                 request,
                 quantityBefore,
                 quantityAfter,
-                null // actorId
+                actorId
         );
 
         return recordMovement(movement);
@@ -113,16 +116,19 @@ public class StockMovementsServiceImpl implements StockMovementsService {
             movementType = StockMovementsType.OUTBOUND; // Default for other types
         }
 
+        String actorId = SecurityUtils.getCurrentAccountId();
+
         StockMovements movement = stockMovementsMapper.toEntity(
                 movementType,
                 request,
                 quantityBefore,
                 quantityAfter,
-                null // actorId
+                actorId
         );
 
         return recordMovement(movement);
     }
+
 
     @Override
     @Transactional(readOnly = true)

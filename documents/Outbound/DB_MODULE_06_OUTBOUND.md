@@ -1,22 +1,22 @@
-# Database Schema - Module 6: Outbound Operations
-## Database Design & Migration Guide
+# Database Schema - Module 6: Nghiệp vụ Xuất kho
+## Thiết kế Database & Hướng dẫn Migration
 
 ---
 
-## 📋 Document Information
+## 📋 Thông tin Tài liệu
 
-| Property | Value |
-|----------|-------|
-| **Module** | Outbound Operations |
-| **Version** | 1.0 |
-| **Date** | February 1, 2026 |
-| **Status** | Draft |
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Module** | Nghiệp vụ Xuất kho |
+| **Phiên bản** | 1.0 |
+| **Ngày** | 01/02/2026 |
+| **Trạng thái** | Bản nháp |
 
 ---
 
-## 🗂️ Schema Overview
+## 🗂️ Tổng quan Schema
 
-### ERD Diagram
+### Sơ đồ ERD
 
 ```
 ┌──────────────────┐         ┌──────────────────┐
@@ -70,9 +70,9 @@
 
 ---
 
-## 📊 Table Definitions
+## 📊 Định nghĩa Các Bảng
 
-### Table: sales_orders
+### Bảng: sales_orders
 
 ```sql
 CREATE TABLE sales_orders (
@@ -112,7 +112,7 @@ CREATE TABLE sales_orders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### Table: sales_order_lines
+### Bảng: sales_order_lines
 
 ```sql
 CREATE TABLE sales_order_lines (
@@ -141,7 +141,7 @@ CREATE TABLE sales_order_lines (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### Table: outbound_shipments
+### Bảng: outbound_shipments
 
 ```sql
 CREATE TABLE outbound_shipments (
@@ -175,7 +175,7 @@ CREATE TABLE outbound_shipments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### Table: outbound_shipment_lines
+### Bảng: outbound_shipment_lines
 
 ```sql
 CREATE TABLE outbound_shipment_lines (
@@ -212,7 +212,7 @@ CREATE TABLE outbound_shipment_lines (
 
 ---
 
-## 📑 Indexes
+## 📑 Indexes (Chỉ mục)
 
 ```sql
 -- sales_orders
@@ -236,7 +236,7 @@ CREATE INDEX idx_shipment_date ON outbound_shipments(shipment_date);
 
 ```sql
 -- ============================================================================
--- Flyway Migration: Create Outbound Operations Module
+-- Flyway Migration: Tạo Module Nghiệp vụ Xuất kho
 -- ============================================================================
 
 CREATE TABLE sales_orders (
@@ -352,5 +352,5 @@ CREATE INDEX idx_shipment_status ON outbound_shipments(status);
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 1, 2026
+**Phiên bản tài liệu:** 1.0  
+**Cập nhật lần cuối:** 01/02/2026

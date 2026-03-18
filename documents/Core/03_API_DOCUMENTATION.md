@@ -306,713 +306,312 @@ Authorization: Bearer {access_token}
 
 ## 📦 Module APIs
 
-## 1. Master Data APIs
+---
 
-### Warehouses
+### 📦 Module 1: Authentication & RBAC
 
-#### List Warehouses
-```http
-GET /api/warehouses?status=ACTIVE&page=0&size=20
+#### Auth APIs (`/api/auth`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/auth/login` | Đăng nhập | Public |
+| `POST` | `/api/auth/refresh` | Refresh token | Public |
+| `POST` | `/api/auth/logout` | Đăng xuất | isAuthenticated |
+| `GET`  | `/api/auth/me` | Lấy thông tin user hiện tại | isAuthenticated |
 
-Response (200):
-{
-  "content": [
-    {
-      "id": 1,
-      "code": "WH-MAIN",
-      "name": "Main Warehouse",
-      "address": "123 Main St",
-      "city": "Hanoi",
-      "country": "Vietnam",
-      "type": "MAIN",
-      "status": "ACTIVE",
-      "manager": {
-        "id": 5,
-        "name": "John Manager"
-      },
-      "createdAt": "2026-01-15T10:00:00Z"
-    }
-  ],
-  "totalElements": 5,
-  "totalPages": 1
-}
-```
+#### User APIs (`/api/users`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/users` | Tạo user mới | ADMIN |
+| `GET`  | `/api/users` | Danh sách users (phân trang) | ADMIN |
+| `GET`  | `/api/users/{id}` | Chi tiết user | ADMIN |
+| `PUT`  | `/api/users/{id}` | Cập nhật user | ADMIN |
+| `DELETE`| `/api/users/{id}` | Xóa user | ADMIN |
 
-#### Create Warehouse
-```http
-POST /api/warehouses
-Authorization: Bearer {token}
-Permission: WAREHOUSE:CREATE
+#### Role APIs (`/api/roles`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/roles` | Tạo role mới | ADMIN |
+| `GET`  | `/api/roles` | Danh sách roles | ADMIN |
+| `GET`  | `/api/roles/{id}` | Chi tiết role | ADMIN |
+| `PUT`  | `/api/roles/{id}` | Cập nhật role | ADMIN |
+| `DELETE`| `/api/roles/{id}` | Xóa role | ADMIN |
 
-Request:
-{
-  "code": "WH-NORTH",
-  "name": "North Warehouse",
-  "address": "456 North Ave",
-  "city": "Hanoi",
-  "state": "Hanoi",
-  "country": "Vietnam",
-  "postalCode": "100000",
-  "type": "SATELLITE",
-  "managerId": 5
-}
+#### Permission APIs (`/api/permissions`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `GET`  | `/api/permissions` | Danh sách permissions | ADMIN |
 
-Response (201):
-{
-  "id": 6,
-  "code": "WH-NORTH",
-  "name": "North Warehouse",
-  "status": "ACTIVE",
-  "createdAt": "2026-01-21T10:30:00Z"
-}
-```
+#### User Role APIs (`/api/user-roles`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/user-roles` | Gán role cho user | ADMIN |
+| `GET`  | `/api/user-roles/user/{userId}` | Lấy roles của user | ADMIN |
+| `GET`  | `/api/user-roles/role/{roleId}` | Lấy users của role | ADMIN |
+| `DELETE`| `/api/user-roles` | Xóa role của user | ADMIN |
 
-#### Get Warehouse by ID
-```http
-GET /api/warehouses/{id}
+#### Role Permission APIs (`/api/role-permissions`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/role-permissions` | Gán permission cho role | ADMIN |
+| `GET`  | `/api/role-permissions/role/{roleId}` | Lấy permissions của role | ADMIN |
+| `DELETE`| `/api/role-permissions` | Xóa permission của role | ADMIN |
 
-Response (200):
-{
-  "id": 1,
-  "code": "WH-MAIN",
-  "name": "Main Warehouse",
-  "address": "123 Main St",
-  "city": "Hanoi",
-  "locations": [
-    {
-      "id": 1,
-      "code": "A-01",
-      "name": "Zone A - Row 1"
-    }
-  ]
-}
-```
+#### Employee APIs (`/api/employees`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/employees` | Tạo employee | ADMIN |
+| `GET`  | `/api/employees` | Danh sách employees | isAuthenticated |
+| `GET`  | `/api/employees/{id}` | Chi tiết employee | isAuthenticated |
+| `PUT`  | `/api/employees/{id}` | Cập nhật employee | ADMIN |
+| `DELETE`| `/api/employees/{id}` | Xóa employee | ADMIN |
 
-#### Update Warehouse
-```http
-PUT /api/warehouses/{id}
-Permission: WAREHOUSE:UPDATE
-
-Request:
-{
-  "name": "Main Warehouse - Updated",
-  "address": "123 Main St, Building B",
-  "status": "ACTIVE"
-}
-
-Response (200):
-{
-  "id": 1,
-  "code": "WH-MAIN",
-  "name": "Main Warehouse - Updated",
-  "updatedAt": "2026-01-21T10:35:00Z"
-}
-```
-
-#### Delete Warehouse (Soft Delete)
-```http
-DELETE /api/warehouses/{id}
-Permission: WAREHOUSE:DELETE
-
-Response (204): No Content
-```
+#### OTP APIs (`/api/otps`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/otps/send` | Gửi OTP | Public |
+| `POST` | `/api/otps/verify` | Xác minh OTP | Public |
+| `POST` | `/api/otps/refresh` | Làm mới OTP | Public |
 
 ---
 
-### Products
+### 📦 Module 2: Master Data (Dữ liệu chính)
 
-#### List Products
-```http
-GET /api/products?status=ACTIVE&search=laptop&page=0&size=20
+#### Warehouse APIs (`/api/warehouses`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/warehouses` | Tạo warehouse | ADMIN |
+| `GET`  | `/api/warehouses` | Danh sách warehouses | isAuthenticated |
+| `GET`  | `/api/warehouses/{id}` | Chi tiết warehouse | isAuthenticated |
+| `PUT`  | `/api/warehouses/{id}` | Cập nhật warehouse | ADMIN |
+| `DELETE`| `/api/warehouses/{id}` | Xóa warehouse | ADMIN |
+| `GET`  | `/api/warehouses/{id}/locations` | Danh sách locations | isAuthenticated |
 
-Response (200):
-{
-  "content": [
-    {
-      "id": 100,
-      "sku": "PROD-LAPTOP-001",
-      "name": "Dell Laptop XPS 15",
-      "description": "High performance laptop",
-      "uom": {
-        "id": 1,
-        "code": "PCS",
-        "name": "Pieces"
-      },
-      "status": "ACTIVE",
-      "minStockLevel": 10,
-      "createdAt": "2026-01-10T08:00:00Z"
-    }
-  ]
-}
-```
+#### Location APIs (`/api/locations`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `GET`  | `/api/locations` | Danh sách locations | isAuthenticated |
+| `GET`  | `/api/locations/{id}` | Chi tiết location | isAuthenticated |
 
-#### Create Product
-```http
-POST /api/products
-Permission: PRODUCT:CREATE
+#### Product APIs (`/api/products`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/products` | Tạo sản phẩm | ADMIN/MANAGER |
+| `GET`  | `/api/products` | Danh sách sản phẩm | isAuthenticated |
+| `GET`  | `/api/products/{id}` | Chi tiết sản phẩm | isAuthenticated |
+| `GET`  | `/api/products/by-sku/{sku}` | Tìm theo SKU | isAuthenticated |
+| `PUT`  | `/api/products/{id}` | Cập nhật sản phẩm | ADMIN/MANAGER |
+| `DELETE`| `/api/products/{id}` | Xóa sản phẩm | ADMIN |
 
-Request:
-{
-  "sku": "PROD-MOUSE-001",
-  "name": "Wireless Mouse",
-  "description": "Ergonomic wireless mouse",
-  "uomId": 1,
-  "category": "ELECTRONICS",
-  "minStockLevel": 50,
-  "maxStockLevel": 500
-}
+#### Category APIs (`/api/categories`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/categories` | Tạo category | ADMIN |
+| `GET`  | `/api/categories` | Danh sách categories | USER/ADMIN |
+| `GET`  | `/api/categories/{id}` | Chi tiết category | USER/ADMIN |
+| `PUT`  | `/api/categories/{id}` | Cập nhật category | ADMIN |
+| `PATCH`| `/api/categories/{id}/status` | Cập nhật trạng thái | ADMIN |
 
-Response (201):
-{
-  "id": 101,
-  "sku": "PROD-MOUSE-001",
-  "name": "Wireless Mouse",
-  "status": "ACTIVE",
-  "createdAt": "2026-01-21T10:40:00Z"
-}
-```
+#### Business Partner APIs (`/api/business-partners`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/business-partners` | Tạo đối tác | ADMIN/MANAGER |
+| `GET`  | `/api/business-partners` | Danh sách đối tác | isAuthenticated |
+| `GET`  | `/api/business-partners/{id}` | Chi tiết đối tác | isAuthenticated |
+| `PUT`  | `/api/business-partners/{id}` | Cập nhật đối tác | ADMIN/MANAGER |
+| `DELETE`| `/api/business-partners/{id}` | Xóa đối tác | ADMIN |
 
-#### Get Product by SKU
-```http
-GET /api/products/by-sku/{sku}
-
-Response (200):
-{
-  "id": 100,
-  "sku": "PROD-LAPTOP-001",
-  "name": "Dell Laptop XPS 15",
-  "currentStock": [
-    {
-      "warehouseId": 1,
-      "warehouseName": "Main Warehouse",
-      "onHandQuantity": 25,
-      "reservedQuantity": 5,
-      "availableQuantity": 20
-    }
-  ]
-}
-```
+#### Units of Measure APIs (`/api/units-of-measure`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/units-of-measure` | Tạo UoM | ADMIN |
+| `GET`  | `/api/units-of-measure` | Danh sách UoM | isAuthenticated |
+| `GET`  | `/api/units-of-measure/{id}` | Chi tiết UoM | isAuthenticated |
+| `PUT`  | `/api/units-of-measure/{id}` | Cập nhật UoM | ADMIN |
+| `DELETE`| `/api/units-of-measure/{id}` | Xóa UoM | ADMIN |
 
 ---
 
-### Locations
+### 📦 Module 3: Batch Management (Quản lý lô hàng)
 
-#### List Locations by Warehouse
-```http
-GET /api/warehouses/{warehouseId}/locations
-
-Response (200):
-[
-  {
-    "id": 1,
-    "code": "A-01",
-    "name": "Zone A - Row 1",
-    "zone": "A",
-    "type": "STORAGE",
-    "capacity": 1000,
-    "currentUtilization": 750
-  },
-  {
-    "id": 2,
-    "code": "B-01",
-    "name": "Zone B - Row 1",
-    "zone": "B",
-    "type": "PICKING",
-    "capacity": 500,
-    "currentUtilization": 300
-  }
-]
-```
-
-#### Create Location
-```http
-POST /api/warehouses/{warehouseId}/locations
-Permission: LOCATION:CREATE
-
-Request:
-{
-  "code": "C-01",
-  "name": "Zone C - Row 1",
-  "zone": "C",
-  "type": "STORAGE",
-  "capacity": 800
-}
-
-Response (201):
-{
-  "id": 10,
-  "code": "C-01",
-  "warehouseId": 1,
-  "status": "ACTIVE"
-}
-```
+#### Batch APIs (`/api/batches`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/batches` | Tạo batch mới | isAuthenticated |
+| `GET`  | `/api/batches` | Danh sách batches (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/batches/{id}` | Chi tiết batch | isAuthenticated |
+| `PUT`  | `/api/batches/{id}` | Cập nhật batch | isAuthenticated |
+| `PATCH`| `/api/batches/{id}/status` | Đổi status batch | isAuthenticated |
+| `PUT`  | `/api/batches/{id}/quarantine` | Chuyển sang QUARANTINE | isAuthenticated |
+| `PUT`  | `/api/batches/{id}/release` | Release từ QUARANTINE | isAuthenticated |
+| `GET`  | `/api/batches/{id}/traceability` | Truy xuất nguồn gốc batch | isAuthenticated |
+| `GET`  | `/api/batches/expiring` | Danh sách batch sắp hết hạn | isAuthenticated |
+| `GET`  | `/api/batches/fifo-recommendations` | FIFO recommendations | isAuthenticated |
+| `GET`  | `/api/batches/by-product/{productId}` | Batches theo sản phẩm | isAuthenticated |
 
 ---
 
-## 2. Inventory APIs
+### 📦 Module 4: Inventory Management (Quản lý tồn kho)
 
-#### Get Inventory Overview
-```http
-GET /api/inventory?productId=100&warehouseId=1
+#### Inventory APIs (`/api/inventories`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `GET`  | `/api/inventories` | Danh sách tồn kho (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/inventories/summary/{productId}` | Tổng tồn kho theo sản phẩm | isAuthenticated |
+| `GET`  | `/api/inventories/by-location` | Tồn kho theo vị trí | isAuthenticated |
+| `POST` | `/api/inventories/check-availability` | Kiểm tra tồn kho khả dụng | isAuthenticated |
+| `POST` | `/api/inventories/reserve` | Đặt trước tồn kho | isAuthenticated |
+| `POST` | `/api/inventories/unreserve` | Giải phóng tồn kho đã đặt | isAuthenticated |
+| `POST` | `/api/inventories/increase` | Tăng tồn kho | isAuthenticated |
+| `POST` | `/api/inventories/decrease` | Giảm tồn kho | isAuthenticated |
 
-Response (200):
-{
-  "content": [
-    {
-      "id": 500,
-      "product": {
-        "id": 100,
-        "sku": "PROD-LAPTOP-001",
-        "name": "Dell Laptop XPS 15"
-      },
-      "warehouse": {
-        "id": 1,
-        "code": "WH-MAIN",
-        "name": "Main Warehouse"
-      },
-      "location": {
-        "id": 1,
-        "code": "A-01"
-      },
-      "batch": {
-        "id": 50,
-        "batchNumber": "BATCH-2026-001",
-        "expiryDate": "2027-01-15"
-      },
-      "onHandQuantity": 25,
-      "reservedQuantity": 5,
-      "availableQuantity": 20,
-      "lastUpdated": "2026-01-21T09:00:00Z"
-    }
-  ]
-}
-```
+#### Stock Adjustments APIs (`/api/stock-adjustments`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/stock-adjustments` | Tạo yêu cầu điều chỉnh | isAuthenticated |
+| `GET`  | `/api/stock-adjustments` | Danh sách điều chỉnh (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/stock-adjustments/{id}` | Chi tiết điều chỉnh | isAuthenticated |
+| `PUT`  | `/api/stock-adjustments/{id}/approve` | Phê duyệt điều chỉnh | isAuthenticated |
+| `PUT`  | `/api/stock-adjustments/{id}/reject` | Từ chối điều chỉnh | isAuthenticated |
 
-#### Check Available Stock
-```http
-GET /api/inventory/available?productId=100&warehouseId=1
+#### Stock Transfers APIs (`/api/stock-transfers`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/stock-transfers` | Tạo chuyển kho | isAuthenticated |
+| `GET`  | `/api/stock-transfers` | Danh sách chuyển kho (phân trang) | isAuthenticated |
+| `GET`  | `/api/stock-transfers/{id}` | Chi tiết chuyển kho | isAuthenticated |
+| `PUT`  | `/api/stock-transfers/{id}/complete` | Hoàn thành chuyển kho | isAuthenticated |
+| `PUT`  | `/api/stock-transfers/{id}/cancel` | Hủy chuyển kho | isAuthenticated |
 
-Response (200):
-{
-  "productId": 100,
-  "productSku": "PROD-LAPTOP-001",
-  "warehouseId": 1,
-  "totalOnHand": 25,
-  "totalReserved": 5,
-  "totalAvailable": 20,
-  "byLocation": [
-    {
-      "locationId": 1,
-      "locationCode": "A-01",
-      "available": 20
-    }
-  ]
-}
-```
-
-#### Inventory Adjustment
-```http
-POST /api/inventory/adjust
-Permission: INVENTORY:ADJUST
-
-Request:
-{
-  "productId": 100,
-  "warehouseId": 1,
-  "locationId": 1,
-  "adjustmentType": "MANUAL",
-  "quantityChange": -2,
-  "reason": "DAMAGE",
-  "notes": "2 units damaged during inspection"
-}
-
-Response (201):
-{
-  "id": 1001,
-  "adjustmentNumber": "ADJ-20260121-001",
-  "status": "PENDING_APPROVAL",
-  "createdAt": "2026-01-21T10:45:00Z",
-  "createdBy": {
-    "id": 1,
-    "username": "admin"
-  }
-}
-```
-
-#### Low Stock Alert
-```http
-GET /api/inventory/low-stock
-
-Response (200):
-[
-  {
-    "productId": 105,
-    "productSku": "PROD-KEYBOARD-001",
-    "productName": "Mechanical Keyboard",
-    "currentStock": 8,
-    "minStockLevel": 20,
-    "deficit": 12,
-    "status": "CRITICAL"
-  }
-]
-```
+#### Stock Movements APIs (`/api/stock-movements`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `GET`  | `/api/stock-movements` | Danh sách movements (phân trang) | isAuthenticated |
+| `GET`  | `/api/stock-movements/{id}` | Chi tiết movement | isAuthenticated |
+| `GET`  | `/api/stock-movements/reference/{referenceType}/{referenceId}` | Movements theo reference | isAuthenticated |
 
 ---
 
-## 3. Inbound APIs
+### 📦 Module 5: Inbound Operations (Nhập kho)
 
-#### Create Purchase Order
-```http
-POST /api/purchase-orders
-Permission: PURCHASE_ORDER:CREATE
+#### Purchase Order APIs (`/api/purchase-orders`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/purchase-orders` | Tạo PO (DRAFT) | isAuthenticated |
+| `GET`  | `/api/purchase-orders` | Danh sách POs (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/purchase-orders/{id}` | Chi tiết PO | isAuthenticated |
+| `PUT`  | `/api/purchase-orders/{id}` | Cập nhật PO (DRAFT) | isAuthenticated |
+| `DELETE`| `/api/purchase-orders/{id}` | Xóa PO (DRAFT) | isAuthenticated |
+| `PUT`  | `/api/purchase-orders/{id}/confirm` | Confirm PO | isAuthenticated |
 
-Request:
-{
-  "supplierId": 10,
-  "warehouseId": 1,
-  "expectedDeliveryDate": "2026-01-25",
-  "notes": "Urgent order",
-  "lines": [
-    {
-      "productId": 100,
-      "quantity": 50,
-      "unitPrice": 1000.00
-    },
-    {
-      "productId": 101,
-      "quantity": 100,
-      "unitPrice": 25.00
-    }
-  ]
-}
+#### Purchase Order Lines APIs (`/api/purchase-order-lines`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/purchase-order-lines` | Thêm dòng PO | isAuthenticated |
+| `GET`  | `/api/purchase-order-lines/purchase-order/{purchaseOrderId}` | Danh sách lines theo PO | isAuthenticated |
+| `PUT`  | `/api/purchase-order-lines/{id}` | Cập nhật dòng PO | isAuthenticated |
+| `DELETE`| `/api/purchase-order-lines/{id}` | Xóa dòng PO | isAuthenticated |
 
-Response (201):
-{
-  "id": 5001,
-  "orderNumber": "PO-20260121-001",
-  "status": "DRAFT",
-  "totalAmount": 52500.00,
-  "createdAt": "2026-01-21T10:50:00Z"
-}
-```
+#### Inbound Receipt APIs (`/api/inbound-receipts`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/inbound-receipts` | Tạo phiếu nhập (DRAFT) | isAuthenticated |
+| `GET`  | `/api/inbound-receipts` | Danh sách phiếu nhập (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/inbound-receipts/by-po/{purchaseOrderId}` | Phiếu nhập theo PO | isAuthenticated |
+| `GET`  | `/api/inbound-receipts/{id}` | Chi tiết phiếu nhập | isAuthenticated |
+| `PUT`  | `/api/inbound-receipts/{id}` | Cập nhật phiếu nhập (DRAFT) | isAuthenticated |
+| `DELETE`| `/api/inbound-receipts/{id}` | Xóa phiếu nhập (DRAFT) | isAuthenticated |
+| `PUT`  | `/api/inbound-receipts/{id}/confirm` | Confirm phiếu nhập | isAuthenticated |
 
-#### Confirm Purchase Order
-```http
-PUT /api/purchase-orders/{id}/confirm
-Permission: PURCHASE_ORDER:CONFIRM
-
-Response (200):
-{
-  "id": 5001,
-  "orderNumber": "PO-20260121-001",
-  "status": "CONFIRMED",
-  "confirmedAt": "2026-01-21T10:55:00Z"
-}
-```
-
-#### Create Inbound Receipt
-```http
-POST /api/inbound-receipts
-Permission: INBOUND:CREATE
-
-Request:
-{
-  "purchaseOrderId": 5001,
-  "warehouseId": 1,
-  "receivedDate": "2026-01-21",
-  "lines": [
-    {
-      "purchaseOrderLineId": 10001,
-      "productId": 100,
-      "locationId": 1,
-      "receivedQuantity": 50,
-      "batchNumber": "BATCH-2026-050",
-      "manufactureDate": "2026-01-15",
-      "expiryDate": "2027-01-15"
-    }
-  ]
-}
-
-Response (201):
-{
-  "id": 6001,
-  "receiptNumber": "INB-20260121-001",
-  "status": "DRAFT",
-  "createdAt": "2026-01-21T11:00:00Z"
-}
-```
-
-#### Confirm Inbound Receipt (Increase Stock)
-```http
-PUT /api/inbound-receipts/{id}/confirm
-Permission: INBOUND:CONFIRM
-
-Response (200):
-{
-  "id": 6001,
-  "receiptNumber": "INB-20260121-001",
-  "status": "CONFIRMED",
-  "confirmedAt": "2026-01-21T11:05:00Z",
-  "stockUpdated": true,
-  "affectedProducts": [
-    {
-      "productId": 100,
-      "quantityReceived": 50,
-      "newStockLevel": 75
-    }
-  ]
-}
-```
+#### Inbound Receipt Lines APIs (`/api/inbound-receipt-lines`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/inbound-receipt-lines` | Thêm dòng phiếu nhập | isAuthenticated |
+| `GET`  | `/api/inbound-receipt-lines?inboundReceiptId={id}` | Danh sách lines theo phiếu | isAuthenticated |
+| `PUT`  | `/api/inbound-receipt-lines/{id}` | Cập nhật dòng phiếu nhập | isAuthenticated |
+| `DELETE`| `/api/inbound-receipt-lines/{id}` | Xóa dòng phiếu nhập | isAuthenticated |
 
 ---
 
-## 4. Outbound APIs
+### 📦 Module 6: Outbound Operations (Xuất kho) - CHƯA TRIỂN KHAI
 
-#### Create Sales Order
-```http
-POST /api/sales-orders
-Permission: SALES_ORDER:CREATE
+#### Sales Order APIs (`/api/sales-orders`) - ❌ CHƯA IMPLEMENT
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/sales-orders` | Tạo SO (DRAFT) | ADMIN/MANAGER |
+| `GET`  | `/api/sales-orders` | Danh sách SOs (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/sales-orders/{id}` | Chi tiết SO | isAuthenticated |
+| `PUT`  | `/api/sales-orders/{id}` | Cập nhật SO (DRAFT) | ADMIN/MANAGER |
+| `DELETE`| `/api/sales-orders/{id}` | Xóa SO (DRAFT) | ADMIN/MANAGER |
+| `PUT`  | `/api/sales-orders/{id}/confirm` | Confirm SO (reserve stock) | ADMIN/MANAGER |
+| `PUT`  | `/api/sales-orders/{id}/cancel` | Cancel SO (unreserve stock) | ADMIN/MANAGER |
 
-Request:
-{
-  "customerId": 20,
-  "warehouseId": 1,
-  "deliveryDate": "2026-01-23",
-  "lines": [
-    {
-      "productId": 100,
-      "quantity": 10,
-      "unitPrice": 1200.00
-    }
-  ]
-}
+#### Sales Order Lines APIs (`/api/sales-order-lines`) - ❌ CHƯA IMPLEMENT
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/sales-order-lines` | Thêm dòng SO | ADMIN/MANAGER |
+| `GET`  | `/api/sales-order-lines/by-so/{soId}` | Danh sách lines theo SO | isAuthenticated |
+| `PUT`  | `/api/sales-order-lines/{id}` | Cập nhật dòng SO | ADMIN/MANAGER |
+| `DELETE`| `/api/sales-order-lines/{id}` | Xóa dòng SO | ADMIN/MANAGER |
 
-Response (201):
-{
-  "id": 7001,
-  "orderNumber": "SO-20260121-001",
-  "status": "DRAFT",
-  "totalAmount": 12000.00
-}
-```
+#### Outbound Shipment APIs (`/api/outbound-shipments`) - ❌ CHƯA IMPLEMENT
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/outbound-shipments` | Tạo shipment (DRAFT) | isAuthenticated |
+| `GET`  | `/api/outbound-shipments` | Danh sách shipments (phân trang, filter) | isAuthenticated |
+| `GET`  | `/api/outbound-shipments/{id}` | Chi tiết shipment | isAuthenticated |
+| `PUT`  | `/api/outbound-shipments/{id}/pick` | Bắt đầu picking | isAuthenticated |
+| `PUT`  | `/api/outbound-shipments/{id}/confirm` | Confirm shipment (decrease stock) | isAuthenticated |
+| `GET`  | `/api/outbound-shipments/{id}/pick-list` | Lấy pick list (FIFO) | isAuthenticated |
 
-#### Confirm Sales Order (Reserve Stock)
-```http
-PUT /api/sales-orders/{id}/confirm
-Permission: SALES_ORDER:CONFIRM
-
-Response (200):
-{
-  "id": 7001,
-  "orderNumber": "SO-20260121-001",
-  "status": "CONFIRMED",
-  "stockReserved": true,
-  "reservedItems": [
-    {
-      "productId": 100,
-      "quantityReserved": 10
-    }
-  ]
-}
-```
-
-#### Create Outbound Shipment
-```http
-POST /api/outbound-shipments
-Permission: OUTBOUND:CREATE
-
-Request:
-{
-  "salesOrderId": 7001,
-  "warehouseId": 1,
-  "shipmentDate": "2026-01-22",
-  "lines": [
-    {
-      "salesOrderLineId": 12001,
-      "productId": 100,
-      "locationId": 1,
-      "quantityToShip": 10,
-      "batchId": 50
-    }
-  ]
-}
-
-Response (201):
-{
-  "id": 8001,
-  "shipmentNumber": "SHIP-20260121-001",
-  "status": "DRAFT"
-}
-```
-
-#### Confirm Shipment (Decrease Stock)
-```http
-PUT /api/outbound-shipments/{id}/confirm
-Permission: OUTBOUND:CONFIRM
-
-Response (200):
-{
-  "id": 8001,
-  "shipmentNumber": "SHIP-20260121-001",
-  "status": "SHIPPED",
-  "shippedAt": "2026-01-22T14:00:00Z",
-  "stockUpdated": true
-}
-```
+#### Outbound Shipment Lines APIs (`/api/outbound-shipment-lines`) - ❌ CHƯA IMPLEMENT
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/outbound-shipment-lines` | Thêm dòng shipment | isAuthenticated |
+| `PUT`  | `/api/outbound-shipment-lines/{id}` | Cập nhật dòng shipment | isAuthenticated |
+| `DELETE`| `/api/outbound-shipment-lines/{id}` | Xóa dòng shipment | isAuthenticated |
 
 ---
 
-## 5. Reporting APIs
+### 📦 Module 7: Notifications (Thông báo)
 
-#### Generate Inventory Report
-```http
-POST /api/reports/inventory
-Permission: REPORT:GENERATE
-
-Request:
-{
-  "reportType": "INVENTORY_SNAPSHOT",
-  "filters": {
-    "warehouseIds": [1, 2],
-    "productIds": [100, 101],
-    "includeZeroStock": false
-  },
-  "format": "PDF"
-}
-
-Response (202 Accepted):
-{
-  "jobId": "report-job-12345",
-  "status": "PENDING",
-  "estimatedTime": 30
-}
-```
-
-#### Check Report Status
-```http
-GET /api/reports/jobs/{jobId}
-
-Response (200):
-{
-  "jobId": "report-job-12345",
-  "status": "COMPLETED",
-  "format": "PDF",
-  "fileSize": 524288,
-  "downloadUrl": "/api/reports/jobs/report-job-12345/download",
-  "createdAt": "2026-01-21T11:10:00Z",
-  "completedAt": "2026-01-21T11:10:25Z"
-}
-```
-
-#### Download Report
-```http
-GET /api/reports/jobs/{jobId}/download
-
-Response (200):
-Content-Type: application/pdf
-Content-Disposition: attachment; filename="inventory-report-20260121.pdf"
-
-[Binary PDF Data]
-```
+#### Email APIs (`/api/emails`)
+| Method | Endpoint | Mô tả | Quyền |
+|--------|----------|--------|-------|
+| `POST` | `/api/emails/send` | Gửi email | isAuthenticated |
+| `POST` | `/api/emails/send-batch` | Gửi email batch | isAuthenticated |
 
 ---
 
-## 6. Excel Import APIs
+## 📊 Tổng kết
 
-#### Import Products
-```http
-POST /api/imports/products
-Content-Type: multipart/form-data
-Permission: IMPORT:EXECUTE
+### Số lượng API theo Module
 
-Request:
-- file: products.xlsx
+| Module | Số APIs | Trạng thái |
+|--------|---------|------------|
+| Auth & RBAC | ~30 | ✅ Đã implement |
+| Master Data | ~35 | ✅ Đã implement |
+| Batch Management | 11 | ✅ Đã implement |
+| Inventory Management | 17 | ✅ Đã implement |
+| Inbound Operations | 18 | ✅ Đã implement |
+| **Outbound Operations** | **19** | **❌ CHƯA IMPLEMENT** |
+| Notifications | 2 | ✅ Đã implement |
+| **TỔNG CỘNG** | **~132** | **113 đã implement** |
 
-Response (202 Accepted):
-{
-  "jobId": "import-job-67890",
-  "status": "PENDING",
-  "fileName": "products.xlsx",
-  "totalRows": 150
-}
-```
-
-#### Check Import Status
-```http
-GET /api/imports/jobs/{jobId}
-
-Response (200):
-{
-  "jobId": "import-job-67890",
-  "status": "COMPLETED_WITH_ERRORS",
-  "totalRows": 150,
-  "successfulRows": 145,
-  "failedRows": 5,
-  "startedAt": "2026-01-21T11:15:00Z",
-  "completedAt": "2026-01-21T11:16:30Z"
-}
-```
-
-#### Get Import Errors
-```http
-GET /api/imports/jobs/{jobId}/errors
-
-Response (200):
-[
-  {
-    "rowNumber": 25,
-    "field": "sku",
-    "error": "SKU 'PROD-001' already exists",
-    "value": "PROD-001"
-  },
-  {
-    "rowNumber": 78,
-    "field": "uomId",
-    "error": "UOM with ID 999 not found",
-    "value": "999"
-  }
-]
-```
+### Các API còn thiếu (chưa implement)
+- **Module Outbound**: 19 APIs cần triển khai
 
 ---
 
-## 📱 WebSocket Notifications
+## 📝 Ghi chú
 
-### Connect to WebSocket
-```javascript
-const socket = new SockJS('http://localhost:8080/ws/notifications');
-const stompClient = Stomp.over(socket);
-
-stompClient.connect({
-  'Authorization': 'Bearer ' + accessToken
-}, function(frame) {
-  // Subscribe to notifications
-  stompClient.subscribe('/user/queue/notifications', function(message) {
-    const notification = JSON.parse(message.body);
-    console.log('Received notification:', notification);
-  });
-});
-```
-
-### Notification Format
-```json
-{
-  "eventType": "INBOUND_COMPLETED",
-  "timestamp": "2026-01-21T11:05:00Z",
-  "message": "Inbound receipt #INB-20260121-001 completed",
-  "severity": "INFO",
-  "data": {
-    "receiptId": 6001,
-    "receiptNumber": "INB-20260121-001",
-    "warehouseId": 1,
-    "totalItems": 50
-  },
-  "actionUrl": "/inbound-receipts/6001"
-}
-```
+1. **Tất cả APIs đều yêu cầu xác thực** (trừ `/api/auth/login`, `/api/auth/refresh`, `/api/otps/*`)
+2. **Response format chuẩn**: `{ "success": true, "message": "...", "data": {...} }`
+3. **Tham khảo Swagger UI**: `http://localhost:8080/swagger-ui.html` để xem chi tiết
+4. **OpenAPI JSON**: `http://localhost:8080/v3/api-docs`
 
 ---
 
-**Cập nhật lần cuối:** 21/01/2026  
-**Version:** 1.0
+**Cập nhật lần cuối:** 17/03/2026  
+**Phiên bản:** 2.0  
+**Ghi chú:** Cập nhật dựa trên code đã implement thực tế
 

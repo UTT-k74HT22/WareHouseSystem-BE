@@ -988,6 +988,24 @@ sequenceDiagram
     Controller-->>Client: 200 OK
 ```
 
+**Mô tả luồng bằng lời:**
+
+Luồng Tăng Tồn kho được sử dụng khi cần tăng số lượng tồn kho thực tế (on-hand) tại một vị trí lưu trữ. Ví dụ điển hình là khi nhận hàng từ phiếu nhập kho (Inbound Receipt) hoặc khi thực hiện điều chỉnh tồn kho thủ công.
+
+**Bước 1 - Nhận yêu cầu:** Client gửi POST request đến `/api/v1/inventories/increase` với các thông tin sản phẩm, kho, vị trí, số lượng cần tăng, và thông tin tham chiếu (loại phiếu và mã phiếu).
+
+**Bước 2 - Chiếm khóa phân tán:** Service sử dụng Redisson để chiếm khóa phân tán dựa trên `reference_type` + `reference_id` hoặc `reference_number`. Điều này đảm bảo rằng nếu cùng một phiếu nhập được xử lý nhiều lần, chỉ request đầu tiên được xử lý, các request trùng lặp sẽ bị từ chối. Khóa này ngăn ngừa việc tăng tồn kho hai lần cho cùng một chứng từ.
+
+**Bước 3 - Validate các thành phần:** Service kiểm tra sự tồn tại của Product (sản phẩm), Warehouse (kho), Location (vị trí - nếu có), và Batch (lô - nếu có). Nếu bất kỳ thành phần nào không tồn tại, hệ thống sẽ throw exception tương ứng.
+
+**Bước 4 - Tìm hoặc tạo mới inventory:** Service tìm kiếm dòng inventory phù hợp với tổ hợp product + warehouse + location + batch. Nếu đã tồn tại, sử dụng `SELECT FOR UPDATE` để lock dòng này. Nếu chưa tồn tại, tạo mới một dòng inventory với số lượng ban đầu.
+
+**Bước 5 - Cập nhật số lượng:** Service cập nhật trường `on_hand_quantity` = `on_hand_quantity hiện tại + quantity` và cập nhật `last_movement_at` = thời điểm hiện tại.
+
+**Bước 6 - Ghi nhận biến động:** Service ghi một dòng vào bảng `stock_movements` với loại biến động là `INBOUND` (nếu đến từ phiếu nhập) hoặc `ADJUSTMENT_INCREASE` (nếu đến từ điều chỉnh). Lưu trữ cả `quantity_before` và `quantity_after` để phục vụ truy xuất nguồn gốc.
+
+**Bước 7 - Trả kết quả:** Giải phóng khóa và trả về InventoryResponse chứa thông tin inventory đã được cập nhật.
+
 ### 5.2 Luồng Đặt trước (Reserve Inventory)
 
 ```mermaid
@@ -1015,6 +1033,22 @@ sequenceDiagram
     Service-->>Controller: ReserveResponse
     Controller-->>Client: 200 OK
 ```
+
+**Mô tả luồng bằng lời:**
+
+Luồng Đặt trước (Reserve) được sử dụng khi cần "giữ chỗ" một lượng tồn kho khả dụng cho một đơn hàng cụ thể. Điều này đảm bảo rằng khi đơn hàng được xuất kho, hàng hóa đã được đảm bảo có sẵn.
+
+**Bước 1 - Validate số lượng:** Kiểm tra yêu cầu có số lượng hợp lệ (lớn hơn 0). Nếu không hợp lệ, trả về lỗi validation.
+
+**Bước 2 - Kiểm tra trùng lặp (Idempotency):** Trước khi tạo mới, hệ thống kiểm tra xem đã có reservation cho `order_line_id` hoặc `request_key` này chưa. Nếu đã có, trả về reservation hiện tại thay vì tạo mới. Điều này cho phép client gọi API nhiều lần mà không sợ tạo ra nhiều reservation trùng nhau.
+
+**Bước 3 - Tìm dòng tồn kho phù hợp (Allocation Strategy):** Service tìm kiếm dòng inventory phù hợp nhất dựa trên product, warehouse, location và batch được chỉ định. Nếu không tìm thấy hoặc không đủ tồn khả dụng, trả về lỗi `INV_004` (không đủ tồn kho).
+
+**Bước 4 - Cập nhật reserved_quantity:** Tăng trường `reserved_quantity` của inventory lên thêm số lượng yêu cầu. Điều này làm giảm `available_quantity` nhưng không thay đổi `on_hand_quantity`.
+
+**Bước 5 - Lưu reservation ledger:** Tạo bản ghi trong bảng `inventory_reservations` để theo dõi việc đặt trước này. Bản ghi này lưu trữ thông tin inventory gốc, số lượng đặt trước, và liên kết với dòng đơn hàng.
+
+**Bước 6 - Ghi movement:** Ghi một dòng vào `stock_movements` với loại `RESERVE` để audit trail. Lưu ý là quantity_change trong trường hợp này sẽ là số âm vì nó làm giảm available stock.
 
 ### 5.3 Luồng Điều chỉnh (Stock Adjustment)
 
@@ -1048,6 +1082,47 @@ sequenceDiagram
     Controller-->>Client: 200 OK
 ```
 
+**Mô tả luồng bằng lời:**
+
+Luồng Điều chỉnh Tồn kho được sử dụng khi cần thay đổi số lượng tồn kho thực tế do sai sót trong kiểm kê, hàng hóa bị hư hỏng, hoặc các lý do khác. Luồng này có tính kiểm soát cao với quy trình phê duyệt.
+
+#### A) Tạo mới điều chỉnh (CREATE)
+
+**Bước 1 - Load inventory:** Service tìm và lock dòng inventory liên quan bằng `SELECT FOR UPDATE`. Việc lock ngay từ đầu đảm bảo không có ai khác thay đổi inventory trong khi đang tính toán.
+
+**Bước 2 - Tính toán số lượng:** Service lấy `quantity_before` trực tiếp từ DB (không chấp nhận từ client vì lý do bảo mật). Sau đó tính `adjustment_quantity = quantity_after - quantity_before`.
+
+**Bước 3 - Validate business rules:** Kiểm tra các quy tắc:
+- `quantity_after >= 0` (không điều chỉnh xuống âm)
+- `quantity_after >= reserved_quantity` (không điều chỉnh thấp hơn số đã đặt trước)
+- `adjustment_quantity <> 0` (thay đổi phải khác 0)
+
+**Bước 4 - Lưu với trạng thái PENDING_APPROVAL:** Tạo bản ghi trong `stock_adjustments` với trạng thái ban đầu là `PENDING_APPROVAL`. Nếu `requires_approval = false`, có thể tự động chuyển sang `APPROVED`.
+
+#### B) Phê duyệt điều chỉnh (APPROVE)
+
+**Bước 1 - Load và lock adjustment:** Tìm adjustment với ID được cung cấp và lock bằng `FOR UPDATE`.
+
+**Bước 2 - Validate trạng thái:** Chỉ cho phép phê duyệt khi status hiện tại là `PENDING_APPROVAL`. Nếu đã `APPROVED` hoặc `REJECTED`, trả về lỗi.
+
+**Bước 3 - Lock inventory:** Lock dòng inventory liên quan để đảm bảo an toàn.
+
+**Bước 4 - Cập nhật inventory:** Set `on_hand_quantity = quantity_after` (giá trị mới sau điều chỉnh).
+
+**Bước 5 - Ghi movement:** Tạo movement với loại `ADJUSTMENT_INCREASE` (nếu tăng) hoặc `ADJUSTMENT_DECREASE` (nếu giảm).
+
+**Bước 6 - Cập nhật metadata:** Lưu thông tin người phê duyệt (`approved_by`), thời gian phê duyệt (`approved_at`), và chuyển status sang `APPROVED`.
+
+#### C) Từ chối điều chỉnh (REJECT)
+
+**Bước 1 - Load và lock adjustment:** Tương tự như approve.
+
+**Bước 2 - Validate trạng thái:** Chỉ cho phép từ chối khi status là `PENDING_APPROVAL`.
+
+**Bước 3 - Validate lý do từ chối:** Yêu cầu `rejection_reason` bắt buộc phải có.
+
+**Bước 4 - Lưu metadata:** Lưu `rejection_reason`, `approved_by`, `approved_at` và chuyển status sang `REJECTED`. **Lưu ý quan trọng:** Trong trường hợp từ ch�ối, inventory KHÔNG thay đổi.
+
 ### 5.4 Luồng Chuyển kho (Stock Transfer)
 
 ```mermaid
@@ -1076,6 +1151,43 @@ sequenceDiagram
     Service-->>Controller: TransferResponse
     Controller-->>Client: 200 OK
 ```
+
+**Mô tả luồng bằng lời:**
+
+Luồng Chuyển kho được sử dụng khi cần di chuyển hàng hóa từ một vị trí lưu trữ này sang vị trí khác trong cùng một kho. Ví dụ: chuyển hàng từ kệ A sang kệ B để cân bằng tồn kho.
+
+#### A) Tạo mới chuyển kho (CREATE)
+
+Khi tạo mới, chỉ lưu thông tin chuyển kho vào bảng `stock_transfers` với trạng thái `DRAFT`. Lúc này chưa có bất kỳ thay đổi nào về số lượng tồn kho. Người dùng có thể xem, chỉnh sửa thông tin hoặc hủy bỏ khi đang ở trạng thái DRAFT.
+
+#### B) Hoàn tất chuyển kho (COMPLETE)
+
+Đây là bước quan trọng nhất trong luồng chuyển kho, thực hiện việc di chuyển tồn kho thực sự.
+
+**Bước 1 - Load và lock transfer:** Tìm phiếu chuyển kho và lock bằng `FOR UPDATE` để đảm bảo không có ai khác thao tác cùng lúc.
+
+**Bước 2 - Validate trạng thái:** Chỉ cho phép hoàn tất khi status hiện tại là `DRAFT`. Nếu đã `COMPLETED` hoặc `CANCELLED`, trả về lỗi.
+
+**Bước 3 - Validate nghiệp vụ:**
+- Kiểm tra `from_location_id <> to_location_id` (nguồn và đích phải khác nhau)
+- Kiểm tra cả hai location cùng thuộc một warehouse
+- Kiểm tra tồn kho tại vị trí nguồn có đủ không
+
+**Bước 4 - Lock inventory nguồn và đích:** Lock cả hai dòng inventory (nguồn và đích) bằng `SELECT FOR UPDATE` trong cùng một transaction. Việc lock cả hai đảm bảo tính nhất quán dữ liệu.
+
+**Bước 5 - Cập nhật tồn kho:**
+- Giảm `on_hand_quantity` tại vị trí nguồn: `on_hand - quantity`
+- Tăng `on_hand_quantity` tại vị trí đích: `on_hand + quantity`
+
+**Bước 6 - Ghi hai movement:**
+- `TRANSFER_OUT`: Ghi biến động giảm tại vị trí nguồn
+- `TRANSFER_IN`: Ghi biến động tăng tại vị trí đích
+
+**Bước 7 - Cập nhật trạng thái:** Chuyển status của phiếu chuyển kho sang `COMPLETED` và lưu thời gian hoàn tất (`completed_at`).
+
+#### C) Hủy chuyển kho (CANCEL)
+
+Nếu chưa hoàn tất và muốn hủy bỏ phiếu chuyển kho, chỉ cần cập nhật status từ `DRAFT` sang `CANCELLED`. Không có bất kỳ thay đổi nào về số lượng tồn kho trong trường hợp này.
 
 ---
 

@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
 import org.demo.whs.entity.enums.StockMovementsType;
+import org.demo.whs.security.SecurityUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
