@@ -205,3 +205,11 @@
   - # of migration validation failures (target: 0)
   - # of DLQ incidents triaged/resolved
   - CI pass rate and median pipeline duration
+
+## 4) DevOps Documentation Track
+- `09-devops-platform-blueprint.md`
+  - A complete blueprint for the DevOps infrastructure, from VMware lab to the physical VPS.
+- `10-devops-deployment-runbook.md`
+  - Bootstrap, deploy, verify, backup, restore, rollback process.
+- `11-devops-operations-checklist.md`
+  - Checklist for operational readiness, release, and go-live.
