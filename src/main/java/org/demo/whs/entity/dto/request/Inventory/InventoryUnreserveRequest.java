@@ -22,19 +22,9 @@ import java.math.BigDecimal;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class InventoryUnreserveRequest {
 
-    @NotBlank(message = "Product ID is required")
-    private String productId;
-
-    @NotBlank(message = "Warehouse ID is required")
-    private String warehouseId;
-
-    private String locationId;
-
-    private String batchId;
-
-    @NotNull(message = "Quantity is required")
-    @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
-    private BigDecimal quantity;
-
+    @NotBlank
     private String orderLineId;
+
+    @NotNull
+    private BigDecimal quantity;
 }

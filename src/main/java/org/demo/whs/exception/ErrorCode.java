@@ -125,6 +125,8 @@ public enum ErrorCode {
     POL_007("POL_007", "Unit price must be greater than or equal to zero"),
     POL_008("POL_008", "Quantity ordered must be greater than zero"),
 
+    // OrderLine errors
+    ORDER_001("ORDER_001", "OrderLine not found"),
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
     COM_002("COM_002", "Internal server error - please contact support"),
