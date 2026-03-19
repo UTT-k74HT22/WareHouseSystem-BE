@@ -8,12 +8,14 @@ import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.mapper.EmailMapper;
 import org.demo.whs.repository.EmailLogRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 /**
  * EmailProducerService: Service to send emails to RabbitMQ queue
  */
 @Service
+@Profile("!test")
 @RequiredArgsConstructor
 @Slf4j
 public class EmailProducerService {

@@ -11,6 +11,7 @@ import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.EmailLogRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import static org.demo.whs.exception.ErrorCode.EMAIL_NOT_FOUND;
  * EmailConsumerService: Service to consume emails from RabbitMQ queue and send them
  */
 @Service
+@Profile("!test")
 @RequiredArgsConstructor
 @Slf4j
 public class EmailConsumerService {

@@ -9,19 +9,21 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 /**
  * RabbitMQConfig: Configuration for RabbitMQ connection and template
  */
 @Configuration
+@Profile("!test")
 public class RabbitMQConfig {
 
     @Bean
     public ConnectionFactory rabbitConnectionFactory(
-            @Value("${spring.rabbitmq.host}") String host,
-            @Value("${spring.rabbitmq.port}") int port,
-            @Value("${spring.rabbitmq.username}") String username,
-            @Value("${spring.rabbitmq.password}") String password,
+            @Value("${spring.rabbitmq.host:localhost}") String host,
+            @Value("${spring.rabbitmq.port:5672}") int port,
+            @Value("${spring.rabbitmq.username:guest}") String username,
+            @Value("${spring.rabbitmq.password:guest}") String password,
             @Value("${spring.rabbitmq.virtual-host:/}") String virtualHost
     ) {
         CachingConnectionFactory factory = new CachingConnectionFactory(host);

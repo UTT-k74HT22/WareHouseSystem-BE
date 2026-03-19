@@ -211,14 +211,14 @@ sequenceDiagram
     participant Nginx as Nginx
     participant App as WHS Backend
 
-    Dev->>GitHub: Push code lên main
+    Dev->>GitHub: Push code lên main hoặc chạy workflow_dispatch
     GitHub->>CI: Trigger workflow ci.yml
     CI->>CI: Setup JDK 17
     CI->>CI: mvn compile
     CI->>CI: mvn test
     CI->>CI: Build Docker image
-    CI->>GHCR: Push image tag theo commit SHA
-    GitHub->>CD: Trigger deploy-vmware.yml
+    CI->>GHCR: Push image tag sha-<commit> và latest
+    GitHub->>CD: Trigger deploy-vmware.yml sau khi CI success
     CD->>VMware: rsync deploy/ và scripts/
     CD->>VMware: SSH + docker login GHCR
     CD->>VMware: export APP_IMAGE=<sha-tag>
@@ -318,6 +318,34 @@ flowchart TD
 - File `.env` thật nằm trên server.
 - TLS cert cũng nằm trên server, không nằm trong repo.
 
+### 11.1. GitHub Secrets tối thiểu để CD chạy được
+
+- `VMWARE_HOST`: IP hoặc DNS của VMware host, phải reachable từ GitHub runner
+- `VMWARE_PORT`: thường là `22`
+- `VMWARE_USER`: user deploy trên host, ví dụ `deploy`
+- `VMWARE_SSH_KEY`: private key dùng cho GitHub Actions SSH vào host
+- `VMWARE_DEPLOY_PATH`: thường là `/opt/whs`
+- `GHCR_USERNAME`: tài khoản GitHub có quyền pull image từ GHCR
+- `GHCR_TOKEN`: PAT có tối thiểu quyền `read:packages`
+- `VMWARE_SSH_KNOWN_HOSTS`: tùy chọn, nên cấu hình để pin host key thay vì phụ thuộc `ssh-keyscan`
+
+### 11.2. Lưu ý quan trọng về kết nối
+
+- Việc bạn SSH được từ máy cá nhân chưa đủ để CD chạy được.
+- GitHub-hosted runner cũng phải SSH được vào `VMWARE_HOST`.
+- Nếu VMware chỉ nằm trong mạng nội bộ lab, bạn cần một trong các cách sau:
+  - public IP hoặc NAT port `22`
+  - VPN/tunnel mà GitHub runner dùng được
+  - self-hosted runner đặt cùng mạng với VMware
+
+### 11.3. Image tag mà workflow sẽ dùng
+
+- `ci.yml` publish:
+  - `ghcr.io/<owner>/<repo>:sha-<commit_sha>`
+  - `ghcr.io/<owner>/<repo>:latest` trên branch mặc định
+- `deploy-vmware.yml` auto deploy image `sha-<commit_sha>` tương ứng với commit CI vừa pass
+- `workflow_dispatch` cho phép nhập tay `image_tag` nếu muốn rollback hoặc redeploy
+
 ## 12. Ý nghĩa của từng lớp trong hệ thống
 
 ### 12.1. Lớp CI
@@ -401,6 +429,24 @@ Nơi bảo vệ khả năng phục hồi:
 - backup tự động bằng cron/systemd timer
 - rollback strategy nâng cao
 - tách app node và data node khi lên VPS thật
+
+### 14.3. Cách demo nhanh sau khi push workflow
+
+1. Thêm đủ GitHub Secrets ở mục `11.1`.
+2. Đảm bảo VMware host reachable từ GitHub runner.
+3. Trên host đã có sẵn:
+   - `/opt/whs/deploy/.env`
+   - `/opt/whs/deploy/certs/fullchain.pem`
+   - `/opt/whs/deploy/certs/privkey.pem`
+4. Push code lên `main` để chạy full CI -> CD tự động.
+5. Nếu muốn deploy tay:
+   - vào GitHub Actions
+   - chạy `Deploy VMware`
+   - nhập `image_tag` như `sha-<commit_sha>` hoặc `latest`
+6. Sau deploy, verify tối thiểu:
+   - `https://<domain>/healthz`
+   - `https://<domain>/actuator/health`
+   - `docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml ps`
 
 ## 15. Kết luận ngắn
 
