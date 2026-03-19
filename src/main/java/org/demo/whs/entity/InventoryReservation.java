@@ -45,9 +45,6 @@ public class InventoryReservation extends BaseEntity {
     @Column(name = "order_line_id", length = 100)
     private String orderLineId;
 
-    @Column(name = "request_key", length = 100, unique = true)
-    private String requestKey;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default
