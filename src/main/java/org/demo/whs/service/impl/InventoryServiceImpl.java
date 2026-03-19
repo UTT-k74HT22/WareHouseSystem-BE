@@ -336,7 +336,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .requestKey(request.getRequestKey())
                 .status(InventoryReservationStatus.RESERVED)
                 .build();
-        
+
         try {
             inventoryReservationRepository.saveAndFlush(reservation);
         } catch (DataIntegrityViolationException ex) {
@@ -346,12 +346,11 @@ public class InventoryServiceImpl implements InventoryService {
                     .orElseThrow(() -> ex);
         }
 
-        log.info("Successfully reserved {} for order line: {} (inventory id: {})", 
+        log.info("Successfully reserved {} for order line: {} (inventory id: {})",
                 request.getQuantity(), request.getOrderLineId(), inventory.getId());
 
         return inventoryMapper.toReserveResponse(reservation, inventory);
     }
-
     @Override
     @Transactional
     public InventoryUnreserveResponse unreserve(InventoryUnreserveRequest request) {

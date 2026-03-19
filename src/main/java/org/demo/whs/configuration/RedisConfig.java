@@ -43,6 +43,7 @@ public class RedisConfig {
      * Bean RedisConnectionFactory – bắt buộc phải có.
      */
     @Bean
+    @Profile("!test")
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(redisHost);
@@ -57,6 +58,7 @@ public class RedisConfig {
      * RedisTemplate với JSON serialization.
      */
     @Bean
+    @Profile("!test")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
