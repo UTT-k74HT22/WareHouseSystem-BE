@@ -1,211 +1,211 @@
-# BA Document - Module 6: Outbound Operations
-## Business Requirements Specification
+# Tài liệu BA - Module 6: Nghiệp vụ Xuất kho
+## Yêu cầu Nghiệp vụ
 
 ---
 
-## 📋 Document Information
+## 📋 Thông tin Tài liệu
 
-| Property | Value |
-|----------|-------|
-| **Module** | Outbound Operations (Sales Orders & Shipments) |
-| **Version** | 1.0 |
-| **Date** | February 1, 2026 |
-| **Status** | Draft |
-| **Author** | Business Analyst |
-
----
-
-## 🎯 Business Context
-
-### Current Pain Points
-
-1. **No Order Tracking**: Sales orders tracked in spreadsheets, prone to errors
-2. **Double Allocation**: Same stock promised to multiple customers
-3. **Picking Errors**: Wrong products or quantities picked
-4. **No FIFO Enforcement**: Oldest stock not picked first, leading to expiry
-5. **Delayed Updates**: Inventory not updated until end of day
-6. **Poor Customer Communication**: Cannot provide accurate ETAs
-
-### Business Value
-
-✅ **Prevent Overselling** - Stock reserved when order confirmed  
-✅ **Accurate Picking** - System-generated pick lists reduce errors  
-✅ **FIFO Compliance** - Recommendations ensure oldest stock shipped first  
-✅ **Real-Time Updates** - Inventory decreased immediately on shipment  
-✅ **Customer Satisfaction** - Accurate order status and tracking  
-✅ **Complete Traceability** - Track which batch shipped to which customer  
+| Thuộc tính | Giá trị |
+|------------|---------|
+| **Module** | Nghiệp vụ Xuất kho (Đơn bán hàng & Lô xuất) |
+| **Phiên bản** | 1.0 |
+| **Ngày** | 01/02/2026 |
+| **Trạng thái** | Bản nháp |
+| **Tác giả** | Phân tích Nghiệp vụ |
 
 ---
 
-## 📦 Module Overview
+## 🎯 Bối cảnh Nghiệp vụ
 
-### Core Entities
-1. **Sales Orders** - Customer orders
-2. **Sales Order Lines** - Items ordered
-3. **Outbound Shipments** - Physical shipments to customers
-4. **Outbound Shipment Lines** - Items shipped
+### Vấn đề Hiện tại
 
-### Process Flow
+1. **Không theo dõi đơn hàng**: Đơn bán hàng được theo dõi bằng bảng tính, dễ sai sót
+2. **Phân bổ kép**: Cùng một tồn kho hứa hẹn cho nhiều khách hàng
+3. **Lỗi picking**: Sản phẩm hoặc số lượng picking sai
+4. **Không thực thi FIFO**: Tồn kho cũ không được picking trước, dẫn đến hết hạn
+5. **Cập nhật chậm**: Tồn kho không được cập nhật cho đến cuối ngày
+6. **Giao tiếp khách hàng kém**: Không thể cung cấp ETA chính xác
+
+### Giá trị Nghiệp vụ
+
+✅ **Ngăn chặn bán quá tồn kho** - Tồn kho được đặt trước khi xác nhận đơn  
+✅ **Picking chính xác** - Danh sách picking do hệ thống tạo giảm lỗi  
+✅ **Tuân thủ FIFO** - Khuyến nghị đảm bảo tồn kho cũ được xuất trước  
+✅ **Cập nhật thời gian thực** - Tồn kho giảm ngay khi xuất hàng  
+✅ **Sự hài lòng khách hàng** - Trạng thái đơn hàng và theo dõi chính xác  
+✅ **Truy xuất nguồn gốc đầy đủ** - Theo dõi lô nào xuất cho khách hàng nào  
+
+---
+
+## 📦 Tổng quan Module
+
+### Các Thực thể Chính
+1. **Sales Orders** - Đơn bán hàng từ khách
+2. **Sales Order Lines** - Dòng sản phẩm trong đơn
+3. **Outbound Shipments** - Lô xuất hàng vật lý cho khách
+4. **Outbound Shipment Lines** - Dòng sản phẩm trong lô xuất
+
+### Luồng Quy trình
 
 ```
-Create Sales Order (DRAFT)
+Tạo Đơn bán hàng (DRAFT)
     ↓
-Confirm Sales Order (CONFIRMED)
-    → Reserve Stock
+Xác nhận Đơn bán hàng (CONFIRMED)
+    → Đặt trước tồn kho
     ↓
-Create Shipment (DRAFT)
-    → Generate Pick List with FIFO recommendations
+Tạo Lô xuất hàng (DRAFT)
+    → Tạo Danh sách picking với khuyến nghị FIFO
     ↓
 Pick Items (PICKING)
-    → Scan/verify items
+    → Scan/xác minh sản phẩm
     ↓
-Pack & Ship (PACKED)
+Đóng gói & Xuất hàng (PACKED)
     ↓
-Confirm Shipment (SHIPPED)
-    → Decrease inventory (on-hand & reserved)
-    → Record movement
-    → Update sales order status
-    → Notify customer
+Xác nhận Lô xuất hàng (SHIPPED)
+    → Giảm tồn kho (on-hand & reserved)
+    → Ghi nhận movement
+    → Cập nhật trạng thái đơn bán hàng
+    → Thông báo khách hàng
 ```
 
 ---
 
-## 📋 Features
+## 📋 Các Tính năng
 
-### Feature 1: Sales Order Management
+### Tính năng 1: Quản lý Đơn bán hàng
 
-**US-OUT-01**: As a Sales Manager, I want to create sales orders with multiple line items, so that I can process customer orders.
+**US-OUT-01**: Là Sales Manager, tôi muốn tạo đơn bán hàng với nhiều dòng sản phẩm, để xử lý đơn hàng khách hàng.
 
-**US-OUT-02**: As a Sales Manager, I want to confirm a sales order to reserve stock, so that inventory is allocated to the customer.
+**US-OUT-02**: Là Sales Manager, tôi muốn xác nhận đơn bán hàng để đặt trước tồn kho, để tồn kho được phân bổ cho khách hàng.
 
-**UC-OUT-01: Create Sales Order**
-- Select customer (business partner with type CUSTOMER)
-- Add line items (product, quantity, price)
-- Calculate totals
-- Save as DRAFT (editable)
+**UC-OUT-01: Tạo Đơn bán hàng**
+- Chọn khách hàng (đối tác có type = CUSTOMER)
+- Thêm dòng sản phẩm (sản phẩm, số lượng, giá)
+- Tính tổng tiền
+- Lưu dưới dạng DRAFT (có thể chỉnh sửa)
 
-**UC-OUT-02: Confirm Sales Order**
-- Validate stock availability for all lines
-- Reserve stock (call inventory.reserveStock())
-- Update status to CONFIRMED
-- Send confirmation to warehouse
-- Generate order confirmation email to customer
+**UC-OUT-02: Xác nhận Đơn bán hàng**
+- Kiểm tra tồn kho khả dụng cho tất cả dòng
+- Đặt trước tồn kho (gọi inventory.reserveStock())
+- Cập nhật trạng thái thành CONFIRMED
+- Gửi thông báo cho kho
+- Gửi email xác nhận đơn cho khách hàng
 
-**Business Rules:**
-- BR-OUT-01: SO number auto-generated (SO-YYYY-NNNN)
-- BR-OUT-02: Cannot confirm if insufficient stock
-- BR-OUT-03: Reservation atomic (all lines or none)
-- BR-OUT-04: CONFIRMED SOs cannot be edited (must cancel)
+**Quy tắc nghiệp vụ:**
+- BR-OUT-01: Số SO tự động tạo (SO-YYYY-NNNN)
+- BR-OUT-02: Không thể xác nhận nếu không đủ tồn kho
+- BR-OUT-03: Đặt trước tồn kho atomic (tất cả dòng hoặc không có dòng nào)
+- BR-OUT-04: SO đã CONFIRMED không thể chỉnh sửa (phải hủy)
 
 ---
 
-### Feature 2: Shipment Processing
+### Tính năng 2: Xử lý Lô xuất hàng
 
-**US-OUT-03**: As Warehouse Staff, I want to create a shipment against a sales order, so that I can prepare items for shipping.
+**US-OUT-03**: Là Nhân viên kho, tôi muốn tạo lô xuất hàng từ đơn bán hàng, để chuẩn bị hàng xuất.
 
-**US-OUT-04**: As a Picker, I want to see FIFO recommendations, so that I ship oldest batches first.
+**US-OUT-04**: Là Picker, tôi muốn xem khuyến nghị FIFO, để xuất lô cũ nhất trước.
 
-**US-OUT-05**: As Warehouse Staff, I want to confirm shipment to update inventory, so that stock levels are accurate.
+**US-OUT-05**: Là Nhân viên kho, tôi muốn xác nhận lô xuất hàng để cập nhật tồn kho, để mức tồn kho chính xác.
 
-**UC-OUT-03: Create Shipment & Generate Pick List**
-- Select CONFIRMED sales order
-- System suggests batches in FIFO order (oldest manufacturing date first)
-- Staff can override but system warns
-- Assign to picker
-- Print/display pick list with locations
+**UC-OUT-03: Tạo Lô xuất hàng & Tạo Danh sách Picking**
+- Chọn đơn bán hàng đã CONFIRMED
+- Hệ thống gợi ý lô theo thứ tự FIFO (ngày sản xuất cũ nhất trước)
+- Nhân viên có thể ghi đè nhưng hệ thống cảnh báo
+- Gán cho picker
+- In/hiển thị danh sách picking với vị trí
 
 **UC-OUT-04: Pick Items**
-- Picker scans items from pick list
-- System verifies correct product, quantity, batch
-- Mark as PICKING status
+- Picker scan sản phẩm từ danh sách picking
+- Hệ thống xác minh đúng sản phẩm, số lượng, lô
+- Đánh dấu trạng thái PICKING
 
-**UC-OUT-05: Confirm Shipment**
-- Validate all items picked
-- Transaction starts:
-  - Decrease inventory (on-hand - shipped qty)
-  - Decrease reserved (reserved - shipped qty)
-  - Record stock movement (OUTBOUND)
-  - Update SO line shipped_quantity
-  - Update SO status (PARTIALLY_SHIPPED or COMPLETED)
-- Transaction commits
-- Update shipment status to SHIPPED
-- Notify customer with tracking info
+**UC-OUT-05: Xác nhận Lô xuất hàng**
+- Xác minh tất cả sản phẩm đã được pick
+- Bắt đầu transaction:
+  - Giảm tồn kho (on-hand - số lượng xuất)
+  - Giảm reserved (reserved - số lượng xuất)
+  - Ghi nhận stock movement (OUTBOUND)
+  - Cập nhật SO line shipped_quantity
+  - Cập nhật trạng thái SO (PARTIALLY_SHIPPED hoặc COMPLETED)
+- Commit transaction
+- Cập nhật trạng thái shipment thành SHIPPED
+- Thông báo khách hàng với thông tin tracking
 
-**Business Rules:**
-- BR-OUT-05: Shipment number auto-generated (SHIP-YYYY-NNNN)
-- BR-OUT-06: Cannot ship more than ordered quantity
-- BR-OUT-07: FIFO recommended but not enforced
-- BR-OUT-08: Shipment confirmation is atomic
-- BR-OUT-09: Both on-hand and reserved decreased on shipment
-
----
-
-### Feature 3: Partial Shipments
-
-**US-OUT-06**: As Warehouse Staff, I want to ship partial quantities when full order not available, so that customers receive what's ready.
-
-**UC-OUT-06: Partial Shipment**
-- Create shipment with quantity < ordered quantity
-- Remaining quantity stays reserved
-- SO status = PARTIALLY_SHIPPED
-- Future shipments can fulfill remaining
-
-**Business Rules:**
-- BR-OUT-10: Multiple shipments per SO allowed
-- BR-OUT-11: Total shipped ≤ ordered quantity
-- BR-OUT-12: SO marked COMPLETED when all lines fully shipped
+**Quy tắc nghiệp vụ:**
+- BR-OUT-05: Số shipment tự động tạo (SHIP-YYYY-NNNN)
+- BR-OUT-06: Không thể xuất nhiều hơn số lượng đặt
+- BR-OUT-07: FIFO khuyến nghị nhưng không bắt buộc
+- BR-OUT-08: Xác nhậh shipment là atomic
+- BR-OUT-09: Cả on-hand và reserved đều giảm khi xuất hàng
 
 ---
 
-### Feature 4: Order Cancellation
+### Tính năng 3: Xuất hàng Từng phần
 
-**US-OUT-07**: As Sales Manager, I want to cancel an order, so that reserved stock is released.
+**US-OUT-06**: Là Nhân viên kho, tôi muốn xuất một phần khi đơn đầy đủ không có sẵn, để khách hàng nhận được những gì có sẵn.
 
-**UC-OUT-07: Cancel Sales Order**
-- Only CONFIRMED SOs (not yet shipped) can be cancelled
-- Unreserve all reserved stock
-- Update status to CANCELLED
-- Send cancellation notification
+**UC-OUT-06: Xuất hàng Từng phần**
+- Tạo shipment với số lượng < số lượng đặt
+- Số lượng còn lại vẫn được reserved
+- Trạng thái SO = PARTIALLY_SHIPPED
+- Các shipments tương lai có thể xuất nốt
 
-**Business Rules:**
-- BR-OUT-13: Cannot cancel after shipment created
-- BR-OUT-14: Cancellation releases all reservations
-- BR-OUT-15: Cancelled orders retained for audit
-
----
-
-## 🔗 API Impact Summary
-
-| Method | Endpoint | Description | Role |
-|--------|----------|-------------|------|
-| POST | /api/sales-orders | Create SO | SALES_MANAGER |
-| GET | /api/sales-orders | List SOs | VIEWER |
-| GET | /api/sales-orders/{id} | Get SO details | VIEWER |
-| PUT | /api/sales-orders/{id} | Update SO (DRAFT only) | SALES_MANAGER |
-| PUT | /api/sales-orders/{id}/confirm | Confirm SO → reserve stock | SALES_MANAGER |
-| PUT | /api/sales-orders/{id}/cancel | Cancel SO → release stock | SALES_MANAGER |
-| POST | /api/outbound-shipments | Create shipment | WAREHOUSE_STAFF |
-| GET | /api/outbound-shipments | List shipments | VIEWER |
-| GET | /api/outbound-shipments/{id} | Get shipment details | VIEWER |
-| PUT | /api/outbound-shipments/{id}/pick | Mark as picking | WAREHOUSE_STAFF |
-| PUT | /api/outbound-shipments/{id}/confirm | Confirm shipment → decrease stock | WAREHOUSE_STAFF |
-| GET | /api/outbound-shipments/{id}/pick-list | Generate pick list PDF | WAREHOUSE_STAFF |
+**Quy tắc nghiệp vụ:**
+- BR-OUT-10: Cho phép nhiều shipments cho một SO
+- BR-OUT-11: Tổng xuất ≤ số lượng đặt
+- BR-OUT-12: SO được đánh dấu COMPLETED khi tất cả dòng đã xuất đủ
 
 ---
 
-## 💾 Database Impact
+### Tính năng 4: Hủy Đơn hàng
 
-See [DB_MODULE_06_OUTBOUND.md](./DB_MODULE_06_OUTBOUND.md)
+**US-OUT-07**: Là Sales Manager, tôi muốn hủy đơn hàng, để giải phóng tồn kho đã đặt trước.
 
-### New Tables
+**UC-OUT-07: Hủy Đơn bán hàng**
+- Chỉ SO đã CONFIRMED (chưa xuất hàng) mới có thể hủy
+- Giải phóng tất cả tồn kho đã reserved
+- Cập nhật trạng thái thành CANCELLED
+- Gửi thông báo hủy
+
+**Quy tắc nghiệp vụ:**
+- BR-OUT-13: Không thể hủy sau khi tạo shipment
+- BR-OUT-14: Hủy giải phóng tất cả reservations
+- BR-OUT-15: Đơn hàng hủy được lưu giữ cho audit
+
+---
+
+## 🔗 Tóm tắt Ảnh hưởng API
+
+| Method | Endpoint | Mô tả | Vai trò |
+|--------|----------|--------|-------|
+| POST | /api/sales-orders | Tạo SO | SALES_MANAGER |
+| GET | /api/sales-orders | Danh sách SO | VIEWER |
+| GET | /api/sales-orders/{id} | Chi tiết SO | VIEWER |
+| PUT | /api/sales-orders/{id} | Cập nhật SO (chỉ DRAFT) | SALES_MANAGER |
+| PUT | /api/sales-orders/{id}/confirm | Xác nhận SO → đặt trước tồn kho | SALES_MANAGER |
+| PUT | /api/sales-orders/{id}/cancel | Hủy SO → giải phóng tồn kho | SALES_MANAGER |
+| POST | /api/outbound-shipments | Tạo shipment | WAREHOUSE_STAFF |
+| GET | /api/outbound-shipments | Danh sách shipments | VIEWER |
+| GET | /api/outbound-shipments/{id} | Chi tiết shipment | VIEWER |
+| PUT | /api/outbound-shipments/{id}/pick | Đánh dấu đang picking | WAREHOUSE_STAFF |
+| PUT | /api/outbound-shipments/{id}/confirm | Xác nhận shipment → giảm tồn kho | WAREHOUSE_STAFF |
+| GET | /api/outbound-shipments/{id}/pick-list | Tạo PDF danh sách picking | WAREHOUSE_STAFF |
+
+---
+
+## 💾 Ảnh hưởng Database
+
+Xem [DB_MODULE_06_OUTBOUND.md](./DB_MODULE_06_OUTBOUND.md)
+
+### Các Bảng Mới
 
 #### sales_orders
 - `so_number` (SO-YYYY-NNNN)
-- `customer_id` FK to business_partners
+- `customer_id` FK đến business_partners
 - `warehouse_id`
 - `status` (DRAFT, CONFIRMED, PARTIALLY_SHIPPED, COMPLETED, CANCELLED)
 - `order_date`, `requested_delivery_date`
-- Financial fields
+- Các trường tài chính
 
 #### sales_order_lines
 - `sales_order_id` FK
@@ -229,50 +229,50 @@ See [DB_MODULE_06_OUTBOUND.md](./DB_MODULE_06_OUTBOUND.md)
 
 ---
 
-## 🔄 Integration Points
+## 🔄 Điểm Tích hợp
 
-### With Inventory Module
-- SO confirmation: `reserveStock()` for each line
-- Shipment confirmation: `decreaseStock()` (both on-hand and reserved)
-- Cancellation: `unreserveStock()`
+### Với Module Inventory
+- Xác nhận SO: `reserveStock()` cho mỗi dòng
+- Xác nhận shipment: `decreaseStock()` (cả on-hand và reserved)
+- Hủy: `unreserveStock()`
 
-### With Batch Module
-- FIFO recommendations query batches ordered by manufacturing_date
-- Only AVAILABLE batches included in recommendations
+### Với Module Batch
+- Khuyến nghị FIFO truy vấn lô theo manufacturing_date
+- Chỉ các lô có status AVAILABLE được đưa vào khuyến nghị
 
-### With Stock Movement Module
-- Shipment confirmation creates OUTBOUND movements
-- Cancellation creates UNRESERVE movements
+### Với Module Stock Movement
+- Xác nhận shipment tạo movement OUTBOUND
+- Hủy tạo movement UNRESERVE
 
-### With Notification Module
-- SO confirmed: notify warehouse, customer
-- Shipment created: notify picker
-- Shipment shipped: notify customer with tracking
-
----
-
-## 📊 Business Rules Summary
-
-| Rule ID | Description |
-|---------|-------------|
-| BR-OUT-01 | SO number auto-generated |
-| BR-OUT-02 | Cannot confirm without sufficient stock |
-| BR-OUT-03 | Reservation atomic |
-| BR-OUT-04 | CONFIRMED SOs immutable |
-| BR-OUT-05 | Shipment number auto-generated |
-| BR-OUT-06 | Cannot ship more than ordered |
-| BR-OUT-07 | FIFO recommended not enforced |
-| BR-OUT-08 | Shipment confirmation atomic |
-| BR-OUT-09 | Decrease both on-hand and reserved |
-| BR-OUT-10 | Multiple shipments per SO |
-| BR-OUT-11 | Total shipped ≤ ordered |
-| BR-OUT-12 | SO completed when fully shipped |
-| BR-OUT-13 | Cannot cancel after shipment |
-| BR-OUT-14 | Cancellation releases reservations |
-| BR-OUT-15 | Cancelled orders retained |
+### Với Module Notification
+- SO đã xác nhận: thông báo cho kho, khách hàng
+- Shipment đã tạo: thông báo cho picker
+- Shipment đã xuất: thông báo khách hàng với tracking
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 1, 2026  
-**Status:** 🚧 Draft - Pending Review
+## 📊 Tóm tắt Quy tắc Nghiệp vụ
+
+| Rule ID | Mô tả |
+|---------|-------|
+| BR-OUT-01 | Số SO tự động tạo |
+| BR-OUT-02 | Không thể xác nhận nếu không đủ tồn kho |
+| BR-OUT-03 | Đặt trước tồn kho atomic |
+| BR-OUT-04 | SO đã CONFIRMED không thể sửa |
+| BR-OUT-05 | Số shipment tự động tạo |
+| BR-OUT-06 | Không thể xuất nhiều hơn đặt |
+| BR-OUT-07 | FIFO khuyến nghị không bắt buộc |
+| BR-OUT-08 | Xác nhận shipment atomic |
+| BR-OUT-09 | Giảm cả on-hand và reserved |
+| BR-OUT-10 | Nhiều shipments cho một SO |
+| BR-OUT-11 | Tổng xuất ≤ đặt |
+| BR-OUT-12 | SO hoàn thành khi xuất đủ |
+| BR-OUT-13 | Không thể hủy sau khi tạo shipment |
+| BR-OUT-14 | Hủy giải phóng reservations |
+| BR-OUT-15 | Đơn hủy được lưu giữ |
+
+---
+
+**Phiên bản tài liệu:** 1.0  
+**Cập nhật lần cuối:** 01/02/2026  
+**Trạng thái:** 🚧 Bản nháp - Chờ Review

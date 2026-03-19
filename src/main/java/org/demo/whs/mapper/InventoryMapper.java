@@ -65,7 +65,7 @@ public class InventoryMapper {
                 .batchId(reservation.getBatchId())
                 .reservedQuantity(reservation.getQuantity())
                 .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
-                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
+                .availableQuantity(inventory.getAvailableQuantity())
                 .orderLineId(reservation.getOrderLineId())
                 .status(reservation.getStatus().name())
                 .reservedAt(reservation.getCreatedAt())

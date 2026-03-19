@@ -59,15 +59,28 @@ class InventoryServiceImplTest {
     @Mock
     private StockMovementsMapper stockMovementsMapper;
 
+    @Mock
+    private org.redisson.api.RedissonClient redissonClient;
+
+    @Mock
+    private org.redisson.api.RLock lock;
+
     @InjectMocks
     private InventoryServiceImpl inventoryService;
+
+    private void setupLock() throws InterruptedException {
+        when(redissonClient.getLock(anyString())).thenReturn(lock);
+        when(lock.tryLock(anyLong(), anyLong(), any(java.util.concurrent.TimeUnit.class))).thenReturn(true);
+        when(lock.isHeldByCurrentThread()).thenReturn(true);
+    }
 
     // --- INCREASE TESTS ---
 
     @Test
     @DisplayName("increase_shouldSucceed_WhenInventoryExists")
-    void increase_shouldSucceed_WhenInventoryExists() {
+    void increase_shouldSucceed_WhenInventoryExists() throws InterruptedException {
         // Arrange
+        setupLock();
         String productId = "prod-1";
         String warehouseId = "wh-1";
         BigDecimal increaseQty = new BigDecimal("10.00");
@@ -88,9 +101,9 @@ class InventoryServiceImplTest {
                 .id("inv-1").productId(productId).warehouseId(warehouseId)
                 .onHandQuantity(new BigDecimal("50.00")).reservedQuantity(BigDecimal.ZERO).build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(wareHouseRepository.findById(warehouseId)).thenReturn(Optional.of(warehouse));
-        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
+        when(productRepository.findById(anyString())).thenReturn(Optional.of(product));
+        when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(warehouse));
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
         when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
 
@@ -133,8 +146,9 @@ class InventoryServiceImplTest {
 
     @Test
     @DisplayName("increase_shouldCreateNew_WhenInventoryMissing")
-    void increase_shouldCreateNew_WhenInventoryMissing() {
+    void increase_shouldCreateNew_WhenInventoryMissing() throws InterruptedException {
         // Arrange
+        setupLock();
         String productId = "prod-1"; String warehouseId = "wh-1";
         InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
                 .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
@@ -143,9 +157,9 @@ class InventoryServiceImplTest {
         Inventory newInv = Inventory.builder().productId(productId).warehouseId(warehouseId)
                 .onHandQuantity(BigDecimal.ZERO).reservedQuantity(BigDecimal.ZERO).build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(new Products()));
-        when(wareHouseRepository.findById(warehouseId)).thenReturn(Optional.of(new Warehouses()));
-        when(inventoryRepository.findByDimensionForUpdate(productId, warehouseId, null, null))
+        when(productRepository.findById(anyString())).thenReturn(Optional.of(new Products()));
+        when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(new Warehouses()));
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(inventoryMapper.toEntity(any(InventoryIncreaseRequest.class))).thenReturn(newInv);
         when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(newInv);
@@ -161,8 +175,9 @@ class InventoryServiceImplTest {
 
     @Test
     @DisplayName("increase_shouldThrowConflict_WhenBatchProductMismatch")
-    void increase_shouldThrowConflict_WhenBatchProductMismatch() {
+    void increase_shouldThrowConflict_WhenBatchProductMismatch() throws InterruptedException {
         // Arrange
+        setupLock();
         String productId = "prod-1"; String otherProductId = "prod-2";
         InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
                 .productId(productId).warehouseId("wh-1").batchId("batch-1").quantity(BigDecimal.TEN)
@@ -171,9 +186,9 @@ class InventoryServiceImplTest {
         Products product = new Products(); product.setId(productId);
         Batch batch = new Batch(); batch.setId("batch-1"); batch.setProductId(otherProductId);
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findById(anyString())).thenReturn(Optional.of(product));
         when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(new Warehouses()));
-        when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
+        when(batchRepository.findById(anyString())).thenReturn(Optional.of(batch));
 
         // Act & Assert
         assertThatThrownBy(() -> inventoryService.increase(request))
@@ -225,5 +240,80 @@ class InventoryServiceImplTest {
 
         assertThat(inv.getReservedQuantity()).isEqualByComparingTo("0");
         verify(inventoryReservationRepository).delete(res);
+    }
+
+    // --- DECREASE TESTS ---
+
+    @Test
+    @DisplayName("decrease_shouldSucceed_WhenNotConsumingReserved")
+    void decrease_shouldSucceed_WhenNotConsumingReserved() throws InterruptedException {
+        // Arrange
+        setupLock();
+        String productId = "prod-1"; String warehouseId = "wh-1";
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
+                .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
+                .consumeReserved(false).build();
+
+        Inventory inventory = Inventory.builder().id("inv-1").productId(productId).warehouseId(warehouseId)
+                .onHandQuantity(new BigDecimal("50")).reservedQuantity(new BigDecimal("10")).build();
+
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
+                .thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+
+        // Act
+        inventoryService.decrease(request);
+
+        // Assert
+        assertThat(inventory.getOnHandQuantity()).isEqualByComparingTo("40");
+        assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("10");
+        verify(stockMovementsService).recordDecrease(eq(request), any(), any());
+    }
+
+    @Test
+    @DisplayName("decrease_shouldSucceed_WhenConsumingReserved")
+    void decrease_shouldSucceed_WhenConsumingReserved() throws InterruptedException {
+        // Arrange
+        setupLock();
+        String productId = "prod-1"; String warehouseId = "wh-1";
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
+                .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
+                .consumeReserved(true).build();
+
+        Inventory inventory = Inventory.builder().id("inv-1").productId(productId).warehouseId(warehouseId)
+                .onHandQuantity(new BigDecimal("50")).reservedQuantity(new BigDecimal("20")).build();
+
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
+                .thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+
+        // Act
+        inventoryService.decrease(request);
+
+        // Assert
+        assertThat(inventory.getOnHandQuantity()).isEqualByComparingTo("40");
+        assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("10");
+        verify(stockMovementsService).recordDecrease(eq(request), any(), any());
+    }
+
+    @Test
+    @DisplayName("decrease_shouldThrowConflict_WhenInsufficientAvailable")
+    void decrease_shouldThrowConflict_WhenInsufficientAvailable() throws InterruptedException {
+        // Arrange
+        setupLock();
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId("p1").warehouseId("w1").quantity(new BigDecimal("100"))
+                .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("S1")
+                .consumeReserved(false).build();
+
+        Inventory inventory = Inventory.builder().onHandQuantity(new BigDecimal("50")).reservedQuantity(new BigDecimal("10")).build();
+
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any())).thenReturn(Optional.of(inventory));
+
+        // Act & Assert
+        assertThatThrownBy(() -> inventoryService.decrease(request))
+                .isInstanceOf(ConflictException.class);
     }
 }

@@ -13,6 +13,7 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
@@ -41,6 +42,8 @@ import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.repository.specification.InventorySpecification;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.StockMovementsService;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +59,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.demo.whs.exception.ErrorCode.PROD_001;
@@ -75,6 +79,20 @@ public class InventoryServiceImpl implements InventoryService {
     private final BatchRepository batchRepository;
     private final StockMovementsService stockMovementsService;
     private final StockMovementsMapper stockMovementsMapper;
+    private final RedissonClient redissonClient;
+
+    private static final String LOCK_PREFIX = "lock:inventory:reference:";
+
+    private String buildLockKey(ReferenceType type, String referenceId, String referenceNumber) {
+        if (referenceId != null && !referenceId.isBlank()) {
+            return LOCK_PREFIX + type + ":" + referenceId;
+        }
+        if (referenceNumber != null && !referenceNumber.isBlank()) {
+            return LOCK_PREFIX + type + ":" + referenceNumber;
+        }
+
+        throw new BadRequestException("Missing idempotency key", ErrorCode.COM_001);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -318,7 +336,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .requestKey(request.getRequestKey())
                 .status(InventoryReservationStatus.RESERVED)
                 .build();
-        
+
         try {
             inventoryReservationRepository.saveAndFlush(reservation);
         } catch (DataIntegrityViolationException ex) {
@@ -328,12 +346,11 @@ public class InventoryServiceImpl implements InventoryService {
                     .orElseThrow(() -> ex);
         }
 
-        log.info("Successfully reserved {} for order line: {} (inventory id: {})", 
+        log.info("Successfully reserved {} for order line: {} (inventory id: {})",
                 request.getQuantity(), request.getOrderLineId(), inventory.getId());
 
         return inventoryMapper.toReserveResponse(reservation, inventory);
     }
-
     @Override
     @Transactional
     public InventoryUnreserveResponse unreserve(InventoryUnreserveRequest request) {
@@ -430,85 +447,162 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public InventoryResponse increase(InventoryIncreaseRequest request) {
-        log.info(
-                "Increasing inventory product={} warehouse={} qty={}",
-                request.getProductId(),
-                request.getWarehouseId(),
-                request.getQuantity()
+        String lockKey = buildLockKey(
+                request.getReferenceType(),
+                request.getReferenceId(),
+                request.getReferenceNumber()
         );
+        RLock lock = redissonClient.getLock(lockKey);
 
-        // 0. Validate duplicate reference
-        if (request.getReferenceId() != null && !request.getReferenceId().isBlank()) {
-            if (stockMovementsService.existsByReference(request.getReferenceType(), request.getReferenceId())) {
-                log.warn("Duplicate inventory increase request for reference ID: {}:{}", 
-                        request.getReferenceType(), request.getReferenceId());
-                throw new ConflictException("Inventory has already been increased for this reference ID", ErrorCode.COM_001);
+        try {
+            if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
+                try {
+                    log.info("Increasing inventory product={} warehouse={} qty={}",
+                            request.getProductId(), request.getWarehouseId(), request.getQuantity());
+
+                    // 1. Validate quantity
+                    if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new BadRequestException(ErrorCode.COM_001);
+                    }
+
+                    // 2. Validate Dimensions
+                    Products product = productRepository.findById(request.getProductId())
+                            .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
+                    Warehouses warehouse = wareHouseRepository.findById(request.getWarehouseId())
+                            .orElseThrow(() -> new NotFoundException(ErrorCode.WHS_001));
+
+                    Locations location = null;
+                    if (request.getLocationId() != null) {
+                        location = locationRepository.findById(request.getLocationId())
+                                .orElseThrow(() -> new NotFoundException(ErrorCode.LOC_001));
+                    }
+
+                    Batch batch = null;
+                    if (request.getBatchId() != null) {
+                        batch = batchRepository.findById(request.getBatchId())
+                                .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
+                        if (!batch.getProductId().equals(request.getProductId())) {
+                            throw new ConflictException(
+                                    String.format("Batch %s belongs to product %s, but request is for product %s",
+                                            batch.getId(), batch.getProductId(), request.getProductId()),
+                                    ErrorCode.COM_001);
+                        }
+                    }
+
+                    // 3. Find or Create Inventory Record with Locking
+                    Inventory inventory = findOrCreateInventoryWithLock(request);
+
+                    // 4. Update Inventory
+                    BigDecimal onHandBefore = inventory.getOnHandQuantity();
+                    inventory.setOnHandQuantity(onHandBefore.add(request.getQuantity()));
+                    inventory.setLastMovementAt(LocalDateTime.now());
+                    inventory = inventoryRepository.save(inventory);
+
+                    // 5. Record Stock Movement with Atomic Idempotency (Catch DB Unique Constraint)
+                    try {
+                        stockMovementsService.recordIncrease(request, onHandBefore, inventory.getOnHandQuantity());
+                    } catch (DataIntegrityViolationException e) {
+                        log.warn("Duplicate request detected at DB level for reference: {}", request.getReferenceId());
+                        throw new ConflictException("Duplicate request", ErrorCode.COM_001);
+                    }
+
+                    log.info("Successfully increased inventory. New on-hand: {}", inventory.getOnHandQuantity());
+                    return inventoryMapper.toResponse(inventory, product, warehouse, location, batch);
+                    
+                } finally {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+            } else {
+                throw new ConflictException(ErrorCode.COM_009);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ConflictException(ErrorCode.COM_010);
         }
-        
-        if (request.getReferenceNumber() != null && !request.getReferenceNumber().isBlank()) {
-            if (stockMovementsService.existsByReferenceNumber(request.getReferenceType(), request.getReferenceNumber())) {
-                log.warn("Duplicate inventory increase request for reference number: {}:{}", 
-                        request.getReferenceType(), request.getReferenceNumber());
-                throw new ConflictException("Inventory has already been increased for this reference number", ErrorCode.COM_001);
-            }
-        }
+    }
 
-        // 1. Validate quantity
-        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException(ErrorCode.COM_001);
-        }
-
-        // 2. Validate Dimensions
-        Products product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new NotFoundException(ErrorCode.PROD_001));
-
-        Warehouses warehouse = wareHouseRepository.findById(request.getWarehouseId())
-                .orElseThrow(() -> new NotFoundException(ErrorCode.WHS_001));
-
-        Locations location = null;
-        if (request.getLocationId() != null) {
-            location = locationRepository.findById(request.getLocationId())
-                    .orElseThrow(() -> new NotFoundException(ErrorCode.LOC_001));
-            
-            if (!location.getWarehouseId().equals(warehouse.getId())) {
-                throw new ConflictException(ErrorCode.INV_003);
-            }
-        }
-
-        Batch batch = null;
-        if (request.getBatchId() != null) {
-            batch = batchRepository.findById(request.getBatchId())
-                    .orElseThrow(() -> new NotFoundException(ErrorCode.BATCH_001));
-
-            if (!batch.getProductId().equals(product.getId())) {
-                throw new ConflictException(ErrorCode.INV_003);
-            }
-        }
-
-        // 3. Find or Create Inventory Record with Locking (Race condition safe)
-        Inventory inventory = findOrCreateInventoryWithLock(request);
-
-        // 4. Update Inventory
-        BigDecimal onHandBefore = inventory.getOnHandQuantity();
-        inventory.setOnHandQuantity(inventory.getOnHandQuantity().add(request.getQuantity()));
-        inventory.setLastMovementAt(LocalDateTime.now());
-        inventory = inventoryRepository.save(inventory);
-
-        // 5. Record Stock Movement
-        stockMovementsService.recordIncrease(
-                request,
-                onHandBefore,
-                inventory.getOnHandQuantity()
+    @Override
+    @Transactional
+    public InventoryResponse decrease(InventoryDecreaseRequest request) {
+        String lockKey = buildLockKey(
+                request.getReferenceType(),
+                request.getReferenceId(),
+                request.getReferenceNumber()
         );
+        RLock lock = redissonClient.getLock(lockKey);
 
-        log.info("Successfully increased inventory. New on-hand: {}", inventory.getOnHandQuantity());
+        try {
+            if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
+                try {
+                    log.info("Decreasing inventory product={} warehouse={} qty={} consumeReserved={}",
+                            request.getProductId(), request.getWarehouseId(), request.getQuantity(), request.isConsumeReserved());
 
-        return inventoryMapper.toResponse(inventory, product, warehouse, location, batch);
+                    // 1. Validate quantity
+                    if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new BadRequestException(ErrorCode.COM_001);
+                    }
+
+                    // 2. Find Inventory with Lock
+                    Inventory inventory = inventoryRepository.findByDimensionForUpdate(
+                            request.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId()
+                    ).orElseThrow(() -> new NotFoundException(ErrorCode.INV_001));
+
+                    // 3. Handle Scenarios
+                    BigDecimal onHandBefore = inventory.getOnHandQuantity();
+                    BigDecimal reservedBefore = inventory.getReservedQuantity();
+
+                    if (request.isConsumeReserved()) {
+                        if (reservedBefore.compareTo(request.getQuantity()) < 0) {
+                            throw new ConflictException(ErrorCode.INV_004);
+                        }
+                        inventory.setOnHandQuantity(onHandBefore.subtract(request.getQuantity()));
+                        inventory.setReservedQuantity(reservedBefore.subtract(request.getQuantity()));
+                    } else {
+                        if (inventory.getAvailableQuantity().compareTo(request.getQuantity()) < 0) {
+                            throw new ConflictException(ErrorCode.INV_004);
+                        }
+                        inventory.setOnHandQuantity(onHandBefore.subtract(request.getQuantity()));
+                    }
+
+                    // 4. Update
+                    inventory.setLastMovementAt(LocalDateTime.now());
+                    inventory = inventoryRepository.save(inventory);
+
+                    // 5. Record Stock Movement with Atomic Idempotency (Catch DB Unique Constraint)
+                    try {
+                        stockMovementsService.recordDecrease(request, onHandBefore, inventory.getOnHandQuantity());
+                    } catch (DataIntegrityViolationException e) {
+                        log.warn("Duplicate request detected at DB level for reference: {}", request.getReferenceId());
+                        throw new ConflictException("Duplicate request", ErrorCode.COM_001);
+                    }
+
+                    log.info("Successfully decreased inventory. New on-hand: {}, New reserved: {}", 
+                            inventory.getOnHandQuantity(), inventory.getReservedQuantity());
+
+                    // 6. Response
+                    Products product = productRepository.findById(inventory.getProductId()).orElse(null);
+                    Warehouses warehouse = wareHouseRepository.findById(inventory.getWarehouseId()).orElse(null);
+                    Locations location = inventory.getLocationId() != null ? locationRepository.findById(inventory.getLocationId()).orElse(null) : null;
+                    Batch batch = inventory.getBatchId() != null ? batchRepository.findById(inventory.getBatchId()).orElse(null) : null;
+
+                    return inventoryMapper.toResponse(inventory, product, warehouse, location, batch);
+                } finally {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+            } else {
+                throw new ConflictException(ErrorCode.COM_009);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ConflictException(ErrorCode.COM_010);
+        }
     }
 
     private Inventory findOrCreateInventoryWithLock(InventoryIncreaseRequest request) {
-        // Try to find with lock first
         Optional<Inventory> existing = inventoryRepository.findByDimensionForUpdate(
                 request.getProductId(),
                 request.getWarehouseId(),
@@ -520,17 +614,10 @@ public class InventoryServiceImpl implements InventoryService {
             return existing.get();
         }
 
-        // Not found, try to create
-        log.info("Inventory record not found. Attempting to create new one for dimensions: product={}, warehouse={}, location={}, batch={}",
-                request.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId());
-
         Inventory newInventory = inventoryMapper.toEntity(request);
         try {
-            // saveAndFlush to trigger unique constraint check immediately
             return inventoryRepository.saveAndFlush(newInventory);
         } catch (DataIntegrityViolationException e) {
-            log.info("Inventory record was created by another thread. Re-fetching with lock.");
-            // Record was created by another thread in the meantime, fetch it with lock
             return inventoryRepository.findByDimensionForUpdate(
                     request.getProductId(),
                     request.getWarehouseId(),

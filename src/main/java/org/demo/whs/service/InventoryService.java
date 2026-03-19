@@ -74,4 +74,13 @@ public interface InventoryService {
      * @return Updated inventory data
      */
     InventoryResponse increase(org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest request);
+
+    /**
+     * Decrease inventory on-hand quantity.
+     * Source: Outbound shipment or stock adjustment.
+     *
+     * @param request The decrease request
+     * @return Updated inventory data
+     */
+    InventoryResponse decrease(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request);
 }

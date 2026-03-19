@@ -134,6 +134,8 @@ public enum ErrorCode {
     COM_006("COM_006", "Page index must not be less than zero"),
     COM_007("COM_007", "Page size must be greater than zero"),
     COM_008("COM_008", "Page size must not exceed 100"),
+    COM_009("COM_009", "Another process is handling this resource - please try again later"),
+    COM_010("COM_010", "Operation interrupted by another process"),
 
     // Batch errors
     BATCH_001("BATCH_001", "Batch not found"),

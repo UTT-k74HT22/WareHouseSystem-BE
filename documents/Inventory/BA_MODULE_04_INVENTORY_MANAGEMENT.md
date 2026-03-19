@@ -1,172 +1,172 @@
-# BA Document - Module 4: Inventory Management
-## Business Requirements Specification
+# Tài liệu BA - Module 4: Quản lý Kho hàng (Inventory Management)
+## Đặc tả Yêu cầu Nghiệp vụ
 
 ---
 
-## 📋 Document Information
+## 📋 Thông tin Tài liệu
 
-| Property | Value |
+| Thuộc tính | Giá trị |
 |----------|-------|
-| **Module** | Inventory Management |
-| **Version** | 1.0 |
-| **Date** | February 1, 2026 |
-| **Status** | Draft |
-| **Author** | Business Analyst |
+| **Module** | Quản lý Kho hàng (Inventory Management) |
+| **Phiên bản** | 1.0 |
+| **Ngày** | 01/02/2026 |
+| **Trạng thái** | Bản thảo (Draft) |
+| **Tác giả** | Business Analyst |
 
 ---
 
-## 📑 Table of Contents
+## 📑 Mục lục
 
-1. [Business Context](#business-context)
-2. [Actors & Roles](#actors--roles)
-3. [Module Overview](#module-overview)
-4. [Feature 1: Real-Time Inventory Tracking](#feature-1-real-time-inventory-tracking)
-5. [Feature 2: Stock Reservation](#feature-2-stock-reservation)
-6. [Feature 3: Stock Adjustment](#feature-3-stock-adjustment)
-7. [Feature 4: Stock Transfer Between Locations](#feature-4-stock-transfer-between-locations)
-8. [Feature 5: Low Stock Alerts](#feature-5-low-stock-alerts)
-9. [API Impact Summary](#api-impact-summary)
-10. [Database Impact Summary](#database-impact-summary)
-11. [Integration Points](#integration-points)
-
----
-
-## 🎯 Business Context
-
-### Current Pain Points
-
-1. **Inventory Inaccuracy**: Physical stock doesn't match system records, leading to overselling or stock-outs
-2. **No Real-Time Visibility**: Managers cannot see current stock levels across locations in real-time
-3. **Double Allocation**: Same stock allocated to multiple orders, causing fulfillment issues
-4. **Manual Stock Counts**: Time-consuming physical counts with high error rates
-5. **Location Confusion**: Items stored but location not tracked, wasting time searching
-6. **No Alert System**: Stock-outs discovered only when customer orders cannot be fulfilled
-
-### Business Value
-
-✅ **99%+ Inventory Accuracy** - Eliminate discrepancies between physical and system stock  
-✅ **Real-Time Visibility** - Instant view of stock levels across all warehouses and locations  
-✅ **Prevent Overselling** - Reserved stock ensures orders can be fulfilled  
-✅ **Optimize Storage** - Track exactly where items are stored for faster picking  
-✅ **Proactive Replenishment** - Auto-alerts when stock falls below minimum levels  
-✅ **Reduce Stock-Outs** - Maintain optimal stock levels based on min/max thresholds  
+1. [Bối cảnh Nghiệp vụ](#bối-cảnh-nghiệp-vụ)
+2. [Các Tác nhân & Vai trò](#các-tác-nhân--vai-trò)
+3. [Tổng quan Module](#tổng-quan-module)
+4. [Tính năng 1: Theo dõi Tồn kho Thời gian thực](#tính-năng-1-theo-dõi-tồn-kho-thời-gian-thực)
+5. [Tính năng 2: Giữ chỗ Tồn kho (Stock Reservation)](#tính-năng-2-giữ-chỗ-tồn-kho-stock-reservation)
+6. [Tính năng 3: Điều chỉnh Kho (Stock Adjustment)](#tính-năng-3-điều-chỉnh-kho-stock-adjustment)
+7. [Tính năng 4: Điều chuyển giữa các vị trí (Stock Transfer Between Locations)](#tính-năng-4-điều-chuyển-giữa-các-vị-trí-stock-transfer-between-locations)
+8. [Tính năng 5: Cảnh báo Tồn kho Thấp](#tính-năng-5-cảnh-báo-tồn-kho-thấp)
+9. [Tóm tắt Tác động API](#tóm-tắt-tác-động-api)
+10. [Tóm tắt Tác động Cơ sở Dữ liệu](#tóm-tắt-tác-động-cơ-sở-dữ-liệu)
+11. [Các Điểm Tích hợp](#các-điểm-tích-hợp)
 
 ---
 
-## 👥 Actors & Roles
+## 🎯 Bối cảnh Nghiệp vụ
 
-| Actor | Goal | Permissions |
+### Các vấn đề hiện tại (Pain Points)
+
+1. **Sai lệch Tồn kho**: Tồn kho thực tế không khớp với hồ sơ hệ thống, dẫn đến bán quá mức (overselling) hoặc hết hàng (stock-outs).
+2. **Thiếu khả năng hiển thị thời gian thực**: Quản lý không thể xem mức tồn kho hiện tại giữa các vị trí trong thời gian thực.
+3. **Phân bổ trùng lặp (Double Allocation)**: Cùng một lượng hàng được phân bổ cho nhiều đơn hàng, gây ra vấn đề trong việc hoàn tất đơn hàng.
+4. **Kiểm kê thủ công**: Việc đếm số lượng thực tế tốn thời gian và có tỷ lệ lỗi cao.
+5. **Nhầm lẫn vị trí**: Hàng hóa được lưu trữ nhưng vị trí không được theo dõi, lãng phí thời gian tìm kiếm.
+6. **Thiếu hệ thống cảnh báo**: Chỉ phát hiện hết hàng khi không thể thực hiện đơn hàng của khách hàng.
+
+### Giá trị Nghiệp vụ
+
+✅ **Độ chính xác tồn kho trên 99%** - Loại bỏ sự khác biệt giữa kho thực tế và hệ thống.  
+✅ **Hiển thị thời gian thực** - Xem tức thời mức tồn kho trên tất cả các kho và vị trí.  
+✅ **Ngăn chặn bán quá mức (Overselling)** - Tồn kho được giữ chỗ (reserved) đảm bảo đơn hàng có thể được thực hiện.  
+✅ **Tối ưu hóa lưu trữ** - Theo dõi chính xác nơi lưu trữ hàng hóa để lấy hàng nhanh hơn.  
+✅ **Bổ sung hàng hóa chủ động** - Tự động cảnh báo khi tồn kho xuống dưới mức tối thiểu.  
+✅ **Giảm thiểu tình trạng hết hàng** - Duy trì mức tồn kho tối ưu dựa trên các ngưỡng tối thiểu/tối đa.  
+
+---
+
+## 👥 Các Tác nhân & Vai trò
+
+| Tác nhân | Mục tiêu | Quyền hạn |
 |-------|------|-------------|
-| **Warehouse Manager** | Monitor overall inventory health, approve adjustments | View all inventory, approve stock adjustments |
-| **Inventory Controller** | Maintain accurate inventory records | Create/update inventory, perform stock counts |
-| **Warehouse Staff** | Process receipts and shipments | View inventory, update locations |
-| **Purchasing Manager** | Identify reorder needs | View inventory levels, receive low-stock alerts |
-| **Sales Manager** | Check product availability | View available inventory (read-only) |
+| **Quản lý Kho (Warehouse Manager)** | Giám sát tình trạng tồn kho tổng thể, phê duyệt điều chỉnh | Xem tất cả tồn kho, phê duyệt điều chỉnh kho |
+| **Kiểm soát viên Kho (Inventory Controller)** | Duy trì hồ sơ tồn kho chính xác | Tạo/cập nhật tồn kho, thực hiện kiểm đếm |
+| **Nhân viên Kho (Warehouse Staff)** | Xử lý nhập và xuất hàng | Xem tồn kho, cập nhật vị trí |
+| **Quản lý Mua hàng (Purchasing Manager)** | Xác định nhu cầu đặt hàng lại | Xem mức tồn kho, nhận cảnh báo tồn kho thấp |
+| **Quản lý Bán hàng (Sales Manager)** | Kiểm tra tình trạng sẵn có của sản phẩm | Xem tồn kho có sẵn (chỉ đọc) |
 
 ---
 
-## 📦 Module Overview
+## 📦 Tổng quan Module
 
-Inventory Management is the core module that tracks the quantity and location of all products in real-time. It maintains separate tracking for on-hand, reserved, and available stock.
+Quản lý Kho hàng là module cốt lõi theo dõi số lượng và vị trí của tất cả sản phẩm trong thời gian thực. Nó duy trì việc theo dõi riêng biệt cho tồn kho thực tế (on-hand), đã giữ chỗ (reserved) và có sẵn (available).
 
-### Core Entities
+### Các Thực thể Chính (Core Entities)
 
-1. **Inventory** - Stock records per product-warehouse-location-batch combination
-2. **Stock Adjustments** - Manual corrections to inventory with approval workflow
-3. **Stock Transfers** - Movement of stock between locations within same warehouse
-4. **Stock Alerts** - Low stock notifications
+1. **Tồn kho (Inventory)** - Hồ sơ kho theo tổ hợp sản phẩm-kho-vị trí-lô hàng.
+2. **Điều chỉnh Kho (Stock Adjustments)** - Các hiệu chỉnh thủ công đối với tồn kho với quy trình phê duyệt.
+3. **Điều chuyển Kho (Stock Transfers)** - Di chuyển hàng hóa giữa các vị trí trong cùng một kho.
+4. **Cảnh báo Kho (Stock Alerts)** - Thông báo khi tồn kho thấp.
 
-### Key Concepts
+### Các Khái niệm Chính
 
-- **On-Hand Quantity**: Physical stock in warehouse (total)
-- **Reserved Quantity**: Stock allocated to confirmed orders (not yet shipped)
-- **Available Quantity**: On-hand minus reserved (can be allocated to new orders)
-- **Stock Adjustment**: Manual correction with reason and approval
-- **Cycle Counting**: Regular counting of subset of products for accuracy
+- **Số lượng Thực tế (On-Hand Quantity)**: Tồn kho thực tế trong kho (tổng cộng).
+- **Số lượng Giữ chỗ (Reserved Quantity)**: Tồn kho được phân bổ cho các đơn hàng đã xác nhận (chưa giao).
+- **Số lượng Có sẵn (Available Quantity)**: Thực tế trừ đi giữ chỗ (có thể phân bổ cho đơn hàng mới).
+- **Điều chỉnh Kho (Stock Adjustment)**: Hiệu chỉnh thủ công với lý do và phê duyệt.
+- **Kiểm kê định kỳ (Cycle Counting)**: Đếm thường xuyên một nhóm nhỏ sản phẩm để đảm bảo tính chính xác.
 
-### Dependencies
+### Phụ thuộc (Dependencies)
 
-- **Depends on**: Master Data (Warehouses, Locations, Products, Batches)
-- **Required by**: Inbound, Outbound, Reporting modules
+- **Phụ thuộc vào**: Dữ liệu Master (Kho, Vị trí, Sản phẩm, Lô hàng).
+- **Được yêu cầu bởi**: Các module Nhập hàng (Inbound), Xuất hàng (Outbound), Báo cáo (Reporting).
 
 ---
 
-## 📋 Feature 1: Real-Time Inventory Tracking
+## 📋 Tính năng 1: Theo dõi Tồn kho Thời gian thực
 
 ### User Stories
 
-**US-INV-01**: As a Warehouse Manager, I want to view real-time stock levels for any product across all locations, so that I can make informed decisions about stock allocation.
+**US-INV-01**: Là một Quản lý Kho, tôi muốn xem mức tồn kho thời gian thực của bất kỳ sản phẩm nào trên tất cả các vị trí, để tôi có thể đưa ra quyết định sáng suốt về phân bổ kho.
 
-**US-INV-02**: As a Sales Manager, I want to check available quantity before promising delivery to customers, so that I avoid overselling.
+**US-INV-02**: Là một Quản lý Bán hàng, tôi muốn kiểm tra số lượng có sẵn trước khi hứa hẹn giao hàng cho khách hàng, để tránh bán quá mức.
 
-**US-INV-03**: As an Inventory Controller, I want to see inventory broken down by batch and location, so that I can identify oldest stock (FIFO) and optimize picking.
+**US-INV-03**: Là một Kiểm soát viên Kho, tôi muốn thấy tồn kho được chia nhỏ theo lô và vị trí, để tôi có thể xác định hàng cũ nhất (FIFO) và tối ưu hóa việc lấy hàng.
 
-**US-INV-04**: As a Warehouse Staff, I want to quickly check if a product is in stock at a specific location, so that I can direct pickers efficiently.
+**US-INV-04**: Là một Nhân viên Kho, tôi muốn kiểm tra nhanh xem một sản phẩm còn hàng tại một vị trí cụ thể hay không, để tôi có thể hướng dẫn người lấy hàng một cách hiệu quả.
 
 ---
 
 ### Use Cases
 
-#### UC-INV-01: View Inventory Summary
+#### UC-INV-01: Xem Tóm tắt Tồn kho
 
-**Brief Description**: Display aggregated inventory across all warehouses and locations for a product.
+**Mô tả ngắn gọn**: Hiển thị tồn kho tổng hợp trên tất cả các kho và vị trí cho một sản phẩm.
 
-**Primary Actor**: Warehouse Manager, Sales Manager, Inventory Controller
+**Tác nhân chính**: Quản lý Kho, Quản lý Bán hàng, Kiểm soát viên Kho.
 
-**Pre-conditions**:
-- User is authenticated
-- User has VIEW_INVENTORY permission
+**Điều kiện tiên quyết**:
+- Người dùng đã được xác thực.
+- Người dùng có quyền VIEW_INVENTORY.
 
-**Post-conditions**:
-- Inventory summary displayed
+**Hậu điều kiện**:
+- Tóm tắt tồn kho được hiển thị.
 
-**Main Flow**:
-1. User opens Inventory Dashboard
-2. User searches by product (SKU, name, or barcode scan)
-3. System displays summary:
-   - Total on-hand quantity across all locations
-   - Total reserved quantity
-   - Total available quantity
-   - Breakdown by warehouse
-   - Breakdown by location within each warehouse
-   - Breakdown by batch (if batch-tracked)
-   - Last movement date/time
-4. User can drill down into specific warehouse/location
-5. System shows detailed view with:
-   - Specific location code
-   - Quantity at that location
-   - Batch information (if applicable)
-   - Days since last movement
+**Luồng chính**:
+1. Người dùng mở Dashboard Tồn kho.
+2. Người dùng tìm kiếm theo sản phẩm (SKU, tên, hoặc quét mã vạch).
+3. Hệ thống hiển thị tóm tắt:
+   - Tổng số lượng thực tế trên tất cả các vị trí.
+   - Tổng số lượng đã giữ chỗ.
+   - Tổng số lượng có sẵn.
+   - Chia nhỏ theo kho.
+   - Chia nhỏ theo vị trí trong từng kho.
+   - Chia nhỏ theo lô (nếu có theo dõi theo lô).
+   - Ngày/giờ biến động cuối cùng.
+4. Người dùng có thể xem chi tiết vào kho/vị trí cụ thể.
+5. Hệ thống hiển thị chế độ xem chi tiết với:
+   - Mã vị trí cụ thể.
+   - Số lượng tại vị trí đó.
+   - Thông tin lô hàng (nếu áp dụng).
+   - Số ngày kể từ lần biến động cuối cùng.
 
-**Business Rules**:
-- BR-INV-01: Available = On-Hand - Reserved
-- BR-INV-02: Real-time data must be accurate to within 1 second
-- BR-INV-03: Inventory records created automatically on first receipt
+**Quy tắc Nghiệp vụ**:
+- BR-INV-01: Có sẵn (Available) = Thực tế (On-Hand) - Giữ chỗ (Reserved).
+- BR-INV-02: Dữ liệu thời gian thực phải chính xác trong vòng 1 giây.
+- BR-INV-03: Hồ sơ tồn kho được tạo tự động khi nhập hàng lần đầu.
 
 ---
 
-#### UC-INV-02: Query Available Stock
+#### UC-INV-02: Truy vấn Tồn kho Có sẵn
 
-**Brief Description**: Check if sufficient stock is available for order fulfillment.
+**Mô tả ngắn gọn**: Kiểm tra xem có đủ tồn kho để hoàn tất đơn hàng hay không.
 
-**Primary Actor**: Sales Manager, Outbound Service (System)
+**Tác nhân chính**: Quản lý Bán hàng, Dịch vụ Xuất hàng (Hệ thống).
 
-**Pre-conditions**:
-- User or system needs to check availability
-- Product and warehouse specified
+**Điều kiện tiên quyết**:
+- Người dùng hoặc hệ thống cần kiểm tra tính sẵn có.
+- Sản phẩm và kho đã được xác định.
 
-**Post-conditions**:
-- Availability confirmed or insufficient stock indicated
+**Hậu điều kiện**:
+- Xác nhận tính sẵn có hoặc thông báo không đủ hàng.
 
-**Main Flow**:
-1. System receives availability query:
+**Luồng chính**:
+1. Hệ thống nhận truy vấn tính sẵn có:
    - product_id
    - warehouse_id
    - requested_quantity
-   - location_id (optional)
-   - batch_id (optional)
-2. System queries inventory:
-   ```
+   - location_id (tùy chọn)
+   - batch_id (tùy chọn)
+2. Hệ thống truy vấn tồn kho:
+   ```sql
    SELECT SUM(on_hand_quantity - reserved_quantity) AS available
    FROM inventory
    WHERE product_id = ? 
@@ -174,117 +174,117 @@ Inventory Management is the core module that tracks the quantity and location of
      AND (location_id = ? OR ? IS NULL)
      AND (batch_id = ? OR ? IS NULL)
    ```
-3. System compares available vs requested
-4. System returns result:
+3. Hệ thống so sánh số lượng có sẵn và yêu cầu.
+4. Hệ thống trả về kết quả:
    - `{ "available": true, "quantity_available": 150 }`
-   - OR `{ "available": false, "quantity_available": 50, "shortfall": 50 }`
+   - HOẶC `{ "available": false, "quantity_available": 50, "shortfall": 50 }`
 
-**Business Rules**:
-- BR-INV-04: Only AVAILABLE batches counted (exclude QUARANTINE, EXPIRED)
-- BR-INV-05: Negative stock not allowed (enforced by constraints)
+**Quy tắc Nghiệp vụ**:
+- BR-INV-04: Chỉ tính các lô có trạng thái AVAILABLE (loại trừ QUARANTINE, EXPIRED).
+- BR-INV-05: Không cho phép tồn kho âm (được thực thi bằng các ràng buộc - constraints).
 
 ---
 
-## 📋 Feature 2: Stock Reservation
+## 📋 Tính năng 2: Giữ chỗ Tồn kho (Stock Reservation)
 
 ### User Stories
 
-**US-INV-05**: As a System, I want to reserve stock when a sales order is confirmed, so that the same stock is not allocated to multiple orders.
+**US-INV-05**: Là một Hệ thống, tôi muốn giữ chỗ tồn kho khi đơn hàng bán được xác nhận, để cùng một lượng hàng không bị phân bổ cho nhiều đơn hàng.
 
-**US-INV-06**: As a Warehouse Manager, I want to view reserved quantities, so that I understand why available stock differs from on-hand stock.
+**US-INV-06**: Là một Quản lý Kho, tôi muốn xem số lượng đã giữ chỗ, để tôi hiểu tại sao số lượng có sẵn khác với số lượng thực tế.
 
-**US-INV-07**: As a System, I want to automatically release reservations if an order is cancelled, so that stock becomes available again.
+**US-INV-07**: Là một Hệ thống, tôi muốn tự động giải phóng giữ chỗ nếu đơn hàng bị hủy, để hàng hóa trở lại trạng thái có sẵn.
 
 ---
 
 ### Use Cases
 
-#### UC-INV-03: Reserve Stock
+#### UC-INV-03: Giữ chỗ Tồn kho (Reserve Stock)
 
-**Brief Description**: Allocate stock to a confirmed sales order, preventing it from being allocated elsewhere.
+**Mô tả ngắn gọn**: Phân bổ tồn kho cho một đơn hàng bán đã xác nhận, ngăn chặn việc phân bổ cho nơi khác.
 
-**Primary Actor**: Outbound Service (System)
+**Tác nhân chính**: Dịch vụ Xuất hàng (Hệ thống).
 
-**Pre-conditions**:
-- Sales order confirmed
-- Sufficient available stock exists
-- Stock is in AVAILABLE status (for batches)
+**Điều kiện tiên quyết**:
+- Đơn hàng bán đã được xác nhận.
+- Tồn kho có sẵn đủ số lượng.
+- Lô hàng ở trạng thái AVAILABLE.
 
-**Post-conditions**:
-- Reserved quantity increased
-- Available quantity decreased
-- Reservation logged in audit trail
+**Hậu điều kiện**:
+- Số lượng giữ chỗ tăng lên.
+- Số lượng có sẵn giảm xuống.
+- Việc giữ chỗ được ghi lại trong nhật ký kiểm tra (audit trail).
 
-**Main Flow**:
-1. Outbound service calls `reserveStock(productId, warehouseId, locationId, batchId, quantity)`
-2. System checks available stock:
+**Luồng chính**:
+1. Dịch vụ xuất hàng gọi `reserveStock(productId, warehouseId, locationId, batchId, quantity)`.
+2. Hệ thống kiểm tra tồn kho có sẵn:
    ```sql
    SELECT on_hand_quantity - reserved_quantity AS available
    FROM inventory
    WHERE product_id = ? AND warehouse_id = ? 
      AND location_id = ? AND batch_id = ?
-   FOR UPDATE; -- Lock row for concurrency control
+   FOR UPDATE; -- Khóa dòng để kiểm soát đồng thời (concurrency control)
    ```
-3. System validates: `available >= quantity`
-4. If sufficient:
+3. Hệ thống xác thực: `available >= quantity`.
+4. Nếu đủ:
    ```sql
    UPDATE inventory
    SET reserved_quantity = reserved_quantity + ?,
        updated_at = NOW()
    WHERE id = ?;
    ```
-5. System records stock movement:
+5. Hệ thống ghi nhận biến động kho:
    - movement_type = 'RESERVE'
-   - quantity_change = +quantity (on reserved)
-6. System commits transaction
-7. System returns success
+   - quantity_change = +quantity (trên phần giữ chỗ)
+6. Hệ thống hoàn tất giao dịch (commit transaction).
+7. Hệ thống trả về thành công.
 
-**Alternative Flows**:
-- A1: Insufficient stock
-  - System returns error: `InsufficientStockException`
-  - Transaction rolled back
+**Luồng thay thế**:
+- A1: Không đủ hàng
+  - Hệ thống trả về lỗi: `InsufficientStockException`
+  - Giao dịch bị hoàn tác (rolled back).
 
-**Exception Flows**:
-- E1: Concurrent reservation (another order just reserved same stock)
-  - Optimistic lock version mismatch
-  - Transaction retried or returns conflict error
+**Luồng ngoại lệ**:
+- E1: Giữ chỗ đồng thời (một đơn hàng khác vừa giữ chỗ cùng một lượng hàng)
+  - Sai lệch phiên bản khóa lạc quan (Optimistic lock version mismatch).
+  - Giao dịch được thử lại hoặc trả về lỗi xung đột.
 
-**Business Rules**:
-- BR-INV-06: Reservations are atomic (all-or-nothing per order)
-- BR-INV-07: Reserved quantity cannot exceed on-hand quantity
-- BR-INV-08: Reservation uses pessimistic locking (`SELECT FOR UPDATE`)
+**Quy tắc Nghiệp vụ**:
+- BR-INV-06: Việc giữ chỗ là nguyên tử - atomic (tất cả hoặc không có gì cho mỗi đơn hàng).
+- BR-INV-07: Số lượng giữ chỗ không được vượt quá số lượng thực tế.
+- BR-INV-08: Việc giữ chỗ sử dụng khóa bi quan - pessimistic locking (`SELECT FOR UPDATE`).
 
 ---
 
-#### UC-INV-04: Release Reservation (Unreserve)
+#### UC-INV-04: Giải phóng Giữ chỗ (Unreserve)
 
-**Brief Description**: Free up reserved stock when order cancelled or shipment confirmed.
+**Mô tả ngắn gọn**: Giải phóng tồn kho đã giữ chỗ khi đơn hàng bị hủy hoặc việc giao hàng đã được xác nhận.
 
-**Primary Actor**: Outbound Service (System)
+**Tác nhân chính**: Dịch vụ Xuất hàng (Hệ thống).
 
-**Pre-conditions**:
-- Stock was previously reserved
-- Order is being cancelled OR shipment completed
+**Điều kiện tiên quyết**:
+- Tồn kho đã được giữ chỗ trước đó.
+- Đơn hàng đang bị hủy HOẶC việc giao hàng đã hoàn tất.
 
-**Post-conditions**:
-- Reserved quantity decreased
-- Available quantity increased (if cancelled) OR on-hand decreased (if shipped)
+**Hậu điều kiện**:
+- Số lượng giữ chỗ giảm xuống.
+- Số lượng có sẵn tăng lên (nếu hủy) HOẶC số lượng thực tế giảm xuống (nếu đã giao).
 
-**Main Flow (Order Cancelled)**:
-1. Outbound service calls `unreserveStock(...)`
-2. System decreases reserved_quantity:
+**Luồng chính (Đơn hàng bị hủy)**:
+1. Dịch vụ xuất hàng gọi `unreserveStock(...)`.
+2. Hệ thống giảm reserved_quantity:
    ```sql
    UPDATE inventory
    SET reserved_quantity = reserved_quantity - ?,
        updated_at = NOW()
    WHERE id = ?;
    ```
-3. System records movement (type = 'UNRESERVE')
-4. Stock becomes available again
+3. Hệ thống ghi nhận biến động (type = 'UNRESERVE').
+4. Hàng hóa trở lại trạng thái có sẵn.
 
-**Main Flow (Shipment Confirmed)**:
-1. Outbound service calls `decreaseStock(...)`
-2. System updates both on-hand and reserved:
+**Luồng chính (Xác nhận Giao hàng)**:
+1. Dịch vụ xuất hàng gọi `decreaseStock(...)`.
+2. Hệ thống cập nhật cả thực tế và giữ chỗ:
    ```sql
    UPDATE inventory
    SET on_hand_quantity = on_hand_quantity - ?,
@@ -292,221 +292,221 @@ Inventory Management is the core module that tracks the quantity and location of
        updated_at = NOW()
    WHERE id = ?;
    ```
-3. System records movement (type = 'OUTBOUND')
+3. Hệ thống ghi nhận biến động (type = 'OUTBOUND').
 
-**Business Rules**:
-- BR-INV-09: Cannot unreserve more than currently reserved
-- BR-INV-10: Shipment confirmation decreases both on-hand AND reserved
+**Quy tắc Nghiệp vụ**:
+- BR-INV-09: Không thể giải phóng nhiều hơn số lượng hiện đang giữ chỗ.
+- BR-INV-10: Xác nhận giao hàng làm giảm cả số lượng thực tế VÀ giữ chỗ.
 
 ---
 
-## 📋 Feature 3: Stock Adjustment
+## 📋 Tính năng 3: Điều chỉnh Kho (Stock Adjustment)
 
 ### User Stories
 
-**US-INV-08**: As an Inventory Controller, I want to adjust stock quantities after physical count, so that system matches reality.
+**US-INV-08**: Là một Kiểm soát viên Kho, tôi muốn điều chỉnh số lượng tồn kho sau khi kiểm đếm thực tế, để hệ thống khớp với thực tế.
 
-**US-INV-09**: As a Warehouse Manager, I want to approve stock adjustments above a threshold, so that large discrepancies are reviewed.
+**US-INV-09**: Là một Quản lý Kho, tôi muốn phê duyệt các điều chỉnh kho trên một ngưỡng nhất định, để các sai lệch lớn được xem xét.
 
-**US-INV-10**: As an Auditor, I want to see all stock adjustments with reasons, so that I can identify patterns of shrinkage or damage.
+**US-INV-10**: Là một Kiểm toán viên, tôi muốn xem tất cả các điều chỉnh kho kèm theo lý do, để tôi có thể xác định các mô hình thất thoát hoặc hư hỏng.
 
 ---
 
 ### Use Cases
 
-#### UC-INV-05: Create Stock Adjustment
+#### UC-INV-05: Tạo Điều chỉnh Kho
 
-**Brief Description**: Create a manual stock adjustment to correct inventory discrepancies.
+**Mô tả ngắn gọn**: Tạo một điều chỉnh kho thủ công để hiệu chỉnh các sai lệch tồn kho.
 
-**Primary Actor**: Inventory Controller
+**Tác nhân chính**: Kiểm soát viên Kho.
 
-**Pre-conditions**:
-- User has CREATE_ADJUSTMENT permission
-- Physical count completed
-- Discrepancy identified
+**Điều kiện tiên quyết**:
+- Người dùng có quyền CREATE_ADJUSTMENT.
+- Việc kiểm đếm thực tế đã hoàn thành.
+- Sai lệch đã được xác định.
 
-**Post-conditions**:
-- Stock adjustment created in PENDING status
-- If below approval threshold, auto-approved and inventory updated
-- If above threshold, awaits manager approval
+**Hậu điều kiện**:
+- Điều chỉnh kho được tạo ở trạng thái PENDING (Chờ duyệt).
+- Nếu dưới ngưỡng phê duyệt, tự động phê duyệt và cập nhật tồn kho.
+- Nếu trên ngưỡng, chờ quản lý phê duyệt.
 
-**Main Flow**:
-1. User opens Stock Adjustment form
-2. User enters:
-   - product (search/scan)
-   - warehouse
-   - location
-   - batch (if batch-tracked)
-   - current_quantity (from system)
-   - actual_quantity (from physical count)
-   - adjustment_quantity (calculated: actual - current)
-   - reason (DAMAGE, THEFT, COUNT_ERROR, EXPIRED, OTHER)
-   - notes (detailed explanation)
-3. System validates inputs
-4. System checks approval threshold (configurable, e.g., ±100 units or $1000 value)
-5. If **below threshold**:
-   - Create adjustment with status APPROVED
-   - Apply to inventory immediately
-   - Log in audit trail
-6. If **above threshold**:
-   - Create adjustment with status PENDING_APPROVAL
-   - Send notification to Warehouse Manager
-   - Await approval
-7. System returns confirmation
+**Luồng chính**:
+1. Người dùng mở biểu mẫu Điều chỉnh Kho.
+2. Người dùng nhập:
+   - sản phẩm (tìm kiếm/quét)
+   - kho
+   - vị trí
+   - lô (nếu có theo dõi theo lô)
+   - số lượng hiện tại (từ hệ thống)
+   - số lượng thực tế (từ kiểm đếm)
+   - số lượng điều chỉnh (tính toán: thực tế - hiện tại)
+   - lý do (HƯ HỎNG, MẤT CẮP, LỖI KIỂM ĐẾM, HẾT HẠN, KHÁC)
+   - ghi chú (giải thích chi tiết)
+3. Hệ thống xác thực đầu vào.
+4. Hệ thống kiểm tra ngưỡng phê duyệt (có thể cấu hình, ví dụ: ±100 đơn vị hoặc giá trị $1000).
+5. Nếu **dưới ngưỡng**:
+   - Tạo điều chỉnh với trạng thái APPROVED (Đã duyệt).
+   - Áp dụng vào tồn kho ngay lập tức.
+   - Ghi vào nhật ký kiểm tra.
+6. Nếu **trên ngưỡng**:
+   - Tạo điều chỉnh với trạng thái PENDING_APPROVAL (Chờ phê duyệt).
+   - Gửi thông báo cho Quản lý Kho.
+   - Chờ phê duyệt.
+7. Hệ thống trả về xác nhận.
 
-**Business Rules**:
-- BR-INV-11: Adjustment reason is mandatory
-- BR-INV-12: Adjustments above threshold require manager approval
-- BR-INV-13: Default approval threshold: 100 units OR value > $1000
-- BR-INV-14: Negative adjustments (shrinkage) highlighted in reports
+**Quy tắc Nghiệp vụ**:
+- BR-INV-11: Lý do điều chỉnh là bắt buộc.
+- BR-INV-12: Các điều chỉnh trên ngưỡng yêu cầu quản lý phê duyệt.
+- BR-INV-13: Ngưỡng phê duyệt mặc định: 100 đơn vị HOẶC giá trị > $1000.
+- BR-INV-14: Các điều chỉnh âm (thất thoát) được làm nổi bật trong báo cáo.
 
 ---
 
-#### UC-INV-06: Approve Stock Adjustment
+#### UC-INV-06: Phê duyệt Điều chỉnh Kho
 
-**Brief Description**: Warehouse Manager reviews and approves/rejects pending stock adjustments.
+**Mô tả ngắn gọn**: Quản lý Kho xem xét và phê duyệt/từ chối các điều chỉnh kho đang chờ xử lý.
 
-**Primary Actor**: Warehouse Manager
+**Tác nhân chính**: Quản lý Kho.
 
-**Pre-conditions**:
-- Adjustment in PENDING_APPROVAL status
-- User has APPROVE_ADJUSTMENT permission
+**Điều kiện tiên quyết**:
+- Điều chỉnh ở trạng thái PENDING_APPROVAL.
+- Người dùng có quyền APPROVE_ADJUSTMENT.
 
-**Post-conditions**:
-- If approved: Inventory updated, adjustment marked APPROVED
-- If rejected: Adjustment marked REJECTED, inventory unchanged
+**Hậu điều kiện**:
+- Nếu được duyệt: Tồn kho được cập nhật, điều chỉnh được đánh dấu APPROVED.
+- Nếu bị từ chối: Điều chỉnh được đánh dấu REJECTED, tồn kho không thay đổi.
 
-**Main Flow (Approval)**:
-1. Manager opens Pending Adjustments list
-2. Manager selects adjustment to review
-3. System displays:
-   - Product details
-   - Current vs actual quantity
-   - Adjustment amount
-   - Reason and notes from creator
-   - Dollar value impact
-4. Manager clicks "Approve"
-5. System applies adjustment to inventory:
+**Luồng chính (Phê duyệt)**:
+1. Quản lý mở danh sách Điều chỉnh Chờ xử lý.
+2. Quản lý chọn điều chỉnh để xem xét.
+3. Hệ thống hiển thị:
+   - Chi tiết sản phẩm.
+   - Số lượng hiện tại so với thực tế.
+   - Lượng điều chỉnh.
+   - Lý do và ghi chú từ người tạo.
+   - Tác động giá trị tiền tệ.
+4. Quản lý nhấn "Approve" (Phê duyệt).
+5. Hệ thống áp dụng điều chỉnh vào tồn kho:
    ```sql
    UPDATE inventory
    SET on_hand_quantity = on_hand_quantity + adjustment_qty
    WHERE id = ?;
    ```
-6. System marks adjustment APPROVED
-7. System records stock movement
-8. System sends confirmation to requester
+6. Hệ thống đánh dấu điều chỉnh là APPROVED.
+7. Hệ thống ghi nhận biến động kho.
+8. Hệ thống gửi xác nhận cho người yêu cầu.
 
-**Main Flow (Rejection)**:
-1-4. Same as approval
-5. Manager clicks "Reject" and enters rejection reason
-6. System marks adjustment REJECTED
-7. Inventory remains unchanged
-8. System notifies requester with rejection reason
+**Luồng chính (Từ chối)**:
+1-4. Tương tự như phê duyệt.
+5. Quản lý nhấn "Reject" (Từ chối) và nhập lý do từ chối.
+6. Hệ thống đánh dấu điều chỉnh là REJECTED.
+7. Tồn kho không thay đổi.
+8. Hệ thống thông báo cho người yêu cầu kèm lý do từ chối.
 
-**Business Rules**:
-- BR-INV-15: Only PENDING adjustments can be approved/rejected
-- BR-INV-16: Manager cannot approve their own adjustments
-- BR-INV-17: Rejection reason is mandatory
+**Quy tắc Nghiệp vụ**:
+- BR-INV-15: Chỉ các điều chỉnh PENDING mới có thể được phê duyệt/từ chối.
+- BR-INV-16: Quản lý không thể phê duyệt các điều chỉnh do chính mình tạo ra.
+- BR-INV-17: Lý do từ chối là bắt buộc.
 
 ---
 
-## 📋 Feature 4: Stock Transfer Between Locations
+## 📋 Tính năng 4: Điều chuyển giữa các vị trí (Stock Transfer Between Locations)
 
 ### User Stories
 
-**US-INV-11**: As a Warehouse Staff, I want to transfer stock from one location to another within the same warehouse, so that I can optimize storage space.
+**US-INV-11**: Là một Nhân viên Kho, tôi muốn chuyển hàng từ vị trí này sang vị trí khác trong cùng một kho, để tôi có thể tối ưu hóa không gian lưu trữ.
 
-**US-INV-12**: As a Warehouse Manager, I want to track all stock transfers, so that I can ensure proper location accuracy.
+**US-INV-12**: Là một Quản lý Kho, tôi muốn theo dõi tất cả các lần điều chuyển kho, để tôi có thể đảm bảo tính chính xác của vị trí.
 
 ---
 
 ### Use Cases
 
-#### UC-INV-07: Create Stock Transfer
+#### UC-INV-07: Tạo Điều chuyển Kho
 
-**Brief Description**: Move stock from one location to another within the same warehouse.
+**Mô tả ngắn gọn**: Di chuyển hàng hóa từ vị trí này sang vị trí khác trong cùng một kho.
 
-**Primary Actor**: Warehouse Staff
+**Tác nhân chính**: Nhân viên Kho.
 
-**Pre-conditions**:
-- User has TRANSFER_STOCK permission
-- Source location has sufficient stock
-- Destination location exists and is ACTIVE
+**Điều kiện tiên quyết**:
+- Người dùng có quyền TRANSFER_STOCK.
+- Vị trí nguồn có đủ hàng.
+- Vị trí đích tồn tại và đang hoạt động (ACTIVE).
 
-**Post-conditions**:
-- Stock quantity decreased at source location
-- Stock quantity increased at destination location
-- Transfer recorded in audit trail
+**Hậu điều kiện**:
+- Số lượng hàng giảm tại vị trí nguồn.
+- Số lượng hàng tăng tại vị trí đích.
+- Việc điều chuyển được ghi lại trong nhật ký kiểm tra.
 
-**Main Flow**:
-1. User opens Stock Transfer form
-2. User enters:
-   - product (search/scan)
-   - warehouse
-   - from_location
-   - to_location
-   - batch (if batch-tracked)
-   - quantity
-   - reason (REORG, PICKING_PREP, OVERFLOW, OTHER)
-3. System validates:
-   - Source has sufficient stock
-   - Source ≠ Destination
-   - Both locations in same warehouse
-4. System creates transfer in transaction:
+**Luồng chính**:
+1. Người dùng mở biểu mẫu Điều chuyển Kho.
+2. Người dùng nhập:
+   - sản phẩm (tìm kiếm/quét)
+   - kho
+   - từ_vị_trí (from_location)
+   - đến_vị_trí (to_location)
+   - lô (nếu có theo dõi theo lô)
+   - số lượng
+   - lý do (SẮP XẾP LẠI, CHUẨN BỊ LẤY HÀNG, QUÁ TẢI, KHÁC)
+3. Hệ thống xác thực:
+   - Nguồn có đủ hàng.
+   - Nguồn ≠ Đích.
+   - Cả hai vị trí trong cùng một kho.
+4. Hệ thống tạo điều chuyển trong một giao dịch:
    ```sql
-   -- Decrease source
+   -- Giảm tại nguồn
    UPDATE inventory
    SET on_hand_quantity = on_hand_quantity - ?
    WHERE product_id = ? AND warehouse_id = ? 
      AND location_id = ? AND batch_id = ?;
    
-   -- Increase or create destination
+   -- Tăng hoặc tạo mới tại đích
    INSERT INTO inventory (...) VALUES (...)
    ON DUPLICATE KEY UPDATE 
      on_hand_quantity = on_hand_quantity + ?;
    ```
-5. System records two stock movements:
-   - Movement 1: TRANSFER_OUT from source location
-   - Movement 2: TRANSFER_IN to destination location
-6. System returns success
+5. Hệ thống ghi nhận hai biến động kho:
+   - Biến động 1: TRANSFER_OUT từ vị trí nguồn.
+   - Biến động 2: TRANSFER_IN tới vị trí đích.
+6. Hệ thống trả về thành công.
 
-**Business Rules**:
-- BR-INV-18: Transfer must be within same warehouse (use different process for inter-warehouse)
-- BR-INV-19: Cannot transfer more than available at source
-- BR-INV-20: Transfer is atomic (both locations updated in same transaction)
+**Quy tắc Nghiệp vụ**:
+- BR-INV-18: Việc điều chuyển phải trong cùng một kho (sử dụng quy trình khác cho điều chuyển liên kho).
+- BR-INV-19: Không thể chuyển nhiều hơn số lượng có sẵn tại nguồn.
+- BR-INV-20: Việc điều chuyển là nguyên tử (cả hai vị trí được cập nhật trong cùng một giao dịch).
 
 ---
 
-## 📋 Feature 5: Low Stock Alerts
+## 📋 Tính năng 5: Cảnh báo Tồn kho Thấp
 
 ### User Stories
 
-**US-INV-13**: As a Warehouse Manager, I want to be alerted when stock falls below minimum level, so that I can initiate reordering.
+**US-INV-13**: Là một Quản lý Kho, tôi muốn được cảnh báo khi tồn kho xuống dưới mức tối thiểu, để tôi có thể bắt đầu đặt hàng lại.
 
-**US-INV-14**: As a Purchasing Manager, I want to see a list of products below reorder point, so that I can create purchase orders.
+**US-INV-14**: Là một Quản lý Mua hàng, tôi muốn xem danh sách các sản phẩm dưới điểm đặt hàng lại, để tôi có thể tạo đơn mua hàng.
 
 ---
 
 ### Use Cases
 
-#### UC-INV-08: Automatic Low Stock Detection
+#### UC-INV-08: Tự động Phát hiện Tồn kho Thấp
 
-**Brief Description**: System automatically detects products below minimum stock level and sends alerts.
+**Mô tả ngắn gọn**: Hệ thống tự động phát hiện các sản phẩm dưới mức tồn kho tối thiểu và gửi cảnh báo.
 
-**Primary Actor**: System (Scheduled Job)
+**Tác nhân chính**: Hệ thống (Công việc lập lịch - Scheduled Job).
 
-**Pre-conditions**:
-- Products have min_stock_level or reorder_point configured
-- Scheduled job configured to run periodically
+**Điều kiện tiên quyết**:
+- Sản phẩm đã được cấu hình min_stock_level hoặc reorder_point.
+- Công việc lập lịch được cấu hình để chạy định kỳ.
 
-**Post-conditions**:
-- Low stock items identified
-- Alerts sent to relevant stakeholders
-- Dashboard updated
+**Hậu điều kiện**:
+- Các mặt hàng tồn kho thấp được xác định.
+- Cảnh báo được gửi tới các bên liên quan.
+- Dashboard được cập nhật.
 
-**Main Flow**:
-1. System runs scheduled job (e.g., every 6 hours)
-2. System queries:
+**Luồng chính**:
+1. Hệ thống chạy công việc lập lịch (ví dụ: mỗi 6 giờ).
+2. Hệ thống truy vấn:
    ```sql
    SELECT 
      p.id, p.sku, p.name,
@@ -518,86 +518,86 @@ Inventory Management is the core module that tracks the quantity and location of
    GROUP BY p.id, p.sku, p.name, p.min_stock_level, p.reorder_point
    HAVING current_stock < p.reorder_point;
    ```
-3. For each low-stock product:
-   - Calculate recommended order quantity:
+3. Đối với mỗi sản phẩm tồn kho thấp:
+   - Tính toán số lượng đặt hàng khuyến nghị:
      `order_qty = max_stock_level - current_stock`
-   - Determine urgency:
-     - CRITICAL: stock < min_stock_level
-     - WARNING: stock < reorder_point
-4. System sends consolidated email to Purchasing Manager
-5. System updates dashboard counters
-6. System logs detection
+   - Xác định mức độ khẩn cấp:
+     - NGHIÊM TRỌNG (CRITICAL): kho < min_stock_level
+     - CẢNH BÁO (WARNING): kho < reorder_point
+4. Hệ thống gửi email tổng hợp cho Quản lý Mua hàng.
+5. Hệ thống cập nhật các bộ đếm trên dashboard.
+6. Hệ thống ghi nhật ký phát hiện.
 
-**Business Rules**:
-- BR-INV-21: Reorder point typically set at 2 weeks of average demand
-- BR-INV-22: Min stock level is safety stock (e.g., 1 week demand)
-- BR-INV-23: Low stock alerts sent maximum once per day per product
+**Quy tắc Nghiệp vụ**:
+- BR-INV-21: Điểm đặt hàng lại thường được đặt ở mức đủ cho 2 tuần nhu cầu trung bình.
+- BR-INV-22: Mức tồn kho tối thiểu là tồn kho an toàn (ví dụ: 1 tuần nhu cầu).
+- BR-INV-23: Cảnh báo tồn kho thấp được gửi tối đa một lần mỗi ngày cho mỗi sản phẩm.
 
 ---
 
-## 🔗 API Impact Summary
+## 🔗 Tóm tắt Tác động API
 
-### New Endpoints
+### Các Endpoint Mới
 
-| Method | Endpoint | Description | Role Required |
+| Phương thức | Endpoint | Mô tả | Vai trò yêu cầu |
 |--------|----------|-------------|---------------|
-| GET | /api/inventory | List inventory with filters | VIEWER |
-| GET | /api/inventory/summary/{productId} | Get inventory summary for product | VIEWER |
-| GET | /api/inventory/by-location | Get inventory grouped by location | VIEWER |
-| POST | /api/inventory/check-availability | Check if stock available | VIEWER |
-| POST | /api/inventory/reserve | Reserve stock (internal) | SYSTEM |
-| POST | /api/inventory/unreserve | Release reservation | SYSTEM |
-| POST | /api/inventory/increase | Increase stock (from inbound) | SYSTEM |
-| POST | /api/inventory/decrease | Decrease stock (from outbound) | SYSTEM |
-| POST | /api/stock-adjustments | Create stock adjustment | INVENTORY_CONTROLLER |
-| GET | /api/stock-adjustments | List adjustments | INVENTORY_CONTROLLER |
-| PUT | /api/stock-adjustments/{id}/approve | Approve adjustment | WAREHOUSE_MANAGER |
-| PUT | /api/stock-adjustments/{id}/reject | Reject adjustment | WAREHOUSE_MANAGER |
-| POST | /api/stock-transfers | Create stock transfer | WAREHOUSE_STAFF |
-| GET | /api/stock-transfers | List transfers | WAREHOUSE_STAFF |
-| GET | /api/inventory/low-stock | Get low stock items | PURCHASING_MANAGER |
+| GET | /api/inventory | Liệt kê tồn kho với bộ lọc | VIEWER |
+| GET | /api/inventory/summary/{productId} | Xem tóm tắt tồn kho cho sản phẩm | VIEWER |
+| GET | /api/inventory/by-location | Xem tồn kho nhóm theo vị trí | VIEWER |
+| POST | /api/inventory/check-availability | Kiểm tra xem hàng còn không | VIEWER |
+| POST | /api/inventory/reserve | Giữ chỗ tồn kho (nội bộ) | SYSTEM |
+| POST | /api/inventory/unreserve | Giải phóng giữ chỗ | SYSTEM |
+| POST | /api/inventory/increase | Tăng kho (từ nhập hàng) | SYSTEM |
+| POST | /api/inventory/decrease | Giảm kho (từ xuất hàng) | SYSTEM |
+| POST | /api/stock-adjustments | Tạo điều chỉnh kho | INVENTORY_CONTROLLER |
+| GET | /api/stock-adjustments | Liệt kê các điều chỉnh | INVENTORY_CONTROLLER |
+| PUT | /api/stock-adjustments/{id}/approve | Phê duyệt điều chỉnh | WAREHOUSE_MANAGER |
+| PUT | /api/stock-adjustments/{id}/reject | Từ chối điều chỉnh | WAREHOUSE_MANAGER |
+| POST | /api/stock-transfers | Tạo điều chuyển kho | WAREHOUSE_STAFF |
+| GET | /api/stock-transfers | Liệt kê các lần điều chuyển | WAREHOUSE_STAFF |
+| GET | /api/inventory/low-stock | Xem các mặt hàng tồn kho thấp | PURCHASING_MANAGER |
 
 ---
 
-## 💾 Database Impact Summary
+## 💾 Tóm tắt Tác động Cơ sở Dữ liệu
 
-See detailed schema in [DB_MODULE_04_INVENTORY.md](./DB_MODULE_04_INVENTORY.md)
+Xem chi tiết schema tại [DB_MODULE_04_INVENTORY.md](./DB_MODULE_04_INVENTORY.md)
 
-### New Tables
+### Các Bảng Mới
 
-#### Table: inventory
+#### Bảng: inventory
 
-Primary table tracking stock at product-warehouse-location-batch level.
+Bảng chính theo dõi kho ở cấp độ sản phẩm-kho-vị trí-lô hàng.
 
-**Key Fields**:
+**Các trường chính**:
 - `id` - UUID
-- `product_id` - FK to products
-- `warehouse_id` - FK to warehouses
-- `location_id` - FK to locations (nullable)
-- `batch_id` - FK to batches (nullable)
-- `on_hand_quantity` - Physical stock
-- `reserved_quantity` - Allocated to orders
-- `version` - Optimistic locking
-- `last_movement_at` - Last transaction timestamp
+- `product_id` - Khóa ngoại tới products
+- `warehouse_id` - Khóa ngoại tới warehouses
+- `location_id` - Khóa ngoại tới locations (có thể null)
+- `batch_id` - Khóa ngoại tới batches (có thể null)
+- `on_hand_quantity` - Kho thực tế
+- `reserved_quantity` - Đã phân bổ cho đơn hàng
+- `version` - Khóa lạc quan (Optimistic locking)
+- `last_movement_at` - Dấu thời gian giao dịch cuối cùng
 
-**Unique Key**: (product_id, warehouse_id, location_id, batch_id)
+**Khóa duy nhất (Unique Key)**: (product_id, warehouse_id, location_id, batch_id)
 
-#### Table: stock_adjustments
+#### Bảng: stock_adjustments
 
-Records manual inventory adjustments.
+Ghi lại các điều chỉnh kho thủ công.
 
-**Key Fields**:
-- `adjustment_number` - Human-readable identifier
+**Các trường chính**:
+- `adjustment_number` - Mã định danh dễ đọc
 - `status` - PENDING_APPROVAL, APPROVED, REJECTED
-- `reason` - DAMAGE, THEFT, COUNT_ERROR, etc.
-- `adjustment_quantity` - Can be positive or negative
-- `approved_by`, `approved_at` - Approval tracking
+- `reason` - DAMAGE, THEFT, COUNT_ERROR, v.v.
+- `adjustment_quantity` - Có thể dương hoặc âm
+- `approved_by`, `approved_at` - Theo dõi phê duyệt
 
-#### Table: stock_transfers
+#### Bảng: stock_transfers
 
-Records movement between locations.
+Ghi lại việc di chuyển giữa các vị trí.
 
-**Key Fields**:
+**Các trường chính**:
 - `transfer_number`
 - `from_location_id`
 - `to_location_id`
@@ -606,77 +606,79 @@ Records movement between locations.
 
 ---
 
-## 🔄 Integration Points
+## 🔄 Các Điểm Tích hợp
 
-### With Inbound Module
-- Inbound receipt confirmation calls `increaseStock()`
-- Creates or updates inventory records
-- On-hand quantity increased
+### Với Module Nhập hàng (Inbound)
+- Xác nhận phiếu nhập kho (Inbound receipt confirmation) sẽ gọi hàm `increaseStock()`.
+- **Chống trùng lặp (Idempotency)**: Sử dụng `reference_type` (INBOUND_RECEIPT) và `reference_number` để đảm bảo mỗi phiếu nhập chỉ được xử lý tăng kho duy nhất một lần.
+- **Cơ chế khóa (Locking)**: Áp dụng khóa phân tán Redisson để ngăn chặn tình trạng Race Condition (tranh chấp dữ liệu) khi có nhiều yêu cầu xác nhận cùng lúc.
+- Cập nhật bản ghi tồn kho và ghi nhật ký biến động kho (Stock movement logs) một cách nguyên tử (atomic) trong cùng một giao dịch.
+- Số lượng tồn kho thực tế (On-hand) được tăng lên tương ứng.
 
-### With Outbound Module
-- Sales order confirmation calls `reserveStock()`
-- Shipment creation can check availability
-- Shipment confirmation calls `decreaseStock()`
-- Both on-hand and reserved decreased
+### Với Module Xuất hàng (Outbound)
+- Xác nhận đơn hàng bán gọi `reserveStock()`.
+- Tạo lô hàng có thể kiểm tra tính sẵn có.
+- Xác nhận giao hàng gọi `decreaseStock()`.
+- Cả tồn kho thực tế và giữ chỗ đều giảm.
 
-### With Batch Module
-- Inventory tracked per batch for batch-tracked products
-- Batch status (QUARANTINE, EXPIRED) excludes stock from available
+### Với Module Lô hàng (Batch)
+- Tồn kho được theo dõi theo từng lô cho các sản phẩm có quản lý lô.
+- Trạng thái lô hàng (QUARANTINE, EXPIRED) sẽ loại trừ hàng khỏi số lượng có sẵn.
 
-### With Stock Movement Module
-- Every inventory change creates stock movement record
-- Provides complete audit trail
+### Với Module Biến động Kho (Stock Movement)
+- Mỗi thay đổi tồn kho đều tạo ra một hồ sơ biến động kho.
+- Cung cấp nhật ký kiểm tra (audit trail) đầy đủ.
 
-### With Notification Module
-- Low stock alerts sent to Purchasing Manager
-- Stock-out warnings sent to Warehouse Manager
-- Adjustment approval requests notify manager
+### Với Module Thông báo (Notification)
+- Cảnh báo tồn kho thấp được gửi cho Quản lý Mua hàng.
+- Cảnh báo hết hàng được gửi cho Quản lý Kho.
+- Các yêu cầu phê duyệt điều chỉnh sẽ thông báo cho quản lý.
 
 ---
 
-## 📊 Business Rules Summary
+## 📊 Tóm tắt Quy tắc Nghiệp vụ
 
-| Rule ID | Description |
+| ID Quy tắc | Mô tả |
 |---------|-------------|
-| BR-INV-01 | Available = On-Hand - Reserved |
-| BR-INV-02 | Real-time data accuracy within 1 second |
-| BR-INV-03 | Inventory records auto-created on first receipt |
-| BR-INV-04 | Only AVAILABLE batches counted in available stock |
-| BR-INV-05 | Negative stock not allowed |
-| BR-INV-06 | Reservations are atomic (all-or-nothing) |
-| BR-INV-07 | Reserved cannot exceed on-hand |
-| BR-INV-08 | Reservation uses pessimistic locking |
-| BR-INV-09 | Cannot unreserve more than reserved |
-| BR-INV-10 | Shipment decreases both on-hand and reserved |
-| BR-INV-11 | Adjustment reason is mandatory |
-| BR-INV-12 | Adjustments above threshold require approval |
-| BR-INV-13 | Default threshold: 100 units OR $1000 value |
-| BR-INV-14 | Negative adjustments highlighted in reports |
-| BR-INV-15 | Only PENDING adjustments can be approved/rejected |
-| BR-INV-16 | Manager cannot approve own adjustments |
-| BR-INV-17 | Rejection reason is mandatory |
-| BR-INV-18 | Transfer within same warehouse only |
-| BR-INV-19 | Cannot transfer more than available |
-| BR-INV-20 | Transfer is atomic |
-| BR-INV-21 | Reorder point = 2 weeks average demand |
-| BR-INV-22 | Min stock = 1 week demand (safety stock) |
-| BR-INV-23 | Low stock alerts max once per day per product |
+| BR-INV-01 | Có sẵn = Thực tế - Giữ chỗ |
+| BR-INV-02 | Độ chính xác dữ liệu thời gian thực trong vòng 1 giây |
+| BR-INV-03 | Hồ sơ tồn kho tự động tạo khi nhập hàng lần đầu |
+| BR-INV-04 | Chỉ tính các lô AVAILABLE trong tồn kho có sẵn |
+| BR-INV-05 | Không cho phép tồn kho âm |
+| BR-INV-06 | Việc giữ chỗ là nguyên tử (tất cả hoặc không có gì) |
+| BR-INV-07 | Giữ chỗ không được vượt quá thực tế |
+| BR-INV-08 | Giữ chỗ sử dụng khóa bi quan (pessimistic locking) |
+| BR-INV-09 | Không thể giải phóng giữ chỗ nhiều hơn mức đã giữ |
+| BR-INV-10 | Giao hàng làm giảm cả thực tế và giữ chỗ |
+| BR-INV-11 | Lý do điều chỉnh là bắt buộc |
+| BR-INV-12 | Điều chỉnh trên ngưỡng yêu cầu phê duyệt |
+| BR-INV-13 | Ngưỡng mặc định: 100 đơn vị HOẶC giá trị $1000 |
+| BR-INV-14 | Điều chỉnh âm được làm nổi bật trong báo cáo |
+| BR-INV-15 | Chỉ các điều chỉnh PENDING mới có thể được phê duyệt/từ chối |
+| BR-INV-16 | Quản lý không thể phê duyệt điều chỉnh của chính mình |
+| BR-INV-17 | Lý do từ chối là bắt buộc |
+| BR-INV-18 | Chỉ điều chuyển trong cùng một kho |
+| BR-INV-19 | Không thể điều chuyển nhiều hơn số lượng có sẵn |
+| BR-INV-20 | Việc điều chuyển là nguyên tử |
+| BR-INV-21 | Điểm đặt hàng lại = 2 tuần nhu cầu trung bình |
+| BR-INV-22 | Kho tối thiểu = 1 tuần nhu cầu (kho an toàn) |
+| BR-INV-23 | Cảnh báo tồn kho thấp tối đa 1 lần/ngày/sản phẩm |
 
 ---
 
-## ✅ Acceptance Criteria
+## ✅ Tiêu chí Chấp nhận (Acceptance Criteria)
 
-1. ✅ Real-time inventory visible across all warehouses and locations
-2. ✅ Available stock accurately calculated (on-hand - reserved)
-3. ✅ Stock reservations prevent double allocation
-4. ✅ Adjustments above threshold require approval
-5. ✅ Stock transfers update both locations atomically
-6. ✅ Low stock alerts sent when below reorder point
-7. ✅ Concurrency handled (no lost updates)
-8. ✅ All inventory changes logged in audit trail
+1. ✅ Tồn kho thời gian thực hiển thị trên tất cả các kho và vị trí.
+2. ✅ Tồn kho có sẵn được tính toán chính xác (thực tế - giữ chỗ).
+3. ✅ Giữ chỗ tồn kho ngăn chặn việc phân bổ trùng lặp.
+4. ✅ Điều chỉnh trên ngưỡng yêu cầu phê duyệt.
+5. ✅ Điều chuyển kho cập nhật cả hai vị trí một cách nguyên tử.
+6. ✅ Cảnh báo tồn kho thấp được gửi khi dưới điểm đặt hàng lại.
+7. ✅ Xử lý được các vấn đề đồng thời (concurrency) - không làm mất dữ liệu cập nhật.
+8. ✅ Tất cả thay đổi tồn kho được ghi lại trong nhật ký kiểm tra.
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 1, 2026  
-**Status:** 🚧 Draft - Pending Review
+**Phiên bản Tài liệu:** 1.0  
+**Cập nhật lần cuối:** 01/02/2026  
+**Trạng thái:** 🚧 Bản thảo - Đang chờ xem xét
