@@ -3,6 +3,7 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -48,5 +49,13 @@ public interface RoleRepository extends JpaRepository<Role, String> {
 
     Optional<Role> findByName(RoleType name);
 
-    boolean existsByName(RoleType name);
+    boolean existsByName(String name);
+
+    boolean existsByIsDefaultTrue();
+
+    boolean existsByCode(String code);
+
+    @Modifying
+    @Query("UPDATE Role r SET r.isDefault = false WHERE r.isDefault = true")
+    void updateAllIsDefaultToFalse();
 }
