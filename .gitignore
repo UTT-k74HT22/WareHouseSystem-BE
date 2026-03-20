@@ -4,6 +4,9 @@
 target/
 bin/
 
+# OS files
+nul
+
 # Environment variables
 .env
 
