@@ -2,7 +2,10 @@
 
 # Build artifacts
 target/
-bin/
+/bin/**
+
+# OS files
+nul
 
 # OS files
 nul
