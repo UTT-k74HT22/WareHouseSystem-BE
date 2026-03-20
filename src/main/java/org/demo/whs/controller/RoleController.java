@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
+import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.service.RoleService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -49,12 +50,14 @@ public class RoleController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
+            @RequestParam(required = false) Boolean isDefault,
+            @RequestParam(required = false) String search,
 
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
 
-        PageResponse<RoleResponse> response = roleService.getRoles(pageable);
+        PageResponse<RoleResponse> response = roleService.getRoles(isDefault, search, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
     }

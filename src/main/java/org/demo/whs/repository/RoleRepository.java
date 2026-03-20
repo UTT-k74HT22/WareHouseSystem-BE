@@ -3,6 +3,7 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,7 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RoleRepository extends JpaRepository<Role, String> {
+public interface RoleRepository extends JpaRepository<Role, String>,
+        JpaSpecificationExecutor<Role> {
 
     /**
      * Find all role names for a given username.
@@ -49,4 +51,20 @@ public interface RoleRepository extends JpaRepository<Role, String> {
     Optional<Role> findByName(RoleType name);
 
     boolean existsByName(RoleType name);
+
+    @Query("""
+    SELECT rp.id.roleId, COUNT(rp.id.permissionId)
+    FROM RoleHasPermission rp
+    WHERE rp.id.roleId IN :roleIds
+    GROUP BY rp.id.roleId
+""")
+    List<Object[]> countPermissionsByRoleIds(List<String> roleIds);
+
+    @Query("""
+    SELECT ar.id.roleId, COUNT(ar.id.accountId)
+    FROM AccountHasRole ar
+    WHERE ar.id.roleId IN :roleIds
+    GROUP BY ar.id.roleId
+""")
+    List<Object[]> countUsersByRoleIds(List<String> roleIds);
 }

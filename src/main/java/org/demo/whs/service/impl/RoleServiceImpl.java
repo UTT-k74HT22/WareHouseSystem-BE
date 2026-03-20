@@ -2,6 +2,7 @@ package org.demo.whs.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
 import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
@@ -10,12 +11,17 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.repository.specification.RoleSpecification;
 import org.demo.whs.service.RoleService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -23,6 +29,7 @@ import java.util.List;
 public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
+    private final RoleMapper roleMapper;
 
     @Override
     public RoleResponse createRole(CreateRoleRequest request) {
@@ -30,8 +37,46 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public PageResponse<RoleResponse> getRoles(Pageable pageable) {
-        return null;
+    public PageResponse<RoleResponse> getRoles(Boolean isDefault, String search, Pageable pageable) {
+
+        Page<Role> rolePage = roleRepository.findAll(
+                RoleSpecification.filter(isDefault, search),
+                pageable
+        );
+
+        List<Role> roles = rolePage.getContent();
+
+        if(roles.isEmpty()) {
+            return PageResponse.from(rolePage.map(roleMapper::toResponse));
+        }
+
+        List<String> roleIds = roles.stream()
+                .map(Role::getId)
+                .toList();
+
+        var permissionCountMap = mapToCountMap(
+                roleRepository.countPermissionsByRoleIds(roleIds)
+        );
+
+        var userCountMap = mapToCountMap(
+                roleRepository.countUsersByRoleIds(roleIds)
+        );
+
+        Page<RoleResponse> responsePage = rolePage.map(role -> {
+            RoleResponse res = roleMapper.toResponse(role);
+
+            res.setPermissionCount(
+                    permissionCountMap.getOrDefault(role.getId(), 0L)
+            );
+
+            res.setUserCount(
+                    userCountMap.getOrDefault(role.getId(), 0L)
+            );
+
+            return res;
+        });
+
+        return PageResponse.from(responsePage);
     }
 
     @Override
@@ -47,6 +92,14 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void deleteRole(String id) {
 
+    }
+
+    private Map<String, Long> mapToCountMap(List<Object[]> data) {
+        return data.stream()
+                .collect(Collectors.toMap(
+                        obj -> (String) obj[0],
+                        obj -> ((Number) obj[1]).longValue()
+                ));
     }
 
 }

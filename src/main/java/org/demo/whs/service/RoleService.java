@@ -23,7 +23,7 @@ public interface RoleService {
      * @param pageable pagination information
      * @return paginated list of roles
      */
-    PageResponse<RoleResponse> getRoles(Pageable pageable);
+    PageResponse<RoleResponse> getRoles(Boolean isDefault, String search, Pageable pageable);
 
     /**
      * Get a role by its ID.
