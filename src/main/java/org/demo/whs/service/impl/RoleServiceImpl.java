@@ -5,12 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
 import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
-import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
-import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
-import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
-import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.specification.RoleSpecification;
@@ -23,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link RoleService}.
+ * This service handles business logic related to {@link Role}:
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -31,11 +31,23 @@ public class RoleServiceImpl implements RoleService {
     private final RoleRepository roleRepository;
     private final RoleMapper roleMapper;
 
+    /**
+     * Create a new role.
+     *
+     * @param request request payload containing role data
+     * @return created role response
+     */
     @Override
     public RoleResponse createRole(CreateRoleRequest request) {
         return null;
     }
 
+    /**
+     * Get roles with pagination.
+     *
+     * @param pageable pagination information
+     * @return paginated list of roles
+     */
     @Override
     public PageResponse<RoleResponse> getRoles(Boolean isDefault, String search, Pageable pageable) {
 
@@ -46,7 +58,7 @@ public class RoleServiceImpl implements RoleService {
 
         List<Role> roles = rolePage.getContent();
 
-        if(roles.isEmpty()) {
+        if (roles.isEmpty()) {
             return PageResponse.from(rolePage.map(roleMapper::toResponse));
         }
 
@@ -94,6 +106,12 @@ public class RoleServiceImpl implements RoleService {
 
     }
 
+    /**
+     * Convert raw aggregation query result into a Map.
+     *
+     * @param data list of Object arrays returned from repository
+     * @return map of roleId to count
+     */
     private Map<String, Long> mapToCountMap(List<Object[]> data) {
         return data.stream()
                 .collect(Collectors.toMap(
@@ -101,5 +119,4 @@ public class RoleServiceImpl implements RoleService {
                         obj -> ((Number) obj[1]).longValue()
                 ));
     }
-
 }
