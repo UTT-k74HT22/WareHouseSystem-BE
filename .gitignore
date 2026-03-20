@@ -1,5 +1,9 @@
 # Git Ignore File
 
+# Build artifacts
+target/
+bin/
+
 # Environment variables
 .env
 
