@@ -292,6 +292,7 @@ class InventoryControllerTest {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
                 .salesOrderLineId("OL-1")
                 .warehouseId("wh-1")
+                .productId("prod-1")
                 .quantity(new BigDecimal("10.00"))
                 .build();
 

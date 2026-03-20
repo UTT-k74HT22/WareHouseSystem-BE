@@ -218,6 +218,7 @@ class InventoryServiceImplTest {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
                 .salesOrderLineId("OL-1")
                 .warehouseId("wh-1")
+                .productId(productId)
                 .quantity(qty)
                 .build();
 
