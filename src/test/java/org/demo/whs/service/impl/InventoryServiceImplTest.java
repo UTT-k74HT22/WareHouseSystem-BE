@@ -65,6 +65,9 @@ class InventoryServiceImplTest {
     @Mock
     private org.redisson.api.RLock lock;
 
+    @Mock
+    private SalesOrderLinesRepository salesOrderLinesRepository;
+
     @InjectMocks
     private InventoryServiceImpl inventoryService;
 
@@ -98,8 +101,12 @@ class InventoryServiceImplTest {
         Products product = new Products(); product.setId(productId);
         Warehouses warehouse = new Warehouses(); warehouse.setId(warehouseId);
         Inventory inventory = Inventory.builder()
-                .id("inv-1").productId(productId).warehouseId(warehouseId)
-                .onHandQuantity(new BigDecimal("50.00")).reservedQuantity(BigDecimal.ZERO).build();
+                .id("inv-1")
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .onHandQuantity(new BigDecimal("50.00"))
+                .reservedQuantity(BigDecimal.ZERO)
+                .build();
 
         when(productRepository.findById(anyString())).thenReturn(Optional.of(product));
         when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(warehouse));
@@ -199,16 +206,24 @@ class InventoryServiceImplTest {
 
     @Test
     @DisplayName("reserve_shouldSucceed_AndRecordMovement")
-    void reserve_shouldSucceed() {
+    void reserve_shouldSucceed() throws InterruptedException {
+        setupLock();
         String productId = "prod-1"; BigDecimal qty = BigDecimal.TEN;
-        InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .productId(productId).warehouseId("wh-1").orderLineId("OL-1").quantity(qty).build();
-
         Inventory inventory = Inventory.builder().id("inv-1").productId(productId).warehouseId("wh-1")
                 .onHandQuantity(new BigDecimal("100")).reservedQuantity(new BigDecimal("10")).build();
 
+        SalesOrderLines orderLine = new SalesOrderLines();
+        orderLine.setProductId(productId);
+
+        InventoryReserveRequest request = InventoryReserveRequest.builder()
+                .salesOrderLineId("OL-1")
+                .warehouseId("wh-1")
+                .quantity(qty)
+                .build();
+
+        when(salesOrderLinesRepository.findById("OL-1")).thenReturn(Optional.of(orderLine));
         when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.empty());
-        when(inventoryRepository.findBestSuitableForUpdate(any(), any(), any(), any(), any())).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.findBestSuitableForUpdate(eq(productId), any(), any(), any(), any())).thenReturn(Optional.of(inventory));
         when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new StockMovements());
 
@@ -223,13 +238,16 @@ class InventoryServiceImplTest {
     @Test
     @DisplayName("unreserve_shouldSucceed_AndDeleteLedger_WhenZero")
     void unreserve_shouldSucceed() {
-        InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
-                .productId("p1").warehouseId("w1").orderLineId("OL-1").quantity(BigDecimal.TEN).build();
 
         InventoryReservation res = InventoryReservation.builder().id("r1").inventoryId("inv-1")
                 .productId("p1").warehouseId("w1").quantity(BigDecimal.TEN).status(InventoryReservationStatus.RESERVED).build();
 
         Inventory inv = Inventory.builder().id("inv-1").reservedQuantity(BigDecimal.TEN).onHandQuantity(new BigDecimal("100")).build();
+
+        InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                .orderLineId("OL-1")
+                .quantity(BigDecimal.TEN)
+                .build();
 
         when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(res));
         when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inv));
