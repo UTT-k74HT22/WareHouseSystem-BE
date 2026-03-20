@@ -202,6 +202,11 @@ public class InventoryServiceImpl implements InventoryService {
         }
         SalesOrderLines orderLine = salesOrderLinesRepository.findById(request.getSalesOrderLineId()).orElseThrow(() -> new NotFoundException(ErrorCode.ORDER_001));
 
+        if (!orderLine.getProductId().equals(request.getProductId())) {
+            log.error("Product ID mismatch: request={}, line={}", request.getProductId(), orderLine.getProductId());
+            throw new BadRequestException("Product ID mismatch between request and order line", ErrorCode.COM_001);
+        }
+
         String lockKey = "lock:reserve:" + request.getSalesOrderLineId();
         RLock lock = redissonClient.getLock(lockKey);
 
