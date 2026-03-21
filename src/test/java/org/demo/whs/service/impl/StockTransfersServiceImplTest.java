@@ -165,8 +165,34 @@ class StockTransfersServiceImplTest {
     }
 
     @Test
-    void should_CompleteTransferAndCreateTwoMovements_When_TransferDraftAndStockAvailable() {
-        StockTransfers transfer = buildDraftTransfer("trf-2", "loc-1", "loc-2", "20.00");
+    void should_SubmitTransfer_When_StatusIsDraft() {
+        StockTransfers transfer = buildDraftTransfer("trf-submit-1", "loc-1", "loc-2", "10.00");
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-submit-1")).thenReturn(Optional.of(transfer));
+        when(stockTransfersRepository.save(any(StockTransfers.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        StockTransfersResponse response = stockTransfersService.submit("trf-submit-1");
+
+        assertThat(response.getStatus()).isEqualTo(StockTransfersStatus.PENDING);
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_SubmitTransferInInvalidStatus() {
+        StockTransfers transfer = StockTransfers.builder()
+                .status(StockTransfersStatus.PENDING)
+                .build();
+        transfer.setId("trf-submit-2");
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-submit-2")).thenReturn(Optional.of(transfer));
+
+        assertThatThrownBy(() -> stockTransfersService.submit("trf-submit-2"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "STF_002");
+    }
+
+    @Test
+    void should_CompleteTransferAndCreateTwoMovements_When_TransferPendingAndStockAvailable() {
+        StockTransfers transfer = buildPendingTransfer("trf-2", "loc-1", "loc-2", "20.00");
         mockActiveTransferDimensions(transfer);
 
         Inventory sourceInventory = buildInventory("loc-1", "100.00", "10.00");
@@ -204,7 +230,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithInsufficientAvailableStock() {
-        StockTransfers transfer = buildDraftTransfer("trf-3", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-3", "loc-1", "loc-2", "10.00");
         mockActiveTransferDimensions(transfer);
 
         Inventory sourceInventory = buildInventory("loc-1", "15.00", "10.00");
@@ -224,7 +250,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithQuarantineReducingAvailableStock() {
-        StockTransfers transfer = buildDraftTransfer("trf-quarantine", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-quarantine", "loc-1", "loc-2", "10.00");
         mockActiveTransferDimensions(transfer);
 
         Inventory sourceInventory = buildInventory("loc-1", "15.00", "0.00");
@@ -245,7 +271,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithNonPositiveQuantity() {
-        StockTransfers transfer = buildDraftTransfer("trf-qty", "loc-1", "loc-2", "0.00");
+        StockTransfers transfer = buildPendingTransfer("trf-qty", "loc-1", "loc-2", "0.00");
         mockActiveTransferDimensions(transfer);
 
         when(stockTransfersRepository.findByIdForUpdate("trf-qty")).thenReturn(Optional.of(transfer));
@@ -274,6 +300,36 @@ class StockTransfersServiceImplTest {
     }
 
     @Test
+    void should_CancelPendingTransfer_When_StatusIsPending() {
+        StockTransfers transfer = StockTransfers.builder()
+                .status(StockTransfersStatus.PENDING)
+                .build();
+        transfer.setId("trf-cancel-pending");
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-cancel-pending")).thenReturn(Optional.of(transfer));
+        when(stockTransfersRepository.save(any(StockTransfers.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        StockTransfersResponse response = stockTransfersService.cancel("trf-cancel-pending");
+
+        assertThat(response.getStatus()).isEqualTo(StockTransfersStatus.CANCELLED);
+        verify(stockMovementsRepository, never()).save(any(StockMovements.class));
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_CancelTransferInInvalidStatus() {
+        StockTransfers transfer = StockTransfers.builder()
+                .status(StockTransfersStatus.COMPLETED)
+                .build();
+        transfer.setId("trf-cancel-invalid");
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-cancel-invalid")).thenReturn(Optional.of(transfer));
+
+        assertThatThrownBy(() -> stockTransfersService.cancel("trf-cancel-invalid"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "STF_002");
+    }
+
+    @Test
     void should_ThrowBadRequest_When_CompleteTransferInInvalidStatus() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.COMPLETED)
@@ -289,7 +345,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_CreateDestinationInventory_When_DestinationInventoryMissingAndSortedFirst() {
-        StockTransfers transfer = buildDraftTransfer("trf-6", "loc-2", "loc-1", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-6", "loc-2", "loc-1", "10.00");
         mockActiveTransferDimensions(transfer);
 
         Inventory sourceInventory = buildInventory("loc-2", "50.00", "5.00");
@@ -317,7 +373,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ReloadDestinationInventory_When_ConcurrentCreationOccurs() {
-        StockTransfers transfer = buildDraftTransfer("trf-7", "loc-2", "loc-1", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-7", "loc-2", "loc-1", "10.00");
         mockActiveTransferDimensions(transfer);
 
         Inventory sourceInventory = buildInventory("loc-2", "60.00", "5.00");
@@ -343,7 +399,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowNotFound_When_SourceInventoryMissing() {
-        StockTransfers transfer = buildDraftTransfer("trf-8", "loc-2", "loc-1", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-8", "loc-2", "loc-1", "10.00");
         mockActiveTransferDimensions(transfer);
 
         when(stockTransfersRepository.findByIdForUpdate("trf-8")).thenReturn(Optional.of(transfer));
@@ -494,7 +550,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithLocationsInDifferentWarehouses() {
-        StockTransfers transfer = buildDraftTransfer("trf-cross-wh", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-cross-wh", "loc-1", "loc-2", "10.00");
 
         Locations source = buildLocation("loc-1", "wh-1", LocationStatus.ACTIVE, LocationType.STORAGE);
         Locations destination = buildLocation("loc-2", "wh-2", LocationStatus.ACTIVE, LocationType.STORAGE);
@@ -669,7 +725,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithInactiveSourceLocation() {
-        StockTransfers transfer = buildDraftTransfer("trf-9", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-9", "loc-1", "loc-2", "10.00");
         Locations source = buildLocation("loc-1", "wh-1", LocationStatus.INACTIVE, LocationType.STORAGE);
         Locations destination = buildLocation("loc-2", "wh-1", LocationStatus.ACTIVE, LocationType.STORAGE);
 
@@ -687,7 +743,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithInvalidDestinationLocationType() {
-        StockTransfers transfer = buildDraftTransfer("trf-10", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-10", "loc-1", "loc-2", "10.00");
         Locations source = buildLocation("loc-1", "wh-1", LocationStatus.ACTIVE, LocationType.STORAGE);
         Locations destination = buildLocation("loc-2", "wh-1", LocationStatus.ACTIVE, LocationType.RETURN);
 
@@ -705,7 +761,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithQuarantinedBatch() {
-        StockTransfers transfer = buildDraftTransfer("trf-11", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-11", "loc-1", "loc-2", "10.00");
         mockTransferLocationsForCompletion(transfer);
 
         Batch batch = Batch.builder()
@@ -727,7 +783,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_CompleteTransferWithExpiredBatch() {
-        StockTransfers transfer = buildDraftTransfer("trf-12", "loc-1", "loc-2", "10.00");
+        StockTransfers transfer = buildPendingTransfer("trf-12", "loc-1", "loc-2", "10.00");
         mockTransferLocationsForCompletion(transfer);
 
         Batch batch = Batch.builder()
@@ -771,6 +827,23 @@ class StockTransfersServiceImplTest {
                 .quantity(new BigDecimal(quantity))
                 .reason(StockTransfersReason.REORG)
                 .status(StockTransfersStatus.DRAFT)
+                .build();
+        transfer.setId(id);
+        transfer.setCreatedAt(LocalDateTime.now());
+        return transfer;
+    }
+
+    private StockTransfers buildPendingTransfer(String id, String fromLocationId, String toLocationId, String quantity) {
+        StockTransfers transfer = StockTransfers.builder()
+                .transferNumber("TRF-" + id)
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .fromLocationId(fromLocationId)
+                .toLocationId(toLocationId)
+                .batchId("batch-1")
+                .quantity(new BigDecimal(quantity))
+                .reason(StockTransfersReason.REORG)
+                .status(StockTransfersStatus.PENDING)
                 .build();
         transfer.setId(id);
         transfer.setCreatedAt(LocalDateTime.now());

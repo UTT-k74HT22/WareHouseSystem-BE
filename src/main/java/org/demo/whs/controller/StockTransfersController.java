@@ -60,6 +60,19 @@ public class StockTransfersController {
     }
 
     /**
+     * Endpoint to submit a stock transfer for approval.
+     *
+     * @param id the ID of the stock transfer to submit
+     * @return a response entity containing the updated stock transfer response after submission
+     */
+    @PutMapping("/{id}/submit")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BaseResponse<StockTransfersResponse>> submitTransfer(@PathVariable String id) {
+        StockTransfersResponse response = stockTransfersService.submit(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
      * Endpoint to retrieve a paginated list of all stock transfers.
      *
      * @param page the page number for pagination
