@@ -3,12 +3,18 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Role;
+import org.demo.whs.entity.Permission;
+import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
 import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.mapper.RoleMapper;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.service.RoleService;
@@ -65,9 +71,19 @@ public class RoleServiceImpl implements RoleService {
         return null;
     }
 
+    /**
+     * Lấy chi tiết Role + Permissions
+     * @param roleId = Role.id trong bảng roles
+     */
     @Override
-    public RoleResponse getRoleById(String id) {
-        return null;
+    public RoleResponse getRoleById(String roleId) {
+
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        List<Permission> permissions = roleRepository.findPermissionsByRoleId(roleId);
+
+        return roleMapper.toResponseWithPermissions(role, permissions);
     }
 
     @Override

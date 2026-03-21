@@ -20,33 +20,6 @@ import java.util.Map;
 public class InventoryMapper {
 
     /**
-     * Entity → Reserve Response
-     */
-    public InventoryReserveResponse toReserveResponse(
-            Inventory inventory,
-            String orderLineId,
-            String status
-    ) {
-        if (inventory == null) {
-            return null;
-        }
-
-        return InventoryReserveResponse.builder()
-                .inventoryId(inventory.getId())
-                .productId(inventory.getProductId())
-                .warehouseId(inventory.getWarehouseId())
-                .locationId(inventory.getLocationId())
-                .batchId(inventory.getBatchId())
-                .reservedQuantity(inventory.getReservedQuantity())
-                .onHandQuantity(inventory.getOnHandQuantity())
-                .availableQuantity(inventory.getAvailableQuantity())
-                .orderLineId(orderLineId)
-                .status(status)
-                .reservedAt(LocalDateTime.now())
-                .build();
-    }
-
-    /**
      * Reservation Entity → Reserve Response
      */
     public InventoryReserveResponse toReserveResponse(
@@ -104,9 +77,9 @@ public class InventoryMapper {
                 .batchId(inventory.getBatchId())
                 .batchNumber(batch != null ? batch.getBatchNumber() : null)
 
-                .onHandQuantity(inventory.getOnHandQuantity())
-                .reservedQuantity(inventory.getReservedQuantity())
-                .availableQuantity(inventory.getAvailableQuantity())
+                .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
+                .reservedQuantity(inventory != null ? inventory.getReservedQuantity() : null)
+                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
 
                 .lastMovementAt(inventory.getLastMovementAt())
                 .createdAt(inventory.getCreatedAt())
@@ -157,14 +130,12 @@ public class InventoryMapper {
                 .productId(inventory.getProductId())
                 .productSku(product != null ? product.getSku() : null)
                 .productName(product != null ? product.getName() : null)
-
                 .batchId(inventory.getBatchId())
                 .batchNumber(batch != null ? batch.getBatchNumber() : null)
-
-                .onHandQuantity(inventory.getOnHandQuantity())
-                .reservedQuantity(inventory.getReservedQuantity())
-                .availableQuantity(inventory.getAvailableQuantity())
-
+                .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
+                .reservedQuantity(inventory != null ? inventory.getReservedQuantity() : null)
+                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
+                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
                 .build();
     }
 

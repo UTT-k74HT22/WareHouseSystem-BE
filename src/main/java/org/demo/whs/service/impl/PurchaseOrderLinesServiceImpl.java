@@ -80,8 +80,12 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
         line.setQuantityReceived(BigDecimal.ZERO);
         line.setLineTotal(calculateLineTotal(request.getQuantityOrdered(), request.getUnitPrice()));
 
-        //Step 6: Return the created line as a response
-        return purchaseOrderLinesMapper.toResponse(purchaseOrderLinesRepository.save(line));
+        PurchaseOrderLines savedLine = purchaseOrderLinesRepository.save(line);
+        
+        // Step 6: Recalculate and update parent PO
+        recalculateAndSavePurchaseOrder(po);
+
+        return purchaseOrderLinesMapper.toResponse(savedLine);
     }
 
     @Override
@@ -89,11 +93,16 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
     public PurchaseOrderLinesResponse update(String id, UpdatePurchaseOrderLinesRequest request) {
         log.info("Update purchase order line, id={}", id);
 
-        //Step 1: Fetch the existing line with a lock and validate the parent purchase order is in DRAFT status
+        //Step 1: Fetch the existing line with a lock
         PurchaseOrderLines line = getLockedOrderLine(id);
 
-        //Step 2: If the product is changing, validate the new product exists and is ACTIVE, and check for duplicates
-        getDraftPurchaseOrder(line.getPurchaseOrderId());
+        //Step 2: Validate the parent purchase order is in DRAFT status and verify ownership
+        PurchaseOrders po = getDraftPurchaseOrder(line.getPurchaseOrderId());
+        
+        // Ownership check
+        if (!po.getId().equals(line.getPurchaseOrderId())) {
+            throw new BadRequestException("Purchase order line does not belong to this purchase order", ErrorCode.COM_001);
+        }
 
         // Only validate product and duplicates if the update request includes a different productId than the existing line
         if (isProductChanging(request, line)) {
@@ -108,8 +117,11 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
         // Recalculate line total after any changes to quantity or unit price
         line.setLineTotal(calculateLineTotal(line.getQuantityOrdered(), line.getUnitPrice()));
 
-        //Step 4: Return the updated line as a response
         purchaseOrderLinesRepository.save(line);
+
+        // Step 4: Recalculate and update parent PO
+        recalculateAndSavePurchaseOrder(po);
+
         return purchaseOrderLinesMapper.toResponse(line);
     }
 
@@ -119,8 +131,29 @@ public class PurchaseOrderLinesServiceImpl implements PurchaseOrderLinesService 
         log.info("Delete purchase order line, id={}", id);
 
         PurchaseOrderLines line = getLockedOrderLine(id);
-        getDraftPurchaseOrder(line.getPurchaseOrderId());
+        PurchaseOrders po = getDraftPurchaseOrder(line.getPurchaseOrderId());
+        
+        // Ownership check
+        if (!po.getId().equals(line.getPurchaseOrderId())) {
+            throw new BadRequestException("Purchase order line does not belong to this purchase order", ErrorCode.COM_001);
+        }
+
         purchaseOrderLinesRepository.delete(line);
+
+        // Recalculate and update parent PO
+        recalculateAndSavePurchaseOrder(po);
+    }
+
+    // Private helpers
+    private void recalculateAndSavePurchaseOrder(PurchaseOrders purchaseOrder) {
+        List<PurchaseOrderLines> lines = purchaseOrderLinesRepository.findByPurchaseOrderIdOrderByLineNumberAsc(purchaseOrder.getId());
+        BigDecimal subTotal = lines.stream()
+                .map(PurchaseOrderLines::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        purchaseOrder.setSubTotal(subTotal);
+        purchaseOrder.setTotalAmount(subTotal.add(purchaseOrder.getTaxAmount() != null ? purchaseOrder.getTaxAmount() : BigDecimal.ZERO));
+        purchaseOrdersRepository.save(purchaseOrder);
     }
 
     // Private helpers

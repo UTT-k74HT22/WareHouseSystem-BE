@@ -1,99 +1,99 @@
-# Module 4 - Inventory Operations Redesign (v2)
-## Scope: Inventory + Stock Adjustments + Stock Transfers + Stock Movements
+# Module 4 - Thiết kế lại Nghiệp vụ Tồn kho (v2)
+## Phạm vi: Tồn kho + Điều chỉnh tồn kho + Chuyển kho + Biến động tồn kho
 
 ---
 
-## 1) Document Information
+## 1) Thông tin Tài liệu
 
-| Property | Value |
+| Thuộc tính | Giá trị |
 |---|---|
-| Module | Inventory Management (Module 4) |
-| Version | 2.0 |
-| Date | 2026-03-04 |
-| Status | Proposed for implementation |
-| Author | BA + Backend Review |
-| Related Jira | WHS-19, WHS-20, WHS-21..24, WHS-25, WHS-87 |
-| Related GitHub | issue #49 |
-| Related Review Note | `BA_STOCK_MOVEMENT_AUDIT_DECISION.md` |
+| Module | Quản lý Tồn kho (Module 4) |
+| Phiên bản | 2.0 |
+| Ngày | 2026-03-04 |
+| Trạng thái | Đề xuất triển khai |
+| Tác giả | BA + Backend Review |
+| Jira liên quan | WHS-19, WHS-20, WHS-21..24, WHS-25, WHS-87 |
+| GitHub liên quan | issue #49 |
+| Ghi chú Review liên quan | `BA_STOCK_MOVEMENT_AUDIT_DECISION.md` |
 
 ---
 
-## 2) Why This Redesign
+## 2) Tại sao cần Thiết kế lại
 
-Current implementation and schema show consistency risks:
+Triển khai hiện tại và schema hiện tại cho thấy các rủi ro về tính nhất quán:
 
-1. `stock_adjustments` stores both `inventory_id` and duplicated dimension fields (`product_id`, `warehouse_id`, `location_id`, `batch_id`) without a strict DB mechanism to guarantee they always match.
-2. `inventory` unique key uses nullable columns and can allow duplicate logical rows in MySQL.
-3. `stock_adjustments` constraints are not enough for workflow rules (`APPROVED` metadata, reject reason, non-zero adjustment).
-4. Approval flow and inventory side effects are not fully modeled in the current service implementation.
-5. `stock_movements` entity/schema are not fully aligned (`warehouse_id` mismatch).
+1. `stock_adjustments` lưu trữ cả `inventory_id` và các trường dimension trùng lặp (`product_id`, `warehouse_id`, `location_id`, `batch_id`) mà không có cơ chế DB nghiêm ngặt để đảm bảo chúng luôn khớp.
+2. Khóa duy nhất của `inventory` sử dụng các cột nullable và có thể cho phép các dòng logic trùng lặp trong MySQL.
+3. Các ràng buộc của `stock_adjustments` không đủ cho các quy tắc workflow (metadata `APPROVED`, lý do từ chối, điều chỉnh khác không).
+4. Luồng phê duyệt và các tác động phụ lên inventory chưa được mô hình hóa đầy đủ trong service implementation hiện tại.
+5. Entity/schema `stock_movements` chưa được align đầy đủ (`warehouse_id` không khớp).
 
-This document defines a target-state design to fix these gaps.
-
----
-
-## 3) Design Principles
-
-1. Single source of truth for stock dimension: `inventory` row.
-2. Document tables (`stock_adjustments`, `stock_transfers`) are business transactions, not secondary inventory truth.
-3. Every stock-changing operation writes to `stock_movements` in the same transaction.
-4. No negative stock. `reserved_quantity <= on_hand_quantity` always.
-5. Clear state transitions with explicit approval/rejection metadata.
+Tài liệu này định nghĩa thiết kế trạng thái mục tiêu để khắc phục các khoảng trống này.
 
 ---
 
-## 4) Canonical Data Model
+## 3) Nguyên tắc Thiết kế
 
-## 4.1 Core tables and role
+1. Nguồn duy nhất cho stock dimension: dòng `inventory`.
+2. Bảng tài liệu (`stock_adjustments`, `stock_transfers`) là giao dịch kinh doanh, không phải nguồn thứ cấp cho inventory.
+3. Mọi thao tác thay đổi stock đều ghi vào `stock_movements` trong cùng một giao dịch.
+4. Không có stock âm. `reserved_quantity <= on_hand_quantity` luôn luôn đúng.
+5. Các chuyển đổi trạng thái rõ ràng với metadata phê duyệt/từ chối rõ ràng.
 
-1. `inventory`: current stock snapshot (source of truth).
-2. `stock_adjustments`: business document for correction requests and approvals.
-3. `stock_transfers`: business document for movement between locations.
-4. `stock_movements`: immutable audit trail for all stock changes.
+---
 
-## 4.2 Relationship map
+## 4) Mô hình Dữ liệu Chuẩn
+
+### 4.1 Bảng cốt lõi và vai trò
+
+1. `inventory`: snapshot tồn kho hiện tại (nguồn thực thật).
+2. `stock_adjustments`: tài liệu kinh doanh cho yêu cầu điều chỉnh và phê duyệt.
+3. `stock_transfers`: tài liệu kinh doanh cho việc di chuyển giữa các vị trí.
+4. `stock_movements`: audit trail bất biến cho tất cả các thay đổi tồn kho.
+
+### 4.2 Bản đồ quan hệ
 
 ```mermaid
 erDiagram
-    PRODUCTS ||--o{ INVENTORY : "has stock"
-    WAREHOUSES ||--o{ INVENTORY : "contains"
-    LOCATIONS ||--o{ INVENTORY : "stores"
-    BATCHES ||--o{ INVENTORY : "optional batch"
+    PRODUCTS ||--o{ INVENTORY : "có tồn kho"
+    WAREHOUSES ||--o{ INVENTORY : "chứa"
+    LOCATIONS ||--o{ INVENTORY : "lưu trữ"
+    BATCHES ||--o{ INVENTORY : "lô tùy chọn"
 
-    INVENTORY ||--o{ STOCK_ADJUSTMENTS : "adjusted by"
-    STOCK_ADJUSTMENTS ||--o{ STOCK_MOVEMENTS : "creates"
+    INVENTORY ||--o{ STOCK_ADJUSTMENTS : "được điều chỉnh bởi"
+    STOCK_ADJUSTMENTS ||--o{ STOCK_MOVEMENTS : "tạo"
 
-    INVENTORY ||--o{ STOCK_TRANSFERS : "source/target"
-    STOCK_TRANSFERS ||--o{ STOCK_MOVEMENTS : "creates two rows"
+    INVENTORY ||--o{ STOCK_TRANSFERS : "nguồn/đích"
+    STOCK_TRANSFERS ||--o{ STOCK_MOVEMENTS : "tạo hai dòng"
 ```
 
 ---
 
-## 5) Schema Target (Business-first)
+## 5) Schema Mục tiêu (Ưu tiên Kinh doanh)
 
-## 5.1 inventory
+### 5.1 inventory
 
-Required constraints:
+Các ràng buộc bắt buộc:
 
-1. Non-negative quantities.
+1. Số lượng không âm.
 2. `reserved_quantity <= on_hand_quantity`.
-3. Unique logical dimension key.
+3. Khóa dimension logic duy nhất.
 
-Recommended practical approach:
+Phương pháp thực tế được khuyến nghị:
 
-1. Keep `location_id` mandatory for operational rows.
-2. For nullable `batch_id`, apply null-normalization strategy before unique indexing (DB-specific implementation in migration).
-3. Add optimistic lock (`@Version`) alignment in entity.
+1. Giữ `location_id` bắt buộc cho các dòng vận hành.
+2. Cho `batch_id` nullable, áp dụng chiến lược null-normalization trước khi index duy nhất (implementation cụ thể trong migration).
+3. Thêm optimistic lock (`@Version`) alignment trong entity.
 
-## 5.2 stock_adjustments
+### 5.2 stock_adjustments
 
-Recommended shape:
+Hình dạng được khuyến nghị:
 
-1. Keep `inventory_id` as required reference.
-2. Remove duplicated dimension fields OR keep them as explicit `snapshot_*` fields.
-3. Keep `quantity_before`, `quantity_after`, `adjustment_quantity`, `reason`, `status`, audit fields.
+1. Giữ `inventory_id` như tham chiếu bắt buộc.
+2. Xóa các trường dimension trùng lặp HOẶC giữ chúng như các trường `snapshot_*` rõ ràng.
+3. Giữ `quantity_before`, `quantity_after`, `adjustment_quantity`, `reason`, `status`, các trường audit.
 
-Required constraints:
+Các ràng buộc bắt buộc:
 
 1. `quantity_before >= 0`
 2. `quantity_after >= 0`
@@ -102,81 +102,81 @@ Required constraints:
 5. `status = APPROVED => approved_by IS NOT NULL AND approved_at IS NOT NULL`
 6. `status = REJECTED => rejection_reason IS NOT NULL`
 
-## 5.3 stock_transfers
+### 5.3 stock_transfers
 
-Recommended shape:
+Hình dạng được khuyến nghị:
 
-1. Keep document header fields.
-2. Ensure source and destination location are different.
-3. Ensure source and destination belong to the same warehouse for intra-warehouse transfer.
+1. Giữ các trường header của tài liệu.
+2. Đảm bảo vị trí nguồn và đích khác nhau.
+3. Đảm bảo nguồn và đích thuộc cùng kho cho chuyển kho nội bộ.
 
-Option A (recommended):
+Phương án A (được khuyến nghị):
 
-1. Use source and destination inventory references (`from_inventory_id`, `to_inventory_id`) to reduce ambiguity.
+1. Sử dụng các tham chiếu inventory nguồn và đích (`from_inventory_id`, `to_inventory_id`) để giảm ambiguosity.
 
-Option B:
+Phương án B:
 
-1. Keep current columns but enforce cross-table validation in service and optional DB-level checks where feasible.
+1. Giữ các cột hiện tại nhưng enforce cross-table validation trong service và optional DB-level checks nếu khả thi.
 
-## 5.4 stock_movements
+### 5.4 stock_movements
 
-Required:
+Bắt buộc:
 
-1. Insert-only table.
-2. Must include `warehouse_id`, `product_id`, `location_id` (nullable if business allows), optional `batch_id`.
+1. Bảng insert-only.
+2. Phải bao gồm `warehouse_id`, `product_id`, `location_id` (nullable nếu business cho phép), optional `batch_id`.
 3. `quantity_after = quantity_before + quantity_change`.
 4. `quantity_before >= 0`, `quantity_after >= 0`.
 
 ---
 
-## 6) API Topology (Target-state)
+## 6) Topology API (Trạng thái Mục tiêu)
 
-## 6.1 Inventory APIs
+### 6.1 Inventory APIs
 
-| Method | Endpoint | Purpose | Stock side effect | Transaction |
+| Method | Endpoint | Mục đích | Tác động lên Stock | Giao dịch |
 |---|---|---|---|---|
-| GET | `/api/v1/inventories` | list inventory with filters | No | Read-only |
-| GET | `/api/v1/inventories/summary/{productId}` | aggregate by product | No | Read-only |
-| GET | `/api/v1/inventories/by-location` | aggregate by location | No | Read-only |
-| POST | `/api/v1/inventories/check-availability` | availability check | No | Read-only |
-| POST | `/api/v1/inventories/reserve` | reserve stock | Yes (`reserved`) | Required |
-| POST | `/api/v1/inventories/unreserve` | release reservation | Yes (`reserved`) | Required |
-| POST | `/api/v1/inventories/increase` | increase on-hand | Yes (`on_hand`) | Required |
-| POST | `/api/v1/inventories/decrease` | decrease on-hand | Yes (`on_hand`) | Required |
+| GET | `/api/v1/inventories` | danh sách tồn kho với bộ lọc | Không | Chỉ đọc |
+| GET | `/api/v1/inventories/summary/{productId}` | tổng hợp theo sản phẩm | Không | Chỉ đọc |
+| GET | `/api/v1/inventories/by-location` | tổng hợp theo vị trí | Không | Chỉ đọc |
+| POST | `/api/v1/inventories/check-availability` | kiểm tra khả dụng | Không | Chỉ đọc |
+| POST | `/api/v1/inventories/reserve` | đặt trước tồn kho | Có (`reserved`) | Bắt buộc |
+| POST | `/api/v1/inventories/unreserve` | giải phóng đặt trước | Có (`reserved`) | Bắt buộc |
+| POST | `/api/v1/inventories/increase` | tăng tồn kho thực tế | Có (`on_hand`) | Bắt buộc |
+| POST | `/api/v1/inventories/decrease` | giảm tồn kho thực tế | Có (`on_hand`) | Bắt buộc |
 
-## 6.2 Stock Adjustment APIs
+### 6.2 Stock Adjustment APIs
 
-| Method | Endpoint | Purpose | Stock side effect |
+| Method | Endpoint | Mục đích | Tác động lên Stock |
 |---|---|---|---|
-| POST | `/api/v1/stock-adjustments` | create adjustment request | only if auto-approved |
-| GET | `/api/v1/stock-adjustments` | list requests | No |
-| GET | `/api/v1/stock-adjustments/{id}` | detail | No |
-| PUT | `/api/v1/stock-adjustments/{id}/approve` | approve pending adjustment | Yes |
-| PUT | `/api/v1/stock-adjustments/{id}/reject` | reject pending adjustment | No |
+| POST | `/api/v1/stock-adjustments` | tạo yêu cầu điều chỉnh | chỉ nếu auto-approved |
+| GET | `/api/v1/stock-adjustments` | danh sách yêu cầu | Không |
+| GET | `/api/v1/stock-adjustments/{id}` | chi tiết | Không |
+| PUT | `/api/v1/stock-adjustments/{id}/approve` | phê duyệt điều chỉnh đang chờ | Có |
+| PUT | `/api/v1/stock-adjustments/{id}/reject` | từ chối điều chỉnh đang chờ | Không |
 
-## 6.3 Stock Transfer APIs
+### 6.3 Stock Transfer APIs
 
-| Method | Endpoint | Purpose | Stock side effect |
+| Method | Endpoint | Mục đích | Tác động lên Stock |
 |---|---|---|---|
-| POST | `/api/v1/stock-transfers` | create transfer document | optional (if immediate) |
-| GET | `/api/v1/stock-transfers` | list transfers | No |
-| GET | `/api/v1/stock-transfers/{id}` | detail | No |
-| PUT | `/api/v1/stock-transfers/{id}/complete` | execute transfer | Yes |
-| PUT | `/api/v1/stock-transfers/{id}/cancel` | cancel draft transfer | No |
+| POST | `/api/v1/stock-transfers` | tạo tài liệu chuyển kho | tùy chọn (nếu immediately) |
+| GET | `/api/v1/stock-transfers` | danh sách chuyển kho | Không |
+| GET | `/api/v1/stock-transfers/{id}` | chi tiết | Không |
+| PUT | `/api/v1/stock-transfers/{id}/complete` | thực hiện chuyển kho | Có |
+| PUT | `/api/v1/stock-transfers/{id}/cancel` | hủy bản nháp chuyển kho | Không |
 
-## 6.4 Stock Movement APIs
+### 6.4 Stock Movement APIs
 
-| Method | Endpoint | Purpose |
+| Method | Endpoint | Mục đích |
 |---|---|---|
-| GET | `/api/v1/stock-movements` | list movement history |
-| GET | `/api/v1/stock-movements/{id}` | movement detail |
-| GET | `/api/v1/stock-movements/reference/{referenceType}/{referenceId}` | movement by business document |
+| GET | `/api/v1/stock-movements` | danh sách lịch sử biến động |
+| GET | `/api/v1/stock-movements/{id}` | chi tiết biến động |
+| GET | `/api/v1/stock-movements/reference/{referenceType}/{referenceId}` | biến động theo tài liệu kinh doanh |
 
 ---
 
-## 7) Key API Contracts (Detailed)
+## 7) Hợp đồng API Chính (Chi tiết)
 
-## 7.1 POST /api/v1/stock-adjustments
+### 7.1 POST /api/v1/stock-adjustments
 
 Request:
 
@@ -190,13 +190,13 @@ Request:
 }
 ```
 
-Rules:
+Quy tắc:
 
-1. `quantity_before` must be loaded from DB inventory, not from client.
+1. `quantity_before` phải được load từ DB inventory, không phải từ client.
 2. `adjustment_quantity = quantity_after - quantity_before`.
-3. Reject when `quantity_after < 0`.
-4. Reject when `quantity_after < reserved_quantity`.
-5. Reject when `adjustment_quantity = 0`.
+3. Từ chối khi `quantity_after < 0`.
+4. Từ chối khi `quantity_after < reserved_quantity`.
+5. Từ chối khi `adjustment_quantity = 0`.
 
 Response:
 
@@ -208,7 +208,7 @@ Response:
 }
 ```
 
-## 7.2 PUT /api/v1/stock-adjustments/{id}/approve
+### 7.2 PUT /api/v1/stock-adjustments/{id}/approve
 
 Request:
 
@@ -218,14 +218,14 @@ Request:
 }
 ```
 
-Rules:
+Quy tắc:
 
-1. Transition only `PENDING_APPROVAL -> APPROVED`.
-2. Lock adjustment row and inventory row.
-3. Revalidate resulting inventory state before commit.
-4. Write one movement row with `ADJUSTMENT_INCREASE` or `ADJUSTMENT_DECREASE`.
+1. Chuyển đổi chỉ `PENDING_APPROVAL -> APPROVED`.
+2. Lock dòng adjustment và inventory.
+3. Revalidate trạng thái inventory kết quả trước khi commit.
+4. Ghi một dòng movement với `ADJUSTMENT_INCREASE` hoặc `ADJUSTMENT_DECREASE`.
 
-## 7.3 PUT /api/v1/stock-adjustments/{id}/reject
+### 7.3 PUT /api/v1/stock-adjustments/{id}/reject
 
 Request:
 
@@ -235,13 +235,13 @@ Request:
 }
 ```
 
-Rules:
+Quy tắc:
 
-1. Transition only `PENDING_APPROVAL -> REJECTED`.
-2. Inventory unchanged.
-3. `rejection_reason` mandatory.
+1. Chuyển đổi chỉ `PENDING_APPROVAL -> REJECTED`.
+2. Inventory không thay đổi.
+3. `rejection_reason` bắt buộc.
 
-## 7.4 POST /api/v1/inventories/reserve
+### 7.4 POST /api/v1/inventories/reserve
 
 Request:
 
@@ -254,39 +254,75 @@ Request:
 }
 ```
 
-Rules:
+Quy tắc:
 
-1. `available = on_hand - reserved` must be enough.
-2. Lock row and update `reserved_quantity` atomically.
-3. Write `stock_movements` type `RESERVE`.
+1. `available = on_hand - reserved` phải đủ.
+2. Lock dòng và update `reserved_quantity` atomically.
+3. Ghi `stock_movements` type `RESERVE`.
 
-## 7.5 POST /api/v1/inventories/unreserve
+### 7.5 POST /api/v1/inventories/unreserve
 
-1. Reverse reserve rule with non-negative validation.
-2. Write movement type `UNRESERVE`.
+1. Đảo ngược quy tắc reserve với validation không âm.
+2. Ghi movement type `UNRESERVE`.
 
-## 7.6 POST /api/v1/inventories/increase
+### 7.6 POST /api/v1/inventories/increase
 
-1. Increase on-hand quantity.
-2. Write movement type `INBOUND` or `ADJUSTMENT_INCREASE` based on reference type.
+**Mục đích**: Tăng số lượng tồn kho thực tế (on-hand) cho một tổ hợp kích thước kho cụ thể (Sản phẩm, Kho hàng, Vị trí, Số lô). API này thường được gọi bởi các nghiệp vụ Nhập hàng (Xác nhận phiếu nhập) hoặc Điều chỉnh kho (Manual Adjustment).
 
-## 7.7 POST /api/v1/inventories/decrease
+#### Quy tắc nghiệp vụ & Logic xử lý:
 
-1. Decrease on-hand quantity.
-2. Prevent underflow and reserved violations.
-3. Write movement type `OUTBOUND` or `ADJUSTMENT_DECREASE`.
+1. **Kiểm soát chống trùng lặp (Idempotency Control)**:
+   * Client BẮT BUỘC phải cung cấp `reference_type` và một trong hai: `reference_id` hoặc `reference_number`.
+   * Hệ thống sử dụng khóa định danh (Lock Key) phân tán: `lock:inventory:reference:{type}:{id|number}`.
+   * Nếu một yêu cầu với cùng mã tham chiếu đang được xử lý, các yêu cầu trùng lặp sau đó sẽ bị từ chối để tránh việc tăng kho hai lần cho cùng một chứng từ.
 
-## 7.8 PUT /api/v1/stock-transfers/{id}/complete
+2. **Quản lý tranh chấp (Concurrency Management)**:
+   * Sử dụng **Redisson Distributed Lock** để đảm bảo việc xử lý tuần tự trên mỗi mã tham chiếu.
+   * Sử dụng `SELECT ... FOR UPDATE` ở mức cơ sở dữ liệu khi Tìm/Tạo bản ghi kho để tránh tình trạng Race Condition (tranh chấp dữ liệu) trên cùng một dòng tồn kho vật lý.
 
-1. Lock source and destination inventory rows.
-2. Decrease source and increase destination in one transaction.
-3. Write 2 movement rows: `TRANSFER_OUT`, `TRANSFER_IN`.
+3. **Tìm hoặc Tạo mới (Find or Create)**:
+   * Nếu bản ghi kho đã tồn tại (khớp Sản phẩm, Kho, Vị trí, Lô), hệ thống sẽ cập nhật số lượng.
+   * Nếu chưa có, một bản ghi mới sẽ được tạo một cách nguyên tử (atomic).
+
+4. **Nhật ký biến động (Audit Trail)**:
+   * Mọi giao dịch tăng kho ĐỀU PHẢI ghi nhận vào bảng `stock_movements`.
+   * Loại biến động được xác định dựa trên `reference_type` (VD: `INBOUND_RECEIPT` -> `INBOUND`, `STOCK_ADJUSTMENT` -> `ADJUSTMENT_INCREASE`).
+   * Lưu trữ giá trị `quantity_before` (trước) và `quantity_after` (sau) để truy xuất nguồn gốc đầy đủ.
+
+#### Quy trình xử lý (Request Flow):
+
+1. Chiếm giữ khóa Redisson dựa trên `reference_type` và `reference_id/number`.
+2. Kiểm tra tính hợp lệ của các thông tin (Sản phẩm, Kho hàng...).
+3. Tìm hoặc Tạo dòng tồn kho với khóa `FOR UPDATE`.
+4. Tính toán: `on_hand_after = on_hand_before + quantity`.
+5. Cập nhật bản ghi Kho và Lưu (Save).
+6. Ghi nhật ký Stock Movement (nằm trong cùng một giao dịch DB).
+7. Giải phóng khóa Redisson.
+
+#### Xử lý lỗi:
+
+* `COM_001`: Thiếu mã tham chiếu chống trùng lặp (Idempotency key).
+* `COM_009`: Xung đột - Yêu cầu đang được xử lý hoặc hết thời gian chờ khóa.
+* `INV_001`: Thông tin kích thước kho không hợp lệ.
+* `DataIntegrityViolation`: Phát hiện trùng lặp mã tham chiếu ở mức DB (lớp bảo vệ cuối cùng).
+
+### 7.7 POST /api/v1/inventories/decrease
+
+1. Giảm số lượng on-hand.
+2. Ngăn underflow và vi phạm reserved.
+3. Ghi movement type `OUTBOUND` hoặc `ADJUSTMENT_DECREASE`.
+
+### 7.8 PUT /api/v1/stock-transfers/{id}/complete
+
+1. Lock source và destination inventory rows.
+2. Giảm source và tăng destination trong một giao dịch.
+3. Ghi 2 dòng movement: `TRANSFER_OUT`, `TRANSFER_IN`.
 
 ---
 
-## 8) Sequence Diagrams
+## 8) Sơ đồ Sequence
 
-## 8.1 Create adjustment (pending approval)
+### 8.1 Tạo điều chỉnh (chờ phê duyệt)
 
 ```mermaid
 sequenceDiagram
@@ -305,7 +341,7 @@ sequenceDiagram
     C-->>Client: 200
 ```
 
-## 8.2 Approve adjustment
+### 8.2 Phê duyệt điều chỉnh
 
 ```mermaid
 sequenceDiagram
@@ -328,7 +364,7 @@ sequenceDiagram
     C-->>Manager: 200
 ```
 
-## 8.3 Reject adjustment
+### 8.3 Từ chối điều chỉnh
 
 ```mermaid
 sequenceDiagram
@@ -346,7 +382,7 @@ sequenceDiagram
     C-->>Manager: 200
 ```
 
-## 8.4 Complete stock transfer
+### 8.4 Hoàn tất chuyển kho
 
 ```mermaid
 sequenceDiagram
@@ -373,9 +409,9 @@ sequenceDiagram
 
 ---
 
-## 9) State Machines
+## 9) Máy trạng thái
 
-## 9.1 stock_adjustments
+### 9.1 stock_adjustments
 
 ```mermaid
 stateDiagram-v2
@@ -386,7 +422,7 @@ stateDiagram-v2
     REJECTED --> [*]
 ```
 
-## 9.2 stock_transfers
+### 9.2 stock_transfers
 
 ```mermaid
 stateDiagram-v2
@@ -399,145 +435,145 @@ stateDiagram-v2
 
 ---
 
-## 10) Business Rules Matrix
+## 10) Ma trận Quy tắc Kinh doanh
 
-| ID | Rule |
+| ID | Quy tắc |
 |---|---|
 | BR-INV-01 | `available = on_hand - reserved` |
 | BR-INV-02 | `on_hand >= 0` |
 | BR-INV-03 | `reserved >= 0` and `reserved <= on_hand` |
-| BR-INV-04 | Adjustment `quantity_before` from DB snapshot |
-| BR-INV-05 | Adjustment delta must be non-zero |
-| BR-INV-06 | Approve/reject only from `PENDING_APPROVAL` |
-| BR-INV-07 | Approved adjustment must update inventory and movement in same transaction |
-| BR-INV-08 | Rejected adjustment must not modify inventory |
-| BR-INV-09 | Transfer complete is atomic across source and destination |
-| BR-INV-10 | Every stock-changing action writes movement log |
+| BR-INV-04 | Adjustment `quantity_before` từ DB snapshot |
+| BR-INV-05 | Adjustment delta phải khác không |
+| BR-INV-06 | Approve/reject chỉ từ `PENDING_APPROVAL` |
+| BR-INV-07 | Điều chỉnh đã phê duyệt phải update inventory và movement trong cùng giao dịch |
+| BR-INV-08 | Điều chỉnh bị từ chối không được sửa inventory |
+| BR-INV-09 | Hoàn tất chuyển kho là atomic across source và destination |
+| BR-INV-10 | Mọi action thay đổi stock đều ghi movement log |
 
 ---
 
-## 11) Error Model (Recommended)
+## 11) Mô hình Lỗi (Đề xuất)
 
-| Area | Suggested code | Description |
+| Khu vực | Mã đề xuất | Mô tả |
 |---|---|---|
-| Adjustment | `STA_001` | Invalid adjustment request |
-| Adjustment | `STA_002` | Invalid adjustment status transition |
-| Adjustment | `STA_404` | Adjustment not found |
-| Inventory | `INV_001` | Inventory not found |
-| Inventory | `INV_004` | Insufficient stock |
-| Common | `COM_001` | Validation error |
+| Adjustment | `STA_001` | Yêu cầu điều chỉnh không hợp lệ |
+| Adjustment | `STA_002` | Chuyển đổi trạng thái điều chỉnh không hợp lệ |
+| Adjustment | `STA_404` | Không tìm thấy điều chỉnh |
+| Inventory | `INV_001` | Không tìm thấy inventory |
+| Inventory | `INV_004` | Không đủ tồn kho |
+| Common | `COM_001` | Lỗi validation |
 | Auth | `AUTH_403` | Forbidden |
 
-Note: map to project `ErrorCode` enum consistently in implementation.
+Lưu ý: map tới project `ErrorCode` enum một cách nhất quán trong implementation.
 
 ---
 
-## 12) Implementation Order (must follow)
+## 12) Thứ tự Triển khai (phải tuân thủ)
 
-1. Design finalization (this document review).
-2. Migration refactor for table constraints and duplicated-dimension strategy.
-3. Service/controller implementation for adjustment + transfer + inventory side effects.
-4. Unit tests and integration tests.
-5. Code review and rollout.
-
----
-
-## 13) Test Coverage Matrix
-
-## 13.1 Adjustment create
-
-1. success pending.
-2. success auto-approved.
-3. reject invalid inventory.
-4. reject quantity_after negative.
-5. reject quantity_after below reserved.
-6. reject zero delta.
-
-## 13.2 Adjustment approve/reject
-
-1. approve success and inventory changed.
-2. reject success and inventory unchanged.
-3. invalid transition returns conflict.
-4. concurrent approve handled by lock/version.
-
-## 13.3 Transfers
-
-1. complete success updates both rows.
-2. source insufficient stock.
-3. source equals destination rejected.
-4. cross-warehouse mismatch rejected.
-
-## 13.4 Movement audit
-
-1. movement row created for each stock-changing endpoint.
-2. quantity before/after arithmetic consistent.
-3. reference mapping correct.
+1. Hoàn thiện thiết kế (review tài liệu này).
+2. Migration refactor cho table constraints và chiến lược dimension trùng lặp.
+3. Service/controller implementation cho adjustment + transfer + inventory side effects.
+4. Unit tests và integration tests.
+5. Code review và rollout.
 
 ---
 
-## 14) Jira Task Alignment
+## 13) Ma trận Phạm vi Test
 
-This redesign impacts these Jira tasks directly:
+### 13.1 Tạo điều chỉnh
 
-1. `WHS-20` (parent) - must include schema consistency track.
-2. `WHS-21` create adjustment - update AC for DB-sourced `quantity_before` and consistency validation.
-3. `WHS-22` list adjustments - include inventory_id/status/date filters and indexes.
-4. `WHS-23` approve adjustment - include atomic inventory + movement side effects.
-5. `WHS-24` reject adjustment - include strict transition and no inventory side effects.
-6. `WHS-25` transfer parent - include source/destination consistency constraints.
-7. `WHS-87` complete transfer - track atomic source/destination mutation, movement audit, and deadlock-safe locking review for `PUT /api/v1/stock-transfers/{id}/complete`.
+1. thành công pending.
+2. thành công auto-approved.
+3. từ chối inventory không hợp lệ.
+4. từ chối quantity_after âm.
+5. từ chối quantity_after dưới reserved.
+6. từ chối delta bằng không.
 
-Recommended additional task:
+### 13.2 Phê duyệt/Từ chối điều chỉnh
+
+1. approve thành công và inventory đã thay đổi.
+2. reject thành công và inventory không thay đổi.
+3. chuyển đổi không hợp lệ trả về conflict.
+4. approve concurrent được handle bằng lock/version.
+
+### 13.3 Chuyển kho
+
+1. complete thành công update cả hai dòng.
+2. source không đủ tồn kho.
+3. source bằng destination bị từ chối.
+4. cross-warehouse mismatch bị từ chối.
+
+### 13.4 Audit Movement
+
+1. dòng movement được tạo cho mỗi endpoint thay đổi stock.
+2. số học quantity before/after nhất quán.
+3. mapping reference đúng.
+
+---
+
+## 14) Align Task Jira
+
+Redesign này ảnh hưởng trực tiếp các task Jira này:
+
+1. `WHS-20` (parent) - phải bao gồm track schema consistency.
+2. `WHS-21` tạo điều chỉnh - update AC cho DB-sourced `quantity_before` và consistency validation.
+3. `WHS-22` danh sách điều chỉnh - bao gồm inventory_id/status/date filters và indexes.
+4. `WHS-23` phê duyệt điều chỉnh - bao gồm atomic inventory + movement side effects.
+5. `WHS-24` từ chối điều chỉnh - bao gồm strict transition và không có inventory side effects.
+6. `WHS-25` parent transfer - bao gồm source/destination consistency constraints.
+7. `WHS-87` complete transfer - theo dõi atomic source/destination mutation, movement audit, và deadlock-safe locking review cho `PUT /api/v1/stock-transfers/{id}/complete`.
+
+Task bổ sung được khuyến nghị:
 
 1. `Refactor inventory schema consistency for adjustment/transfer` (migration + backfill + entity alignment).
 
 ---
 
-## 15) Current Code Gaps (Quick Snapshot)
+## 15) Khoảng trống Code Hiện tại (Quick Snapshot)
 
-1. `InventoryController`, `StockTransfersController`, `StockMovementsController` are placeholder controllers.
-2. `StockAdjustmentsServiceImpl` has partial create and unimplemented approve/reject/list/detail logic.
-3. `StockTransfersStatus` enum currently has `DAFT` typo and should be `DRAFT`.
-4. `StockMovements` entity must align with DB columns (`warehouse_id` in schema).
-
----
-
-## 16) Decision Checklist for Team Review
-
-1. Keep duplicated dimensions in `stock_adjustments` as snapshots, or remove them?
-2. Keep immediate transfer completion, or split create and complete workflow?
-3. Standardize quantity precision at `DECIMAL(15,2)` or move all to `DECIMAL(19,6)`?
-4. Choose locking strategy: pessimistic only, or optimistic with retry?
+1. `InventoryController`, `StockTransfersController`, `StockMovementsController` là các controller placeholder.
+2. `StockAdjustmentsServiceImpl` có partial create và unimplemented approve/reject/list/detail logic.
+3. `StockTransfersStatus` enum hiện có typo `DAFT` và nên là `DRAFT`.
+4. Entity `StockMovements` phải align với các cột DB (`warehouse_id` trong schema).
 
 ---
 
-## 17) WHS-70 Implementation Notes
+## 16) Checklist Quyết định cho Team Review
 
-Implemented changes for `feature/WHS-70-inventory-schema-consistency`:
+1. Giữ các dimension trùng lặp trong `stock_adjustments` như snapshots, hay xóa?
+2. Giữ immediate transfer completion, hay chia workflow create và complete?
+3. Standardize quantity precision tại `DECIMAL(15,2)` hay chuyển tất cả sang `DECIMAL(19,6)`?
+4. Chọn chiến lược locking: pessimistic only, hay optimistic với retry?
 
-1. New migration: `V20260404_01__Refactor_inventory_schema_consistency.sql`.
-2. `inventory` logical uniqueness now normalizes nullable dimensions (`location_id`, `batch_id`) before unique enforcement.
-3. `stock_adjustments` now enforces:
-   - non-negative quantities,
-   - arithmetic consistency (`adjustment_quantity = quantity_after - quantity_before`),
-   - non-zero delta,
-   - strict workflow metadata for pending/approved/rejected states.
-4. `stock_movements` and JPA entity mapping are aligned (including `warehouse_id`, nullable `location_id/reference` fields).
-5. `StockAdjustmentsServiceImpl` now fully implements:
-   - create (pending and auto-approved),
+---
+
+## 17) Ghi chú Triển khai WHS-70
+
+Các thay đổi đã implement cho `feature/WHS-70-inventory-schema-consistency`:
+
+1. Migration mới: `V20260404_01__Refactor_inventory_schema_consistency.sql`.
+2. `inventory` logical uniqueness hiện normalize các dimension nullable (`location_id`, `batch_id`) trước khi enforce unique.
+3. `stock_adjustments` hiện enforce:
+   - số lượng không âm,
+   - tính nhất quán số học (`adjustment_quantity = quantity_after - quantity_before`),
+   - delta khác không,
+   - strict workflow metadata cho các trạng thái pending/approved/rejected.
+4. `stock_movements` và JPA entity mapping được align (bao gồm `warehouse_id`, các trường nullable `location_id/reference`).
+5. `StockAdjustmentsServiceImpl` hiện fully implement:
+   - create (pending và auto-approved),
    - approve/reject transition checks,
    - atomic inventory + movement side effects.
-6. `StockTransfersServiceImpl` now fully implements:
+6. `StockTransfersServiceImpl` hiện fully implement:
    - create/list/detail,
    - complete/cancel transitions,
-   - atomic source/destination inventory updates with `TRANSFER_OUT` + `TRANSFER_IN` movements.
-7. Added integration tests for adjustment constraints and inventory optimistic lock behavior, plus unit tests for adjustment/transfer workflows.
+   - atomic source/destination inventory updates với `TRANSFER_OUT` + `TRANSFER_IN` movements.
+7. Thêm integration tests cho adjustment constraints và inventory optimistic lock behavior, cộng với unit tests cho adjustment/transfer workflows.
 
-### Backward-Compatibility Notes
+### Ghi chú Tương thích Ngược
 
-1. `POST /api/v1/stock-adjustments` still accepts legacy fields (`product_id`, `warehouse_id`, `location_id`, `batch_id`, `quantity_before`) but now treats `inventory_id` as source-of-truth and derives snapshot values from inventory at runtime.
-2. `StockTransfersStatus` enum typo was fixed from `DAFT` to `DRAFT` to align with DB enum values. Any client-side use of `DAFT` must be updated.
+1. `POST /api/v1/stock-adjustments` vẫn accept các trường legacy (`product_id`, `warehouse_id`, `location_id`, `batch_id`, `quantity_before`) nhưng hiện coi `inventory_id` là source-of-truth và derive snapshot values từ inventory tại runtime.
+2. Enum `StockTransfersStatus` typo đã được fix từ `DAFT` sang `DRAFT` để align với các giá trị DB enum. Bất kỳ client-side use nào của `DAFT` phải được update.
 
 ---
 
-**End of document**
+**Hết tài liệu**

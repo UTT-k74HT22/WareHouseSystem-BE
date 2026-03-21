@@ -70,6 +70,20 @@ public interface StockMovementsService {
     );
 
     /**
+     * Records a decrease in inventory based on the provided request and balance details.
+     *
+     * @param request        the inventory decrease request
+     * @param quantityBefore the quantity before the decrease
+     * @param quantityAfter  the quantity after the decrease
+     * @return the recorded stock movement response
+     */
+    StockMovementsResponse recordDecrease(
+            org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request,
+            BigDecimal quantityBefore,
+            BigDecimal quantityAfter
+    );
+
+    /**
      * Checks if a stock movement exists for the provided reference type and ID.
      *
      * @param referenceType the type of reference

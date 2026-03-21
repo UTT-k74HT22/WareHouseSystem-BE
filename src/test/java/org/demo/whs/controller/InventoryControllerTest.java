@@ -290,8 +290,9 @@ class InventoryControllerTest {
     @DisplayName("Should return 200 when reservation is successful")
     void shouldReturn200WhenReservationIsSuccessful() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .productId("prod-1")
+                .orderLineId("OL-1")
                 .warehouseId("wh-1")
+                .productId("prod-1")
                 .quantity(new BigDecimal("10.00"))
                 .build();
 
@@ -423,14 +424,49 @@ class InventoryControllerTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when increase request is invalid")
-    void shouldReturn400WhenIncreaseRequestIsInvalid() throws Exception {
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
-                // productId and warehouseId are missing
+    @DisplayName("Should return 200 when decrease is successful")
+    void shouldReturn200WhenDecreaseIsSuccessful() throws Exception {
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .quantity(new BigDecimal("10.00"))
+                .referenceType(org.demo.whs.entity.enums.ReferenceType.OUTBOUND_SHIPMENT)
+                .referenceId("ref-uuid")
+                .referenceNumber("SHIP-001")
+                .consumeReserved(false)
+                .build();
+
+        InventoryResponse mockResponse = InventoryResponse.builder()
+                .id("inv-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .onHandQuantity(new BigDecimal("90.00"))
+                .reservedQuantity(new BigDecimal("10.00"))
+                .build();
+
+        when(inventoryService.decrease(any(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/decrease")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("inv-1"))
+                .andExpect(jsonPath("$.data.on_hand_quantity").value(90.00));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when decrease request is invalid")
+    void shouldReturn400WhenDecreaseRequestIsInvalid() throws Exception {
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                // Missing fields
                 .quantity(new BigDecimal("-5.00"))
                 .build();
 
-        mockMvc.perform(post("/api/v1/inventories/increase")
+        mockMvc.perform(post("/api/v1/inventories/decrease")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

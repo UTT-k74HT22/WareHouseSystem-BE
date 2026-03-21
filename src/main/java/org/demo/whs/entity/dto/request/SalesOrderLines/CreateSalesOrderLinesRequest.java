@@ -20,7 +20,10 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class SalesOrderLinesRequest {
+public class CreateSalesOrderLinesRequest {
+
+    @NotBlank(message = "Sales Order ID is required")
+    private String salesOrderId;
 
     @NotBlank(message = "Product ID is required")
     private String productId;

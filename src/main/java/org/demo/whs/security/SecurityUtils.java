@@ -28,4 +28,24 @@ public class SecurityUtils {
 
         return authentication.getName(); // fallback
     }
+
+    /**
+     * Retrieves the ID (UUID) of the currently authenticated user.
+     *
+     * @return the user ID or null if unauthenticated or not using CustomUserDetails
+     */
+    public static String getCurrentAccountId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getAccount().getId();
+        }
+
+        return null;
+    }
 }
