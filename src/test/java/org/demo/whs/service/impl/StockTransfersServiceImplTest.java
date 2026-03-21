@@ -10,6 +10,9 @@ import org.demo.whs.entity.StockTransfers;
 import org.demo.whs.entity.dto.request.StockTransfers.StockTransfersRequest;
 import org.demo.whs.entity.dto.response.StockTransfers.StockTransfersResponse;
 import org.demo.whs.entity.enums.AccountStatus;
+import org.demo.whs.entity.enums.BatchStatus;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.entity.enums.StockTransfersReason;
 import org.demo.whs.entity.enums.StockTransfersStatus;
@@ -41,6 +44,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -134,10 +138,14 @@ class StockTransfersServiceImplTest {
         Locations from = new Locations();
         from.setId("loc-1");
         from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
 
         Locations to = new Locations();
         to.setId("loc-2");
         to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
 
         when(productRepository.existsById("prod-1")).thenReturn(true);
         when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
@@ -351,12 +359,17 @@ class StockTransfersServiceImplTest {
 
         Locations from = new Locations();
         from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
 
         Locations to = new Locations();
         to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
 
         Batch batch = Batch.builder()
                 .productId("another-product")
+                .status(BatchStatus.AVAILABLE)
                 .build();
         batch.setId("batch-1");
 
@@ -391,6 +404,213 @@ class StockTransfersServiceImplTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Employee not found for current user")
                 .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_FromLocationIsInactive() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.INACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Source location is not active")
+                .hasFieldOrPropertyWithValue("errorCode", "LOC_007");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_ToLocationIsInactive() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.MAINTENANCE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Destination location is not active")
+                .hasFieldOrPropertyWithValue("errorCode", "LOC_007");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_FromLocationTypeIsNotValidForTransfer() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.RETURN);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Source location type is not valid")
+                .hasFieldOrPropertyWithValue("errorCode", "LOC_008");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_BatchIsQuarantined() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+        setField(request, "batchId", "batch-1");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        Batch batch = Batch.builder()
+                .productId("prod-1")
+                .status(BatchStatus.QUARANTINE)
+                .build();
+        batch.setId("batch-1");
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+        when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Batch is not available")
+                .hasFieldOrPropertyWithValue("errorCode", "BATCH_012");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_BatchIsExpired() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+        setField(request, "batchId", "batch-1");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        Batch batch = Batch.builder()
+                .productId("prod-1")
+                .status(BatchStatus.AVAILABLE)
+                .expiryDate(LocalDate.now().minusDays(1))
+                .build();
+        batch.setId("batch-1");
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+        when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Batch has expired")
+                .hasFieldOrPropertyWithValue("errorCode", "BATCH_020");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_BatchIsRecalled() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+        setField(request, "batchId", "batch-1");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        Batch batch = Batch.builder()
+                .productId("prod-1")
+                .status(BatchStatus.RECALLED)
+                .build();
+        batch.setId("batch-1");
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+        when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Batch is not available")
+                .hasFieldOrPropertyWithValue("errorCode", "BATCH_012");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_LocationIsFull() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.FULL);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Source location is not active")
+                .hasFieldOrPropertyWithValue("errorCode", "LOC_007");
     }
 
     private StockTransfersRequest buildTransferRequest(String quantity) {

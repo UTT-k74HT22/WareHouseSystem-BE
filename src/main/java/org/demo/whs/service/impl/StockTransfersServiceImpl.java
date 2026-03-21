@@ -12,6 +12,9 @@ import org.demo.whs.entity.StockTransfers;
 import org.demo.whs.entity.dto.request.StockTransfers.StockTransfersRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockTransfers.StockTransfersResponse;
+import org.demo.whs.entity.enums.BatchStatus;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.ReferenceType;
 import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.entity.enums.StockTransfersStatus;
@@ -254,6 +257,9 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         Locations toLocation = locationRepository.findById(request.getToLocationId())
                 .orElseThrow(() -> new BadRequestException("Destination location not found", ErrorCode.LOC_001));
 
+        validateLocationForTransfer(fromLocation, "Source");
+        validateLocationForTransfer(toLocation, "Destination");
+
         if (!fromLocation.getWarehouseId().equals(request.getWarehouseId())
                 || !toLocation.getWarehouseId().equals(request.getWarehouseId())) {
             throw new BadRequestException("Transfer locations must belong to the provided warehouse", ErrorCode.STF_002);
@@ -265,6 +271,45 @@ public class StockTransfersServiceImpl implements StockTransfersService {
             if (!batch.getProductId().equals(request.getProductId())) {
                 throw new BadRequestException("Batch does not belong to the provided product", ErrorCode.STF_002);
             }
+            validateBatchForTransfer(batch);
+        }
+    }
+
+    private void validateLocationForTransfer(Locations location, String locationType) {
+        if (location.getStatus() != LocationStatus.ACTIVE) {
+            throw new BadRequestException(
+                    locationType + " location is not active for stock transfer",
+                    ErrorCode.LOC_007
+            );
+        }
+
+        if (!isValidLocationTypeForTransfer(location.getType())) {
+            throw new BadRequestException(
+                    locationType + " location type is not valid for stock transfer",
+                    ErrorCode.LOC_008
+            );
+        }
+    }
+
+    private boolean isValidLocationTypeForTransfer(LocationType type) {
+        return type == LocationType.STORAGE
+                || type == LocationType.PICKING
+                || type == LocationType.STAGING;
+    }
+
+    private void validateBatchForTransfer(Batch batch) {
+        if (batch.getStatus() != BatchStatus.AVAILABLE) {
+            throw new BadRequestException(
+                    "Batch is not available for stock transfer",
+                    ErrorCode.BATCH_012
+            );
+        }
+
+        if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(java.time.LocalDate.now())) {
+            throw new BadRequestException(
+                    "Batch has expired",
+                    ErrorCode.BATCH_020
+            );
         }
     }
 
