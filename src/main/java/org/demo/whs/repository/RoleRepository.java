@@ -13,12 +13,6 @@ import java.util.Optional;
 @Repository
 public interface RoleRepository extends JpaRepository<Role, String> {
 
-    /**
-     * Find all role names for a given username.
-     *
-     * @param username the account username
-     * @return list of role name strings (e.g. ["ADMIN", "USER"])
-     */
     @Query(value = """
     SELECT r.name
     FROM roles r
@@ -28,17 +22,6 @@ public interface RoleRepository extends JpaRepository<Role, String> {
     """, nativeQuery = true)
     List<String> findRoleNamesByUsername(@Param("username") String username);
 
-    /**
-     * Find all role names for a given account ID (UUID).
-     * <p>
-     * Returns {@code List<String>} because:
-     * 1) Native queries return raw strings, not enums
-     * 2) A user may have multiple roles (e.g. ADMIN + MANAGER)
-     * </p>
-     *
-     * @param accountId the account UUID
-     * @return list of role name strings (e.g. ["ADMIN", "USER"])
-     */
     @Query(value = """
     SELECT r.name
     FROM roles r
@@ -49,13 +32,13 @@ public interface RoleRepository extends JpaRepository<Role, String> {
 
     Optional<Role> findByName(RoleType name);
 
-    boolean existsByName(String name);
+    boolean existsByNameIgnoreCase(String name);
 
     boolean existsByIsDefaultTrue();
 
     boolean existsByCode(String code);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Role r SET r.isDefault = false WHERE r.isDefault = true")
     void updateAllIsDefaultToFalse();
 }

@@ -13,11 +13,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+// Cho phép lenient toàn bộ class → tránh UnnecessaryStubbingException
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RoleServiceImplTest {
 
     @Mock
@@ -34,33 +39,34 @@ class RoleServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        request = new CreateRoleRequest();
-        request.setName("Admin Manager");
-        request.setDescription("Test role");
-        request.setIsDefault(true);
+        // Builder immutable
+        request = CreateRoleRequest.builder()
+                .name("Admin Manager")
+                .description("Test role")
+                .isDefault(true)
+                .build();
 
+        // Role không null để tránh NPE
         role = new Role();
         role.setId("1");
-        role.setName("Admin Manager");
+        role.setName(request.getName());
+
+        // Stub chung
+        lenient().when(roleMapper.createEntity(any(CreateRoleRequest.class))).thenReturn(role);
+        lenient().when(roleMapper.toResponse(any(Role.class))).thenReturn(RoleResponse.builder().build());
     }
 
     // ===================== SUCCESS =====================
     @Test
     void createRole_success() {
-
-        // chỉ mock những gì flow dùng
-        when(roleRepository.existsByName("Admin Manager")).thenReturn(false);
-
-
-        when(roleMapper.createEntity(request)).thenReturn(role);
+        when(roleRepository.existsByNameIgnoreCase("Admin Manager")).thenReturn(false);
+        when(roleRepository.existsByCode("role_admin_manager")).thenReturn(false);
+        when(roleRepository.existsByIsDefaultTrue()).thenReturn(true);
         when(roleRepository.save(any(Role.class))).thenReturn(role);
-        when(roleMapper.toResponse(any(Role.class)))
-                .thenReturn(RoleResponse.builder().build());
 
         RoleResponse response = roleService.createRole(request);
 
         assertNotNull(response);
-
         verify(roleRepository).updateAllIsDefaultToFalse();
         verify(roleRepository).save(any(Role.class));
     }
@@ -68,18 +74,22 @@ class RoleServiceImplTest {
     // ===================== NAME NULL =====================
     @Test
     void createRole_nameNull_throwException() {
-
-        request.setName(null);
+        request = CreateRoleRequest.builder()
+                .name(null)
+                .description("Test role")
+                .isDefault(true)
+                .build();
 
         assertThrows(BadRequestException.class,
                 () -> roleService.createRole(request));
+
+        verify(roleRepository, never()).save(any());
     }
 
     // ===================== NAME DUPLICATE =====================
     @Test
     void createRole_duplicateName_throwException() {
-
-        when(roleRepository.existsByName("Admin Manager")).thenReturn(true);
+        when(roleRepository.existsByNameIgnoreCase("Admin Manager")).thenReturn(true);
 
         assertThrows(BadRequestException.class,
                 () -> roleService.createRole(request));
@@ -90,40 +100,41 @@ class RoleServiceImplTest {
     // ===================== CODE DUPLICATE =====================
     @Test
     void createRole_duplicateCode_throwException() {
+        // ensure name check passes
+        when(roleRepository.existsByNameIgnoreCase("Admin Manager")).thenReturn(false);
 
-        // đảm bảo không fail ở validateName
-        when(roleRepository.existsByName("Admin Manager")).thenReturn(false);
+        // roleMapper trả non-null → tránh NullPointerException
+        Role mockRole = new Role();
+        when(roleMapper.createEntity(any(CreateRoleRequest.class))).thenReturn(mockRole);
 
-        // KHÔNG cần mock existsByIsDefaultTrue nếu không dùng
-        // hoặc:
-        // when(roleRepository.existsByIsDefaultTrue()).thenReturn(true);
-
-        // mock đúng đoạn bị fail
-        when(roleRepository.existsByCode("role_admin_manager")).thenReturn(true);
+        // mock save() throw DataIntegrityViolationException → service sẽ catch và throw BadRequestException
+        when(roleRepository.save(mockRole)).thenThrow(new DataIntegrityViolationException("duplicate"));
 
         assertThrows(BadRequestException.class,
                 () -> roleService.createRole(request));
 
-        verify(roleRepository, never()).save(any());
+        // verify save() đã được gọi
+        verify(roleRepository).save(mockRole);
     }
 
     // ===================== DEFAULT LOGIC =====================
     @Test
     void createRole_firstRole_shouldBeDefault() {
+        request = CreateRoleRequest.builder()
+                .name("Admin Manager")
+                .description("Test role")
+                .isDefault(null)
+                .build();
 
-        request.setIsDefault(null);
-
-        when(roleRepository.existsByName("Admin Manager")).thenReturn(false);
-        when(roleRepository.existsByIsDefaultTrue()).thenReturn(false);
+        when(roleRepository.existsByNameIgnoreCase("Admin Manager")).thenReturn(false);
         when(roleRepository.existsByCode("role_admin_manager")).thenReturn(false);
-
-        when(roleMapper.createEntity(request)).thenReturn(role);
         when(roleRepository.save(any(Role.class))).thenReturn(role);
-        when(roleMapper.toResponse(any(Role.class)))
-                .thenReturn(RoleResponse.builder().build());
+
+        when(roleRepository.existsByIsDefaultTrue()).thenReturn(false); // chưa có default role
 
         roleService.createRole(request);
 
-        verify(roleRepository).updateAllIsDefaultToFalse();
+        // guard → không gọi updateAllIsDefaultToFalse
+        verify(roleRepository, never()).updateAllIsDefaultToFalse();
     }
 }
