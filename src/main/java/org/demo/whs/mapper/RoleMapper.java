@@ -46,16 +46,16 @@ public class RoleMapper {
             return;
         }
 
-        if (request.getCode() != null) {
-            role.setCode(request.getCode());
-        }
-
         if (request.getName() != null) {
             role.setName(request.getName());
         }
 
         if (request.getDescription() != null) {
             role.setDescription(request.getDescription());
+        }
+
+        if (request.getIsDefault() != null) {
+            role.setIsDefault(request.getIsDefault());
         }
     }
 

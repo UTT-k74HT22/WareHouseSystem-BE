@@ -4,6 +4,7 @@ import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -49,7 +50,7 @@ public interface RoleRepository extends JpaRepository<Role, String>{
 
     Optional<Role> findByName(RoleType name);
 
-    boolean existsByName(RoleType name);
+    boolean existsByName(String name);
 
     /**
      * Lấy danh sách Permission gán cho role theo role.id
@@ -61,4 +62,12 @@ public interface RoleRepository extends JpaRepository<Role, String>{
         WHERE rhp.role_id = :roleId
     """, nativeQuery = true)
     List<Permission> findPermissionsByRoleId(@Param("roleId") String roleId);
+
+    /**
+     * Updates all roles in the database to set isDefault = false.
+     * Typically used before assigning a new default role.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Role r SET r.isDefault = false WHERE r.isDefault = true")
+    void updateAllIsDefaultToFalse();
 }

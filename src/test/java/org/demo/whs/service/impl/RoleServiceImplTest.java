@@ -1,7 +1,9 @@
 package org.demo.whs.service.impl;
 
+import com.mysql.cj.util.TestUtils;
 import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
+import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.exception.NotFoundException;
@@ -117,4 +119,78 @@ class RoleServiceImplTest {
         verify(roleRepository, never()).findPermissionsByRoleId(any());
         verify(roleMapper, never()).toResponseWithPermissions(any(), any());
     }
+
+    @Test
+    void testUpdateRole_Success() {
+        // Given
+        String roleId = "role-123";
+
+        UpdateRoleRequest request = UpdateRoleRequest.builder()
+                .name("Manager")
+                .description("Updated role")
+                .isDefault(true)
+                .build();
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        Role updatedRole = Role.builder()
+                .code("ROLE_ADMIN") // giữ nguyên code
+                .name("Manager")
+                .description("Updated role")
+                .isDefault(true)
+                .build();
+
+        when(roleRepository.save(any(Role.class))).thenReturn(updatedRole);
+
+        RoleResponse mockResponse = RoleResponse.builder()
+                .id(roleId)
+                .name("Manager")
+                .build();
+
+        when(roleMapper.toResponse(updatedRole)).thenReturn(mockResponse);
+
+        // When
+        RoleResponse response = roleService.updateRole(roleId, request);
+
+        // Then
+        assertNotNull(response);
+        assertEquals("Manager", response.getName());
+
+        verify(roleRepository).findById(roleId);
+        verify(roleRepository).save(any(Role.class));
+        verify(roleMapper).toResponse(updatedRole);
+    }
+
+    @Test
+    void testUpdateRole_NotFound() {
+        when(roleRepository.findById("invalid"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class,
+                () -> roleService.updateRole("invalid",
+                        UpdateRoleRequest.builder().build()));
+    }
+
+    @Test
+    void testUpdateRole_SetDefault() {
+        String roleId = "role-123";
+
+        // 🔥 Override lại role cho test này
+        role.setIsDefault(false);
+
+        UpdateRoleRequest request = UpdateRoleRequest.builder()
+                .isDefault(true)
+                .build();
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+        when(roleRepository.save(any(Role.class))).thenAnswer(i -> i.getArgument(0));
+        when(roleMapper.toResponse(any())).thenReturn(RoleResponse.builder().build());
+
+        roleService.updateRole(roleId, request);
+
+        verify(roleRepository).updateAllIsDefaultToFalse(); // ✅ pass
+        verify(roleRepository).save(any(Role.class));
+    }
+
+
 }
