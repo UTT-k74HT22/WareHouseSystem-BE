@@ -25,6 +25,9 @@ public class InventoryReserveRequest {
     @NotBlank(message = "Warehouse ID is required")
     private String warehouseId;
 
+    @NotBlank(message = "Product ID is required")
+    private String productId;
+
     private String locationId;
 
     private String batchId;
@@ -33,6 +36,6 @@ public class InventoryReserveRequest {
     @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
     private BigDecimal quantity;
 
-    @NotBlank(message = "SalesOrderLineId is required")
-    private String salesOrderLineId;
+    @NotBlank(message = "OrderLineId is required")
+    private String orderLineId;
 }
