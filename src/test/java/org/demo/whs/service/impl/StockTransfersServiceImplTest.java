@@ -466,6 +466,53 @@ class StockTransfersServiceImplTest {
     }
 
     @Test
+    void should_ThrowBadRequest_When_FromAndToLocationsAreInDifferentWarehouses() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-2");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Stock transfer must be within the same warehouse")
+                .hasMessageContaining("Cross-warehouse transfer is not allowed")
+                .hasFieldOrPropertyWithValue("errorCode", "STF_002");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_CompleteTransferWithLocationsInDifferentWarehouses() {
+        StockTransfers transfer = buildDraftTransfer("trf-cross-wh", "loc-1", "loc-2", "10.00");
+
+        Locations source = buildLocation("loc-1", "wh-1", LocationStatus.ACTIVE, LocationType.STORAGE);
+        Locations destination = buildLocation("loc-2", "wh-2", LocationStatus.ACTIVE, LocationType.STORAGE);
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-cross-wh")).thenReturn(Optional.of(transfer));
+        when(locationRepository.findByIdForUpdate("loc-1")).thenReturn(Optional.of(source));
+        when(locationRepository.findByIdForUpdate("loc-2")).thenReturn(Optional.of(destination));
+
+        assertThatThrownBy(() -> stockTransfersService.complete("trf-cross-wh"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Stock transfer must be within the same warehouse")
+                .hasMessageContaining("Cross-warehouse transfer is not allowed")
+                .hasFieldOrPropertyWithValue("errorCode", "STF_002");
+
+        verifyNoInteractions(inventoryRepository, stockMovementsRepository);
+    }
+
+    @Test
     void should_ThrowBadRequest_When_FromLocationTypeIsNotValidForTransfer() {
         StockTransfersRequest request = buildTransferRequest("5.00");
 
