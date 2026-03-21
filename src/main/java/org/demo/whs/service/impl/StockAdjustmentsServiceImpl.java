@@ -40,21 +40,16 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     private final InventoryRepository inventoryRepository;
     private final StockMovementsRepository stockMovementsRepository;
     private final AccountRepository accountRepository;
+    private final EmployeeRepository employeeRepository;
     private final StockAdjustmentsMapper stockAdjustmentsMapper;
     private final StockMovementsMapper stockMovementsMapper;
     private final RoleRepository roleRepository;
     private final IdentifierGenerator identifierGenerator;
 
-    /**
-     * Creates a new stock adjustment request.
-     *
-     * @param request the stock adjustment request details
-     * @return the created stock adjustment response
-     */
     @Override
     @Transactional
     public StockAdjustmentsResponse createAdjustment(StockAdjustmentsRequest request) {
-        log.info("Attempting to create stock adjustment. inventoryId={}, reason={}",
+        log.info("Attempting to create stock adjustment. inventoryId={}, reason=",
                 request == null ? null : request.getInventoryId(),
                 request == null ? null : request.getReason());
 
@@ -64,6 +59,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
         //Step 2: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
         Inventory inventory = getInventoryForUpdate(request.getInventoryId());
+        validateWarehouseOwnership(inventory.getWarehouseId());
         BigDecimal quantityBefore = inventory.getOnHandQuantity();
         BigDecimal quantityAfter = request.getQuantityAfter();
         BigDecimal adjustmentQuantity = quantityAfter.subtract(quantityBefore);
@@ -134,12 +130,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         return stockAdjustmentsMapper.toResponse(savedAdjustment);
     }
 
-    /**
-     * Retrieves a stock adjustment by its ID.
-     *
-     * @param id the ID of the stock adjustment
-     * @return the stock adjustment response
-     */
     @Override
     @Transactional(readOnly = true)
     public StockAdjustmentsResponse getById(String id) {
@@ -148,13 +138,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         return stockAdjustmentsMapper.toResponse(adjustment);
     }
 
-    /**
-     * Retrieves a paginated list of all stock adjustments.
-     *
-     * @param page the page number for pagination
-     * @param size the page size for pagination
-     * @return a paginated response containing the list of stock adjustments
-     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<StockAdjustmentsResponse> getAll(Integer page, Integer size) {
@@ -167,14 +150,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         return PageResponse.from(adjustmentPage, content);
     }
 
-    /**
-     * Searches for stock adjustments based on the provided criteria.
-     *
-     * @param request the search criteria for stock adjustments
-     * @param page    the page number for pagination
-     * @param size    the page size for pagination
-     * @return a paginated response containing the search results
-     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<StockAdjustmentsResponse> search(SearchStockAdjustmentsRequest request, Integer page, Integer size) {
@@ -200,13 +175,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         return PageResponse.from(adjustmentPage, content);
     }
 
-    /**
-     * Approves a stock adjustment request.
-     *
-     * @param id         the ID of the stock adjustment to approve
-     * @param request    the approval details
-     * @return the updated stock adjustment response after approval
-     */
     @Override
     @Transactional
     public StockAdjustmentsResponse approve(String id, ApproveStockAdjustmentRequest request) {
@@ -229,6 +197,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
         //Step 4: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment approval
         Inventory inventory = getInventoryForUpdate(adjustment.getInventoryId());
+        validateWarehouseOwnership(inventory.getWarehouseId());
 
         // IMPORTANT: Use adjustment fields for audit correctness
         BigDecimal quantityBefore = adjustment.getQuantityBefore();
@@ -286,11 +255,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         return stockAdjustmentsMapper.toResponse(savedAdjustment);
     }
 
-    /**
-     * @param id the ID of the stock adjustment to reject
-     * @param request the rejection details
-     * @return the updated stock adjustment response after rejection
-     */
     @Override
     @Transactional
     public StockAdjustmentsResponse reject(String id, RejectStockAdjustmentRequest request) {
@@ -322,10 +286,8 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         adjustment.setApprovedAt(now);
         adjustment.setUpdatedBy(actorId);
 
-        // If rejection reason is provided, append it to notes for audit trail
         adjustment.setNotes(appendNote(adjustment.getNotes(), "REJECTION_REASON", request.getRejectionReason()));
 
-        //Step 4: Save the updated stock adjustment record with rejection details
         StockAdjustments savedAdjustment = stockAdjustmentsRepository.save(adjustment);
         return stockAdjustmentsMapper.toResponse(savedAdjustment);
     }
@@ -364,7 +326,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         }
     }
 
-    // Applies the new on-hand quantity to the inventory and updates relevant metadata
     private void applyInventoryAfterQuantity(Inventory inventory, BigDecimal quantityAfter, String actorId, LocalDateTime now) {
         if (quantityAfter.compareTo(inventory.getReservedQuantity()) < 0) {
             throw new BadRequestException("Quantity after cannot be lower than reserved quantity", ErrorCode.STA_001);
@@ -413,12 +374,10 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         boolean sensitiveReason = reasonType == ReasonType.THEFT || reasonType == ReasonType.SYSTEM_ERROR;
         boolean largeDelta = adjustmentQuantity.abs().compareTo(new BigDecimal("5.00")) >= 0;
 
-        // MANAGER có thể auto-apply các điều chỉnh nhỏ và không nhạy cảm.
         if (hasRole(actorRoles, RoleType.MANAGER)) {
             return sensitiveReason || largeDelta;
         }
 
-        // USER và các role khác luôn cần duyệt.
         return true;
     }
 
@@ -442,12 +401,17 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         }
     }
 
-    /**
-     * Checks whether the given role name list contains the specified role.
-     * Safe for null/empty lists and handles String↔RoleType comparison.
-     */
     private boolean hasRole(List<String> roleNames, RoleType target) {
         if (roleNames == null || roleNames.isEmpty()) return false;
         return roleNames.contains(target.name());
+    }
+
+    private void validateWarehouseOwnership(String warehouseId) {
+        String accountId = getCurrentActorId();
+        Employee employee = employeeRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BadRequestException("Employee not found for current user", ErrorCode.AUTH_003));
+        if (!employee.getWarehouseId().equals(warehouseId)) {
+            throw new BadRequestException("You do not have permission to access this warehouse", ErrorCode.AUTH_003);
+        }
     }
 }

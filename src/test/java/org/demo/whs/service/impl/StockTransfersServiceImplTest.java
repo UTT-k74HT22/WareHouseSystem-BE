@@ -2,6 +2,7 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Employee;
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.StockMovements;
@@ -18,6 +19,7 @@ import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.mapper.StockTransfersMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.EmployeeRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
@@ -80,6 +82,9 @@ class StockTransfersServiceImplTest {
     @Mock
     private AccountRepository accountRepository;
 
+    @Mock
+    private EmployeeRepository employeeRepository;
+
     private StockTransfersServiceImpl stockTransfersService;
 
     @BeforeEach
@@ -92,6 +97,7 @@ class StockTransfersServiceImplTest {
                 locationRepository,
                 batchRepository,
                 accountRepository,
+                employeeRepository,
                 new StockTransfersMapper(),
                 new StockMovementsMapper(),
                 new IdentifierGenerator()
@@ -108,6 +114,12 @@ class StockTransfersServiceImplTest {
                 .build();
         account.setId("acc-1");
         lenient().when(accountRepository.findByUsername("tester")).thenReturn(Optional.of(account));
+
+        Employee employee = Employee.builder()
+                .accountId("acc-1")
+                .warehouseId("wh-1")
+                .build();
+        lenient().when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.of(employee));
     }
 
     @AfterEach
@@ -356,6 +368,29 @@ class StockTransfersServiceImplTest {
         assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "STF_002");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_UserAccessWarehouseTheyDoNotBelongTo() {
+        StockTransfersRequest request = buildTransferRequest("5.00");
+        setField(request, "warehouseId", "wh-different");
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("You do not have permission to access this warehouse")
+                .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
+    }
+
+    @Test
+    void should_ThrowBadRequest_When_EmployeeNotFoundForCurrentUser() {
+        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
+
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Employee not found for current user")
+                .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
     }
 
     private StockTransfersRequest buildTransferRequest(String quantity) {

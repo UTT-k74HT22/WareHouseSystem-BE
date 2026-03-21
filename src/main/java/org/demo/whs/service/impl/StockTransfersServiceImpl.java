@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
+import org.demo.whs.entity.Employee;
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.StockMovements;
@@ -21,6 +22,7 @@ import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.mapper.StockTransfersMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
+import org.demo.whs.repository.EmployeeRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
@@ -52,6 +54,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     private final LocationRepository locationRepository;
     private final BatchRepository batchRepository;
     private final AccountRepository accountRepository;
+    private final EmployeeRepository employeeRepository;
     private final StockTransfersMapper stockTransfersMapper;
     private final StockMovementsMapper stockMovementsMapper;
     private final IdentifierGenerator identifierGenerator;
@@ -236,6 +239,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     }
 
     private void validateTransferRequest(StockTransfersRequest request) {
+        validateWarehouseOwnership(request.getWarehouseId());
+
         if (request.getFromLocationId().equals(request.getToLocationId())) {
             throw new BadRequestException("Source and destination locations must be different", ErrorCode.STF_002);
         }
@@ -336,5 +341,14 @@ public class StockTransfersServiceImpl implements StockTransfersService {
 
     private String normalizeKeyPart(String value) {
         return value == null ? "" : value;
+    }
+
+    private void validateWarehouseOwnership(String warehouseId) {
+        String accountId = getCurrentActorId();
+        Employee employee = employeeRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BadRequestException("Employee not found for current user", ErrorCode.AUTH_003));
+        if (!employee.getWarehouseId().equals(warehouseId)) {
+            throw new BadRequestException("You do not have permission to access this warehouse", ErrorCode.AUTH_003);
+        }
     }
 }
