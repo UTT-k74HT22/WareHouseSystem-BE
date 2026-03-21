@@ -42,6 +42,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -101,11 +102,9 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     public StockTransfersResponse complete(String id) {
         log.info("Attempting to complete stock transfer with ID: {}", id);
 
-        //Step 1: Check current user and permissions
         String actorId = getCurrentActorId();
         LocalDateTime now = LocalDateTime.now();
 
-        //Step 2: Load transfer và kiểm tra trạng thái (chỉ cho phép complete nếu đang ở trạng thái DRAFT)
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
@@ -113,13 +112,11 @@ public class StockTransfersServiceImpl implements StockTransfersService {
             throw new BadRequestException("Only draft transfer can be completed", ErrorCode.STF_002);
         }
 
-        //Step 3: Validate quantity
         BigDecimal quantity = transfer.getQuantity();
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Quantity must be greater than 0", ErrorCode.STF_003);
         }
 
-        //Step 4: Lock inventory theo thứ tự cố định để tránh deadlock
         String fromLocationId = transfer.getFromLocationId();
         String toLocationId = transfer.getToLocationId();
         boolean lockFromFirst = buildInventoryLockKey(transfer, fromLocationId)
@@ -131,39 +128,34 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         Inventory firstInv = findInventoryForUpdate(transfer, firstLocationId).orElse(null);
         Inventory secondInv = findInventoryForUpdate(transfer, secondLocationId).orElse(null);
 
-        Inventory sourceInventory = lockFromFirst ? firstInv : secondInv; //nguồn tồn kho
-        Inventory destinationInventory = lockFromFirst ? secondInv : firstInv; // kho đích
+        Inventory sourceInventory = lockFromFirst ? firstInv : secondInv;
+        Inventory destinationInventory = lockFromFirst ? secondInv : firstInv;
 
         if (sourceInventory == null) {
             throw new NotFoundException("Source inventory not found", ErrorCode.INV_001);
         }
 
-        // Step 5: Nếu kho đích chưa có tồn kho thì tạo mới (với onHand=0) để đảm bảo tính nhất quán
         if (destinationInventory == null) {
             destinationInventory = createOrReloadDestinationInventory(transfer, actorId);
         }
 
-        // Step 6: Kiểm tra số lượng hàng có sẵn tại nguồn (hàng có sẵn đã được đặt trước).
-        BigDecimal onHand = defaultZero(sourceInventory.getOnHandQuantity()); // tồn kho thực tế
-        BigDecimal available = defaultZero(sourceInventory.getAvailableQuantity()); // loại trừ cả reserved và quarantine
+        BigDecimal onHand = defaultZero(sourceInventory.getOnHandQuantity());
+        BigDecimal available = defaultZero(sourceInventory.getAvailableQuantity());
 
         if (available.compareTo(quantity) < 0) {
             throw new BadRequestException("Insufficient available stock in source inventory", ErrorCode.INV_004);
         }
 
-        // Step 7: Tính sự chênh lệch tồn kho và cập nhật cả 2 bên (nguồn trừ đi, đích cộng vào)
-        BigDecimal sourceBefore = onHand; // số lượng hàng thực tế tại nguồn trước khi chuyển
-        BigDecimal sourceAfter = sourceBefore.subtract(quantity); // số lượng hàng thực tế tại nguồn sau khi chuyển
-        // Kiểm tra lại số lượng hàng có sẵn sau khi trừ đi lượng chuyển để đảm bảo không bị âm do các giao dịch khác đã cập nhật trước đó
+        BigDecimal sourceBefore = onHand;
+        BigDecimal sourceAfter = sourceBefore.subtract(quantity);
         BigDecimal unavailableAfterTransfer = defaultZero(sourceInventory.getReservedQuantity())
                 .add(defaultZero(sourceInventory.getQuarantineQuantity()));
         if (sourceAfter.compareTo(unavailableAfterTransfer) < 0) {
             throw new BadRequestException("Insufficient available stock in source inventory after re-checking", ErrorCode.INV_004);
         }
-        BigDecimal destinationBefore = defaultZero(destinationInventory.getOnHandQuantity()); // số lượng hàng thực tế tại đích trước khi chuyển
-        BigDecimal destinationAfter = destinationBefore.add(quantity); // số lượng hàng thực tế tại đích sau khi chuyển
+        BigDecimal destinationBefore = defaultZero(destinationInventory.getOnHandQuantity());
+        BigDecimal destinationAfter = destinationBefore.add(quantity);
 
-        // Step 8: Cập nhật tồn kho và tạo bản ghi chuyển kho
         sourceInventory.setOnHandQuantity(sourceAfter);
         sourceInventory.setLastMovementAt(now);
         sourceInventory.setUpdatedBy(actorId);
@@ -175,7 +167,6 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         inventoryRepository.save(sourceInventory);
         inventoryRepository.save(destinationInventory);
 
-        // Step 9: Tạo bản ghi lịch sử chuyển kho
         StockMovements transferOutMovement = stockMovementsMapper.toEntity(
                 StockMovementsType.TRANSFER_OUT,
                 transfer.getProductId(),
@@ -210,14 +201,12 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         stockMovementsRepository.save(transferOutMovement);
         stockMovementsRepository.save(transferInMovement);
 
-        //Step 10: Update transfer status
         transfer.setStatus(StockTransfersStatus.COMPLETED);
         transfer.setCompletedAt(now);
         transfer.setUpdatedBy(actorId);
 
         StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
 
-        //Step 11: Return response
         return stockTransfersMapper.toResponse(savedTransfer);
     }
 
@@ -305,7 +294,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
             );
         }
 
-        if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(java.time.LocalDate.now())) {
+        if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(LocalDate.now())) {
             throw new BadRequestException(
                     "Batch has expired",
                     ErrorCode.BATCH_020
