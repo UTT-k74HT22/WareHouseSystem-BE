@@ -1,5 +1,6 @@
 package org.demo.whs.repository;
 
+import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RoleRepository extends JpaRepository<Role, String> {
+public interface RoleRepository extends JpaRepository<Role, String>{
 
     /**
      * Find all role names for a given username.
@@ -49,4 +50,15 @@ public interface RoleRepository extends JpaRepository<Role, String> {
     Optional<Role> findByName(RoleType name);
 
     boolean existsByName(RoleType name);
+
+    /**
+     * Lấy danh sách Permission gán cho role theo role.id
+     */
+    @Query(value = """
+        SELECT p.*
+        FROM permissions p
+        JOIN role_permissions rhp ON rhp.permission_id = p.id
+        WHERE rhp.role_id = :roleId
+    """, nativeQuery = true)
+    List<Permission> findPermissionsByRoleId(@Param("roleId") String roleId);
 }
