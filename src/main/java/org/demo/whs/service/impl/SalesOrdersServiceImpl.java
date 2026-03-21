@@ -188,7 +188,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
 
         validateDraftStatus(salesOrder, "confirmed");
 
-        List<SalesOrderLines> lines = salesOrderLinesRepository.findBySalesOrderId(id);
+        List<SalesOrderLines> lines = salesOrderLinesRepository.findAllBySalesOrderIdForUpdate(id);
         if (lines.isEmpty()) {
             throw new BadRequestException("Sales order must have at least one line", ErrorCode.COM_001);
         }
@@ -204,13 +204,12 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
         }
 
         // Step 1: Reserve inventory for all lines (Atomic Check & Reserve)
-        // If any line fails (insufficient stock), the entire transaction will rollback
         for (SalesOrderLines line : lines) {
             inventoryService.reserve(InventoryReserveRequest.builder()
                     .warehouseId(salesOrder.getWarehouseId())
                     .productId(line.getProductId())
                     .quantity(line.getQuantityOrdered())
-                    .salesOrderLineId(line.getId())
+                    .orderLineId(line.getId())
                     .build());
         }
 
@@ -254,13 +253,15 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
                 }
             }
 
-            List<SalesOrderLines> lines = salesOrderLinesRepository.findBySalesOrderId(id);
+            List<SalesOrderLines> lines = salesOrderLinesRepository.findAllBySalesOrderIdForUpdate(id);
 
             // Unreserve inventory based on actual reservation records
             for (SalesOrderLines line : lines) {
                 inventoryReservationRepository.findByOrderLineId(line.getId()).ifPresent(reservation -> {
                     if (reservation.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
                         inventoryService.unreserve(InventoryUnreserveRequest.builder()
+                                .productId(reservation.getProductId())
+                                .warehouseId(reservation.getWarehouseId())
                                 .orderLineId(line.getId())
                                 .quantity(reservation.getQuantity())
                                 .build());
@@ -281,7 +282,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
                 .orElseThrow(() -> new NotFoundException("Customer not found", ErrorCode.COM_001));
 
         boolean validType = customer.getType() == BusinessPartnerType.CUSTOMER
-                || customer.getType() == BusinessPartnerType.BOTH;
+                || customer.getType() == BusinessPartnerType.BOTH|| customer.getType() == BusinessPartnerType.SUPPLIER;
         if (customer.getStatus() != BusinessPartnerStatus.ACTIVE || !validType) {
             throw new BadRequestException("Customer is not active or not a customer", ErrorCode.COM_001);
         }

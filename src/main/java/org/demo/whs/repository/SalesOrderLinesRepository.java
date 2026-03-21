@@ -4,10 +4,12 @@ import org.demo.whs.entity.SalesOrderLines;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -69,4 +71,16 @@ public interface SalesOrderLinesRepository extends JpaRepository<SalesOrderLines
         WHERE sol.salesOrderId = :salesOrderId
     """)
     BigDecimal sumLineTotalBySalesOrderId(@Param("salesOrderId") String salesOrderId);
+
+    /**
+     * Lock all lines by Sales Order ID for update (pessimistic lock)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
+    @Query("""
+        SELECT sol
+        FROM SalesOrderLines sol
+        WHERE sol.salesOrderId = :salesOrderId
+    """)
+    List<SalesOrderLines> findAllBySalesOrderIdForUpdate(@Param("salesOrderId") String salesOrderId);
 }

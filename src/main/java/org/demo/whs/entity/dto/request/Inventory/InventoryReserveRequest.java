@@ -36,6 +36,6 @@ public class InventoryReserveRequest {
     @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
     private BigDecimal quantity;
 
-    @NotBlank(message = "SalesOrderLineId is required")
-    private String salesOrderLineId;
+    @NotBlank(message = "OrderLineId is required")
+    private String orderLineId;
 }

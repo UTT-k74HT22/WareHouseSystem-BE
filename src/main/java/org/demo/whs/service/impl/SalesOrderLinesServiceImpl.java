@@ -90,6 +90,10 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
         // Lock the parent Sales Order
         SalesOrders salesOrder = salesOrdersRepository.findByIdForUpdate(line.getSalesOrderId())
                 .orElseThrow(() -> new NotFoundException("Sales order parent not found", ErrorCode.COM_001));
+
+        if (!salesOrder.getId().equals(line.getSalesOrderId())) {
+            throw new BadRequestException("Sales order line does not belong to this sales order", ErrorCode.COM_001);
+        }
         
         validateDraftStatus(salesOrder, "update lines of");
 
@@ -128,6 +132,11 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
     @Transactional(readOnly = true)
     public List<SalesOrderLinesResponse> getBySalesOrder(String salesOrderId) {
         log.info("Getting lines for sales order, id={}", salesOrderId);
+        
+        // Validate PO exists
+        salesOrdersRepository.findById(salesOrderId)
+                .orElseThrow(() -> new NotFoundException("Sales order not found", ErrorCode.COM_001));
+
         return salesOrderLinesRepository.findBySalesOrderIdOrderByLineNumberAsc(salesOrderId)
                 .stream()
                 .map(salesOrderLinesMapper::toResponse)
@@ -142,7 +151,7 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
     private void validateDraftStatus(SalesOrders salesOrder, String operation) {
         if (salesOrder.getStatus() != SalesOrdersStatus.DRAFT) {
             throw new BadRequestException(
-                    String.format("Only draft sales orders can %s", operation),
+                    String.format("Only draft sales orders can be %s", operation),
                     ErrorCode.COM_001
             );
         }

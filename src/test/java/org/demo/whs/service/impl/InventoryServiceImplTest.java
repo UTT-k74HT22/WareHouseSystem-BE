@@ -216,7 +216,7 @@ class InventoryServiceImplTest {
         orderLine.setProductId(productId);
 
         InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .salesOrderLineId("OL-1")
+                .orderLineId("OL-1")
                 .warehouseId("wh-1")
                 .productId(productId)
                 .quantity(qty)
@@ -246,6 +246,8 @@ class InventoryServiceImplTest {
         Inventory inv = Inventory.builder().id("inv-1").reservedQuantity(BigDecimal.TEN).onHandQuantity(new BigDecimal("100")).build();
 
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                .productId("p1")
+                .warehouseId("w1")
                 .orderLineId("OL-1")
                 .quantity(BigDecimal.TEN)
                 .build();

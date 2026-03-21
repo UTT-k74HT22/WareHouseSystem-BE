@@ -41,6 +41,7 @@ public class SalesOrdersRequest {
     private LocalDate requestedDeliveryDate;
 
     @NotBlank(message = "Currency is required")
+    // NOTE: Keep in sync with CurrencyType enum
     @Pattern(regexp = "^(VND|USD|EUR|JPY)$", message = "Currency must be one of: VND, USD, EUR, JPY")
     private String currency;
 

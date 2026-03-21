@@ -193,21 +193,21 @@ public class InventoryServiceImpl implements InventoryService {
 
         log.info("Reserving inventory for request: {}", request);
 
-        if (request.getSalesOrderLineId() == null || request.getSalesOrderLineId().isBlank()) {
-            throw new BadRequestException("salesOrderLineId is required", ErrorCode.COM_001);
+        if (request.getOrderLineId() == null || request.getOrderLineId().isBlank()) {
+            throw new BadRequestException("orderLineId is required", ErrorCode.COM_001);
         }
 
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException(ErrorCode.COM_001);
         }
-        SalesOrderLines orderLine = salesOrderLinesRepository.findById(request.getSalesOrderLineId()).orElseThrow(() -> new NotFoundException(ErrorCode.ORDER_001));
+        SalesOrderLines orderLine = salesOrderLinesRepository.findById(request.getOrderLineId()).orElseThrow(() -> new NotFoundException(ErrorCode.ORDER_001));
 
         if (!orderLine.getProductId().equals(request.getProductId())) {
             log.error("Product ID mismatch: request={}, line={}", request.getProductId(), orderLine.getProductId());
             throw new BadRequestException("Product ID mismatch between request and order line", ErrorCode.COM_001);
         }
 
-        String lockKey = "lock:reserve:" + request.getSalesOrderLineId();
+        String lockKey = "lock:reserve:" + request.getOrderLineId();
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
@@ -216,7 +216,7 @@ public class InventoryServiceImpl implements InventoryService {
             }
 
             try {
-                Optional<InventoryReservation> existing = inventoryReservationRepository.findByOrderLineId(request.getSalesOrderLineId());
+                Optional<InventoryReservation> existing = inventoryReservationRepository.findByOrderLineId(request.getOrderLineId());
 
                 if (existing.isPresent()) {
                     Inventory inv = inventoryRepository.findById(existing.get().getInventoryId()).orElse(null);
@@ -236,11 +236,11 @@ public class InventoryServiceImpl implements InventoryService {
                 inventory.setLastMovementAt(LocalDateTime.now());
                 inventoryRepository.save(inventory);
 
-                InventoryReservation reservation = InventoryReservation.builder().inventoryId(inventory.getId()).productId(inventory.getProductId()).warehouseId(inventory.getWarehouseId()).locationId(inventory.getLocationId()).batchId(inventory.getBatchId()).quantity(request.getQuantity()).orderLineId(request.getSalesOrderLineId()).status(InventoryReservationStatus.RESERVED).build();
+                InventoryReservation reservation = InventoryReservation.builder().inventoryId(inventory.getId()).productId(inventory.getProductId()).warehouseId(inventory.getWarehouseId()).locationId(inventory.getLocationId()).batchId(inventory.getBatchId()).quantity(request.getQuantity()).orderLineId(request.getOrderLineId()).status(InventoryReservationStatus.RESERVED).build();
 
                 inventoryReservationRepository.save(reservation);
 
-                StockMovements movement = stockMovementsMapper.toEntity(StockMovementsType.RESERVE, inventory.getProductId(), inventory.getWarehouseId(), inventory.getLocationId(), inventory.getBatchId(), request.getQuantity().negate(), availableBefore, inventory.getAvailableQuantity(), ReferenceType.SALES_ORDER, request.getSalesOrderLineId(), null, "Reservation for orderLine: " + request.getSalesOrderLineId(), null);
+                StockMovements movement = stockMovementsMapper.toEntity(StockMovementsType.RESERVE, inventory.getProductId(), inventory.getWarehouseId(), inventory.getLocationId(), inventory.getBatchId(), request.getQuantity().negate(), availableBefore, inventory.getAvailableQuantity(), ReferenceType.SALES_ORDER, request.getOrderLineId(), null, "Reservation for orderLine: " + request.getOrderLineId(), null);
 
                 stockMovementsService.recordMovement(movement);
                 return inventoryMapper.toReserveResponse(reservation, inventory);
@@ -276,6 +276,14 @@ public class InventoryServiceImpl implements InventoryService {
             return new NotFoundException(ErrorCode.INV_001);
         });
 
+        // Cross-validate with request to ensure we are unreserving the right thing
+        if (request.getProductId() != null && !request.getProductId().equals(reservation.getProductId())) {
+            throw new BadRequestException("Product ID mismatch", ErrorCode.COM_001);
+        }
+        if (request.getWarehouseId() != null && !request.getWarehouseId().equals(reservation.getWarehouseId())) {
+            throw new BadRequestException("Warehouse ID mismatch", ErrorCode.COM_001);
+        }
+
         if (reservation.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             log.info("Nothing to unreserve for orderLineId={}", request.getOrderLineId());
             return inventoryMapper.toUnreserveResponse(reservation, BigDecimal.ZERO);
@@ -291,7 +299,8 @@ public class InventoryServiceImpl implements InventoryService {
         BigDecimal availableBefore = inventory.getAvailableQuantity();
 
         if (inventory.getReservedQuantity().compareTo(unreserveQty) < 0) {
-            log.error("Inventory reserved {} < unreserve {}", inventory.getReservedQuantity(), unreserveQty);
+            log.error("Data inconsistency: Inventory reserved {} < unreserve request {}", 
+                inventory.getReservedQuantity(), unreserveQty);
             throw new ConflictException(ErrorCode.INV_002);
         }
 

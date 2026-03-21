@@ -290,7 +290,7 @@ class InventoryControllerTest {
     @DisplayName("Should return 200 when reservation is successful")
     void shouldReturn200WhenReservationIsSuccessful() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .salesOrderLineId("OL-1")
+                .orderLineId("OL-1")
                 .warehouseId("wh-1")
                 .productId("prod-1")
                 .quantity(new BigDecimal("10.00"))
@@ -340,6 +340,8 @@ class InventoryControllerTest {
     @DisplayName("Should return 200 when unreservation is successful")
     void shouldReturn200WhenUnreservationIsSuccessful() throws Exception {
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
                 .orderLineId("OL-1001")
                 .quantity(new BigDecimal("10.00"))
                 .build();

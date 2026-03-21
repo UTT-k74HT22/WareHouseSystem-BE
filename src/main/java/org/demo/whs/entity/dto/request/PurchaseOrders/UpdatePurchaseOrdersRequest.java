@@ -30,6 +30,7 @@ public class UpdatePurchaseOrdersRequest {
     @FutureOrPresent(message = "Expected delivery date cannot be in the past")
     private LocalDate expectedDeliveryDate;
 
+    // NOTE: Keep in sync with CurrencyType enum
     @Pattern(regexp = "^(VND|USD|EUR|JPY)$", message = "Currency must be one of: VND, USD, EUR, JPY")
     private String currency;
 
