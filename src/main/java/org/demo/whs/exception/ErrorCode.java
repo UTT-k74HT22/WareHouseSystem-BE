@@ -26,7 +26,9 @@ public enum ErrorCode {
     RESET_005("RESET_005", "Old password is incorrect"),
     // Role
     ROLE_001("ROLE_001", "Role not found"),
-
+    ROLE_002("ROLE_002", "Permission list cannot be empty"),
+    ROLE_003("ROLE_003", "Invalid permission IDs"),
+    ROLE_004("ROLE_004", "Role name already exists"),
     // OTP errors
     OTP_001("OTP_001", "OTP type is required"),
     OTP_002("OTP_002", "Account not found"),
