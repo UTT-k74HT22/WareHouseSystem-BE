@@ -252,6 +252,13 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         validateLocationForTransfer(fromLocation, "Source");
         validateLocationForTransfer(toLocation, "Destination");
 
+        if (!fromLocation.getWarehouseId().equals(toLocation.getWarehouseId())) {
+            throw new BadRequestException(
+                    "Stock transfer must be within the same warehouse. Cross-warehouse transfer is not allowed",
+                    ErrorCode.STF_002
+            );
+        }
+
         if (!fromLocation.getWarehouseId().equals(request.getWarehouseId())
                 || !toLocation.getWarehouseId().equals(request.getWarehouseId())) {
             throw new BadRequestException("Transfer locations must belong to the provided warehouse", ErrorCode.STF_002);
@@ -291,6 +298,13 @@ public class StockTransfersServiceImpl implements StockTransfersService {
 
         validateLocationForTransfer(fromLocation, "Source");
         validateLocationForTransfer(toLocation, "Destination");
+
+        if (!fromLocation.getWarehouseId().equals(toLocation.getWarehouseId())) {
+            throw new BadRequestException(
+                    "Stock transfer must be within the same warehouse. Cross-warehouse transfer is not allowed",
+                    ErrorCode.STF_002
+            );
+        }
 
         if (!transfer.getWarehouseId().equals(fromLocation.getWarehouseId())
                 || !transfer.getWarehouseId().equals(toLocation.getWarehouseId())) {
