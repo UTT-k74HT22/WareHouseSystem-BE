@@ -2,6 +2,7 @@ package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
@@ -9,7 +10,6 @@ import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
-import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.service.RoleService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -51,8 +51,7 @@ public class RoleController {
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
             @RequestParam(required = false) Boolean isDefault,
-            @RequestParam(required = false) String search,
-
+            @RequestParam(required = false) @Size(max = 100, message = "Search keyword max 50 chars") String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {

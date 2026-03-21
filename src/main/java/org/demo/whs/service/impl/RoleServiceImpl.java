@@ -14,14 +14,13 @@ import org.demo.whs.service.RoleService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of {@link RoleService}.
- * This service handles business logic related to {@link Role}:
+ * Implementation of RoleService.
  */
 @Service
 @Slf4j
@@ -31,24 +30,21 @@ public class RoleServiceImpl implements RoleService {
     private final RoleRepository roleRepository;
     private final RoleMapper roleMapper;
 
-    /**
-     * Create a new role.
-     *
-     * @param request request payload containing role data
-     * @return created role response
-     */
     @Override
     public RoleResponse createRole(CreateRoleRequest request) {
         return null;
     }
 
     /**
-     * Get roles with pagination.
+     * Get roles with filtering + pagination.
      *
-     * @param pageable pagination information
-     * @return paginated list of roles
+     * @param isDefault filter by default role
+     * @param search    keyword search
+     * @param pageable  pagination info
+     * @return paginated roles
      */
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<RoleResponse> getRoles(Boolean isDefault, String search, Pageable pageable) {
 
         Page<Role> rolePage = roleRepository.findAll(
@@ -66,11 +62,11 @@ public class RoleServiceImpl implements RoleService {
                 .map(Role::getId)
                 .toList();
 
-        var permissionCountMap = mapToCountMap(
+        Map<String, Long> permissionCountMap = mapToCountMapSafe(
                 roleRepository.countPermissionsByRoleIds(roleIds)
         );
 
-        var userCountMap = mapToCountMap(
+        Map<String, Long> userCountMap = mapToCountMapSafe(
                 roleRepository.countUsersByRoleIds(roleIds)
         );
 
@@ -103,20 +99,33 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public void deleteRole(String id) {
-
     }
 
     /**
-     * Convert raw aggregation query result into a Map.
-     *
-     * @param data list of Object arrays returned from repository
-     * @return map of roleId to count
+     * Safe mapping for aggregation results.
+     * Prevent:
+     * - NullPointerException
+     * - ClassCastException
      */
-    private Map<String, Long> mapToCountMap(List<Object[]> data) {
+    private Map<String, Long> mapToCountMapSafe(List<Object[]> data) {
+
+        if (data == null || data.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
         return data.stream()
+                .filter(Objects::nonNull)
+                .filter(arr -> arr.length >= 2 && arr[0] != null)
                 .collect(Collectors.toMap(
-                        obj -> (String) obj[0],
-                        obj -> ((Number) obj[1]).longValue()
+                        arr -> String.valueOf(arr[0]),
+                        arr -> {
+                            Object count = arr[1];
+                            if (count == null) return 0L;
+                            if (count instanceof Number num) {
+                                return num.longValue();
+                            }
+                            return 0L;
+                        }
                 ));
     }
 }
