@@ -99,6 +99,27 @@ public class StockTransfersServiceImpl implements StockTransfersService {
 
     @Override
     @Transactional
+    public StockTransfersResponse submit(String id) {
+        log.info("Attempting to submit stock transfer with ID: {}", id);
+
+        String actorId = getCurrentActorId();
+
+        StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
+
+        if (transfer.getStatus() != StockTransfersStatus.DRAFT) {
+            throw new BadRequestException("Only draft transfer can be submitted", ErrorCode.STF_002);
+        }
+
+        transfer.setStatus(StockTransfersStatus.PENDING);
+        transfer.setUpdatedBy(actorId);
+
+        StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
+        return stockTransfersMapper.toResponse(savedTransfer);
+    }
+
+    @Override
+    @Transactional
     public StockTransfersResponse complete(String id) {
         log.info("Attempting to complete stock transfer with ID: {}", id);
 
@@ -108,8 +129,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
-        if (transfer.getStatus() != StockTransfersStatus.DRAFT) {
-            throw new BadRequestException("Only draft transfer can be completed", ErrorCode.STF_002);
+        if (transfer.getStatus() != StockTransfersStatus.PENDING) {
+            throw new BadRequestException("Only pending transfer can be completed", ErrorCode.STF_002);
         }
 
         validateTransferStateForCompletion(transfer);
@@ -222,8 +243,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
-        if (transfer.getStatus() != StockTransfersStatus.DRAFT) {
-            throw new BadRequestException("Only draft transfer can be cancelled", ErrorCode.STF_002);
+        if (transfer.getStatus() != StockTransfersStatus.DRAFT && transfer.getStatus() != StockTransfersStatus.PENDING) {
+            throw new BadRequestException("Only draft or pending transfer can be cancelled", ErrorCode.STF_002);
         }
 
         transfer.setStatus(StockTransfersStatus.CANCELLED);
