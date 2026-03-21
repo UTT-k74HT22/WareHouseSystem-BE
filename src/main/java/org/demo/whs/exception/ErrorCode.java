@@ -69,6 +69,8 @@ public enum ErrorCode {
     LOC_004("LOC_004", "Warehouse is not active - cannot create location"),
     LOC_005("LOC_005", "Invalid location status transition"),
     LOC_006("LOC_006", "Cannot change status - location has active inventory"),
+    LOC_007("LOC_007", "Location is not active for stock transfer"),
+    LOC_008("LOC_008", "Location type is not valid for stock transfer"),
 
     // Product errors
     PROD_001("PROD_001", "Product not found"),
@@ -159,6 +161,7 @@ public enum ErrorCode {
     BATCH_017("BATCH_017", "Batch cannot be released because it is expired"),
     BATCH_018("BATCH_018", "Recalled batch cannot be released"),
     BATCH_019("BATCH_019", "Batch date filter range is invalid"),
+    BATCH_020("BATCH_020", "Batch has expired"),
 
     // Inbound Receipt Line errors
     IRL_001("IRL_001", "Inbound receipt line not found"),
