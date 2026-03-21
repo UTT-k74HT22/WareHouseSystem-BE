@@ -375,6 +375,21 @@ class StockAdjustmentsServiceImplTest {
                     .hasMessageContaining("Failed to create stock adjustment")
                     .hasFieldOrPropertyWithValue("errorCode", "STA_001");
         }
+
+        @Test
+        @DisplayName("Should throw BadRequest when user accesses inventory from different warehouse")
+        void should_ThrowBadRequest_When_UserAccessDifferentWarehouseInventory() {
+            Inventory inventoryFromOtherWarehouse = buildInventory("inv-other", "100.00", "10.00");
+            setField(inventoryFromOtherWarehouse, "warehouseId", "wh-other");
+            StockAdjustmentsRequest request = buildAdjustmentRequest("inv-other", "120.00", ReasonType.COUNT_ERROR);
+
+            when(inventoryRepository.findByIdForUpdate("inv-other")).thenReturn(Optional.of(inventoryFromOtherWarehouse));
+
+            assertThatThrownBy(() -> stockAdjustmentsService.createAdjustment(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("You do not have permission to access this warehouse")
+                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
+        }
     }
 
     // =========================================================================
@@ -509,6 +524,23 @@ class StockAdjustmentsServiceImplTest {
             assertThatThrownBy(() -> stockAdjustmentsService.approve("adj-user", null))
                     .isInstanceOf(BadRequestException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "AUTH_002");
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequest when user approves inventory from different warehouse")
+        void should_ThrowBadRequest_When_UserApprovesDifferentWarehouseInventory() {
+            Inventory inventoryFromOtherWarehouse = buildInventory("inv-other", "100.00", "10.00");
+            setField(inventoryFromOtherWarehouse, "warehouseId", "wh-other");
+            StockAdjustments adjustment = buildPendingAdjustment("adj-wh", "inv-other", "100.00", "130.00");
+
+            when(roleRepository.findRoleNamesByAccountId(ACTOR_ID)).thenReturn(List.of("ADMIN"));
+            when(stockAdjustmentsRepository.findByIdForUpdate("adj-wh")).thenReturn(Optional.of(adjustment));
+            when(inventoryRepository.findByIdForUpdate("inv-other")).thenReturn(Optional.of(inventoryFromOtherWarehouse));
+
+            assertThatThrownBy(() -> stockAdjustmentsService.approve("adj-wh", null))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("You do not have permission to access this warehouse")
+                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
         }
     }
 
