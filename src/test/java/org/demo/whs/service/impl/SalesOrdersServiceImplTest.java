@@ -287,7 +287,7 @@ class SalesOrdersServiceImplTest {
         SalesOrderLines line = buildSalesOrderLine("line-1", "so-1", 1, "5.00", "100.00", "500.00");
 
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
-        when(salesOrderLinesRepository.findBySalesOrderId("so-1")).thenReturn(List.of(line));
+        when(salesOrderLinesRepository.findAllBySalesOrderIdForUpdate("so-1")).thenReturn(List.of(line));
         when(inventoryService.reserve(any(InventoryReserveRequest.class))).thenReturn(
                 InventoryReserveResponse.builder().inventoryId("inv-1").status("RESERVED").build()
         );
@@ -326,7 +326,7 @@ class SalesOrdersServiceImplTest {
         SalesOrders so = buildSalesOrder("so-1", "SO-001", SalesOrdersStatus.DRAFT);
 
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
-        when(salesOrderLinesRepository.findBySalesOrderId("so-1")).thenReturn(List.of());
+        when(salesOrderLinesRepository.findAllBySalesOrderIdForUpdate("so-1")).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.confirm("so-1"))
                 .isInstanceOf(BadRequestException.class)
@@ -358,12 +358,13 @@ class SalesOrdersServiceImplTest {
         SalesOrderLines line = buildSalesOrderLine("line-1", "so-1", 1, "5.00", "100.00", "500.00");
         InventoryReservation reservation = InventoryReservation.builder()
                 .id("res-1").inventoryId("inv-1").orderLineId("line-1")
+                .productId("prod-1").warehouseId("wh-1")
                 .quantity(new BigDecimal("5.00")).status(InventoryReservationStatus.RESERVED).build();
 
         when(salesOrdersRepository.findById("so-1")).thenReturn(Optional.of(so));
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
         when(outboundShipmentsRepository.findBySalesOrderId("so-1")).thenReturn(List.of());
-        when(salesOrderLinesRepository.findBySalesOrderId("so-1")).thenReturn(List.of(line));
+        when(salesOrderLinesRepository.findAllBySalesOrderIdForUpdate("so-1")).thenReturn(List.of(line));
         when(inventoryReservationRepository.findByOrderLineId("line-1")).thenReturn(Optional.of(reservation));
         when(salesOrdersRepository.save(any(SalesOrders.class))).thenAnswer(inv -> inv.getArgument(0));
         when(salesOrdersMapper.toResponse(any(SalesOrders.class))).thenReturn(

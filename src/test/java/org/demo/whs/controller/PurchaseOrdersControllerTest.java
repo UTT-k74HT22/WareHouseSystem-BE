@@ -78,7 +78,7 @@ class PurchaseOrdersControllerTest {
                                 "supplier_id", "sup-1",
                                 "warehouse_id", "wh-1",
                                 "order_date", "2026-03-15",
-                                "expected_delivery_date", "2026-03-20",
+                                "expected_delivery_date", "2026-03-25",
                                 "currency", "VND",
                                 "payment_terms", "Net 30",
                                 "notes", "Test order"

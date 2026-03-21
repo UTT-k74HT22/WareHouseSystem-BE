@@ -122,7 +122,7 @@ class SalesOrderLinesServiceImplTest {
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Only draft sales orders can add lines");
+                .hasMessageContaining("add lines to");
 
         verify(salesOrderLinesRepository, never()).save(any());
     }
@@ -270,7 +270,7 @@ class SalesOrderLinesServiceImplTest {
 
         assertThatThrownBy(() -> service.update("line-1", request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Only draft sales orders can update lines");
+                .hasMessageContaining("update lines of");
 
         verify(salesOrderLinesRepository, never()).save(any());
     }
@@ -295,6 +295,9 @@ class SalesOrderLinesServiceImplTest {
         SalesOrderLines line1 = buildLine("line-1", "so-1", 1, "5.00", "100.00", "500.00");
         SalesOrderLines line2 = buildLine("line-2", "so-1", 2, "3.00", "50.00", "150.00");
 
+        SalesOrders so = SalesOrders.builder().soNumber("SO-001").build();
+        so.setId("so-1");
+        when(salesOrdersRepository.findById("so-1")).thenReturn(Optional.of(so));
         when(salesOrderLinesRepository.findBySalesOrderIdOrderByLineNumberAsc("so-1"))
                 .thenReturn(List.of(line1, line2));
         when(salesOrderLinesMapper.toResponse(line1)).thenReturn(
