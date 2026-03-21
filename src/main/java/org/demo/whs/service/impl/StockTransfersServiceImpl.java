@@ -112,6 +112,9 @@ public class StockTransfersServiceImpl implements StockTransfersService {
             throw new BadRequestException("Only draft transfer can be completed", ErrorCode.STF_002);
         }
 
+        validateTransferStateForCompletion(transfer);
+
+        //Step 3: Validate quantity
         BigDecimal quantity = transfer.getQuantity();
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Quantity must be greater than 0", ErrorCode.STF_003);
@@ -278,6 +281,34 @@ public class StockTransfersServiceImpl implements StockTransfersService {
                     ErrorCode.LOC_008
             );
         }
+    }
+
+    private void validateTransferStateForCompletion(StockTransfers transfer) {
+        Locations fromLocation = locationRepository.findByIdForUpdate(transfer.getFromLocationId())
+                .orElseThrow(() -> new BadRequestException("Source location not found", ErrorCode.LOC_001));
+        Locations toLocation = locationRepository.findByIdForUpdate(transfer.getToLocationId())
+                .orElseThrow(() -> new BadRequestException("Destination location not found", ErrorCode.LOC_001));
+
+        validateLocationForTransfer(fromLocation, "Source");
+        validateLocationForTransfer(toLocation, "Destination");
+
+        if (!transfer.getWarehouseId().equals(fromLocation.getWarehouseId())
+                || !transfer.getWarehouseId().equals(toLocation.getWarehouseId())) {
+            throw new BadRequestException("Transfer locations must belong to the provided warehouse", ErrorCode.STF_002);
+        }
+
+        if (transfer.getBatchId() == null || transfer.getBatchId().isBlank()) {
+            return;
+        }
+
+        Batch batch = batchRepository.findByIdForUpdate(transfer.getBatchId())
+                .orElseThrow(() -> new BadRequestException("Batch not found", ErrorCode.BATCH_001));
+
+        if (!transfer.getProductId().equals(batch.getProductId())) {
+            throw new BadRequestException("Batch does not belong to the provided product", ErrorCode.STF_002);
+        }
+
+        validateBatchForTransfer(batch);
     }
 
     private boolean isValidLocationTypeForTransfer(LocationType type) {

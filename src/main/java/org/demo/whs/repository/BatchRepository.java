@@ -2,6 +2,8 @@ package org.demo.whs.repository;
 
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.enums.BatchStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +20,10 @@ import java.util.Optional;
  */
 @Repository
 public interface BatchRepository extends JpaRepository<Batch, String>, JpaSpecificationExecutor<Batch> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Batch b WHERE b.id = :id")
+    Optional<Batch> findByIdForUpdate(@Param("id") String id);
 
     boolean existsByProductIdAndBatchNumber(String productId, String batchNumber);
 
