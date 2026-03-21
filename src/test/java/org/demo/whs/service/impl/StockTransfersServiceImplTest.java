@@ -388,7 +388,7 @@ class StockTransfersServiceImplTest {
 
     @Test
     void should_ThrowBadRequest_When_EmployeeNotFoundForCurrentUser() {
-        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
+        lenient().when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
 
         StockTransfersRequest request = buildTransferRequest("5.00");
 
@@ -490,12 +490,8 @@ class StockTransfersServiceImplTest {
         StockTransfersRequest request = buildTransferRequest("5.00");
         setField(request, "toLocationId", "loc-1");
 
-        Locations from = new Locations();
-        from.setId("loc-1");
-        from.setWarehouseId("wh-1");
-
-        when(productRepository.existsById("prod-1")).thenReturn(true);
-        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        lenient().when(productRepository.existsById("prod-1")).thenReturn(true);
+        lenient().when(locationRepository.findById("loc-1")).thenReturn(Optional.of(new Locations()));
 
         assertThatThrownBy(() -> stockTransfersService.createTransfer(request))
                 .isInstanceOf(BadRequestException.class)
