@@ -170,7 +170,7 @@
     │               │                   │                   │                 │
 ```
 
-**Chi tiết:** Xem [02-on-demand-report-flow.md](./02-on-demand-report-flow.md)
+**Chi tiết:** Xem [02-on-demand-report-flow.md](02-on-demand-report-flow.md)
 
 ### 3.2 Async Report Flow
 
@@ -219,7 +219,7 @@
     │               │                   │                   │                 │
 ```
 
-**Chi tiết:** Xem [03-async-report-flow.md](./03-async-report-flow.md)
+**Chi tiết:** Xem [03-async-report-flow.md](03-async-report-flow.md)
 
 ### 3.3 Scheduled Report Flow
 
@@ -254,7 +254,7 @@
        │                   │                   │                 │
 ```
 
-**Chi tiết:** Xem [04-schedule-report-flow.md](./04-schedule-report-flow.md)
+**Chi tiết:** Xem [04-schedule-report-flow.md](04-schedule-report-flow.md)
 
 ---
 
@@ -699,10 +699,10 @@
 
 ### Documentation Index
 
-- [02-on-demand-report-flow.md](./02-on-demand-report-flow.md) - Chi tiết flow on-demand
-- [03-async-report-flow.md](./03-async-report-flow.md) - Chi tiết flow async
-- [04-schedule-report-flow.md](./04-schedule-report-flow.md) - Chi tiết flow scheduled
-- [05-export-import-flow.md](./05-export-import-flow.md) - Chi tiết flow export/import
-- [06-sequence-diagrams.md](./06-sequence-diagrams.md) - Sequence diagrams
-- [07-data-flow-diagrams.md](./07-data-flow-diagrams.md) - Data flow diagrams
-- [08-integration-points.md](./08-integration-points.md) - Integration details
+- [02-on-demand-report-flow.md](02-on-demand-report-flow.md) - Chi tiết flow on-demand
+- [03-async-report-flow.md](03-async-report-flow.md) - Chi tiết flow async
+- [04-schedule-report-flow.md](04-schedule-report-flow.md) - Chi tiết flow scheduled
+- [05-export-import-flow.md](05-export-import-flow.md) - Chi tiết flow export/import
+- [06-sequence-diagrams.md](06-sequence-diagrams.md) - Sequence diagrams
+- [07-data-flow-diagrams.md](07-data-flow-diagrams.md) - Data flow diagrams
+- [08-integration-points.md](08-integration-points.md) - Integration details

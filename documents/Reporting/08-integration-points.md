@@ -804,10 +804,10 @@ class ReportIntegrationTest {
 
 ## 7. Documentation Index
 
-- [01-end-to-end-flow.md](./01-end-to-end-flow.md) - Flow tổng quan
-- [02-on-demand-report-flow.md](./02-on-demand-report-flow.md) - Chi tiết on-demand
-- [03-async-report-flow.md](./03-async-report-flow.md) - Chi tiết async
-- [04-schedule-report-flow.md](./04-schedule-report-flow.md) - Chi tiết scheduled
-- [05-export-import-flow.md](./05-export-import-flow.md) - Chi tiết export/import
-- [06-sequence-diagrams.md](./06-sequence-diagrams.md) - Sequence diagrams
-- [07-data-flow-diagrams.md](./07-data-flow-diagrams.md) - Data flow diagrams
+- [01-end-to-end-flow.md](01-end-to-end-flow.md) - Flow tổng quan
+- [02-on-demand-report-flow.md](02-on-demand-report-flow.md) - Chi tiết on-demand
+- [03-async-report-flow.md](03-async-report-flow.md) - Chi tiết async
+- [04-schedule-report-flow.md](04-schedule-report-flow.md) - Chi tiết scheduled
+- [05-export-import-flow.md](05-export-import-flow.md) - Chi tiết export/import
+- [06-sequence-diagrams.md](06-sequence-diagrams.md) - Sequence diagrams
+- [07-data-flow-diagrams.md](07-data-flow-diagrams.md) - Data flow diagrams

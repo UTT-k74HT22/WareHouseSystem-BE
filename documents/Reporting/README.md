@@ -15,14 +15,14 @@
 
 | # | File | Mô Tả |
 |---|------|--------|
-| 01 | [01-end-to-end-flow.md](./01-end-to-end-flow.md) | Flow tổng quan end-to-end của module Report |
-| 02 | [02-on-demand-report-flow.md](./02-on-demand-report-flow.md) | Chi tiết flow báo cáo on-demand (WHS-67) |
-| 03 | [03-async-report-flow.md](./03-async-report-flow.md) | Chi tiết flow báo cáo async qua RabbitMQ (WHS-68) |
-| 04 | [04-schedule-report-flow.md](./04-schedule-report-flow.md) | Chi tiết flow báo cáo theo lịch (WHS-69) |
-| 05 | [05-export-import-flow.md](./05-export-import-flow.md) | Chi tiết flow export/import dữ liệu (WHS-37,38,39) |
-| 06 | [06-sequence-diagrams.md](./06-sequence-diagrams.md) | Sequence diagrams chi tiết cho từng use case |
-| 07 | [07-data-flow-diagrams.md](./07-data-flow-diagrams.md) | Data flow diagrams và data dictionary |
-| 08 | [08-integration-points.md](./08-integration-points.md) | Các điểm tích hợp với hệ thống nội bộ và bên ngoài |
+| 01 | [01-end-to-end-flow.md](01-end-to-end-flow.md) | Flow tổng quan end-to-end của module Report |
+| 02 | [02-on-demand-report-flow.md](02-on-demand-report-flow.md) | Chi tiết flow báo cáo on-demand (WHS-67) |
+| 03 | [03-async-report-flow.md](03-async-report-flow.md) | Chi tiết flow báo cáo async qua RabbitMQ (WHS-68) |
+| 04 | [04-schedule-report-flow.md](04-schedule-report-flow.md) | Chi tiết flow báo cáo theo lịch (WHS-69) |
+| 05 | [05-export-import-flow.md](05-export-import-flow.md) | Chi tiết flow export/import dữ liệu (WHS-37,38,39) |
+| 06 | [06-sequence-diagrams.md](06-sequence-diagrams.md) | Sequence diagrams chi tiết cho từng use case |
+| 07 | [07-data-flow-diagrams.md](07-data-flow-diagrams.md) | Data flow diagrams và data dictionary |
+| 08 | [08-integration-points.md](08-integration-points.md) | Các điểm tích hợp với hệ thống nội bộ và bên ngoài |
 
 ---
 
