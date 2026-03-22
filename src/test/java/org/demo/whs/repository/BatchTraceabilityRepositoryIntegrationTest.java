@@ -93,6 +93,7 @@ class BatchTraceabilityRepositoryIntegrationTest {
         line.setProductId("P1");
         line.setBatchId(batchId);
         line.setLocationId("LOC-1");
+        line.setLineNumber(1);
         line.setQuantityShipped(new BigDecimal(quantity));
         return line;
     }
