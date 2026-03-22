@@ -111,19 +111,13 @@ public class RoleServiceImpl implements RoleService {
                 roleRepository.countUsersByRoleIds(roleIds)
         );
 
-        Page<RoleResponse> responsePage = rolePage.map(role -> {
-            RoleResponse res = roleMapper.toResponse(role);
-
-            res.setPermissionCount(
-                    permissionCountMap.getOrDefault(role.getId(), 0L)
-            );
-
-            res.setUserCount(
-                    userCountMap.getOrDefault(role.getId(), 0L)
-            );
-
-            return res;
-        });
+        Page<RoleResponse> responsePage = rolePage.map(role ->
+                roleMapper.toDetailResponse(
+                        role,
+                        permissionCountMap.getOrDefault(role.getId(), 0L),
+                        userCountMap.getOrDefault(role.getId(), 0L)
+                )
+        );
 
         return PageResponse.from(responsePage);
     }

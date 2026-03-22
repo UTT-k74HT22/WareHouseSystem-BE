@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
-import org.demo.whs.entity.enums.RoleType;
 
 import java.time.LocalDateTime;
 import java.util.List;
