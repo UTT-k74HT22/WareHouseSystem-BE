@@ -1,5 +1,6 @@
 package org.demo.whs.service.impl;
 
+import jdk.jfr.Timestamp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Role;
@@ -141,15 +142,41 @@ public class RoleServiceImpl implements RoleService {
     }
 
     /**
-     * Updates an existing role with the provided request data.
+     * Update an existing role.
      *
      * @param id      the ID of the role to update
-     * @param request the update request containing new role data
-     * @return the updated RoleResponse
+     * @param request the request body containing updated role details
+     * @return the updated role details
      */
     @Override
+    @Transactional
     public RoleResponse updateRole(String id, UpdateRoleRequest request) {
-        return null;
+
+        log.info("Updating role with id={}", id);
+
+        if (request == null) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        if (request.getName() != null && request.getName().isBlank()) {
+            throw new BadRequestException(ErrorCode.ROLE_002);
+        }
+
+        if (Boolean.TRUE.equals(request.getIsDefault()) &&
+                !Boolean.TRUE.equals(role.getIsDefault())) {
+            roleRepository.updateAllIsDefaultToFalse();
+        }
+
+        roleMapper.updateEntity(request, role);
+
+        Role updated = roleRepository.save(role);
+
+        log.info("Role updated successfully id={}, name={}", updated.getId(), updated.getName());
+
+        return roleMapper.toResponse(updated);
     }
 
     /**

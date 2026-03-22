@@ -27,12 +27,12 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @return a list of role names associated with the user
      */
     @Query(value = """
-        SELECT r.name
-        FROM roles r
-        INNER JOIN account_roles ar ON r.id = ar.role_id
-        INNER JOIN accounts a ON ar.account_id = a.id
-        WHERE a.username = :username
-        """, nativeQuery = true)
+            SELECT r.name
+            FROM roles r
+            INNER JOIN account_roles ar ON r.id = ar.role_id
+            INNER JOIN accounts a ON ar.account_id = a.id
+            WHERE a.username = :username
+            """, nativeQuery = true)
     List<String> findRoleNamesByUsername(@Param("username") String username);
 
     /**
@@ -42,11 +42,11 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @return a list of role names associated with the account
      */
     @Query(value = """
-        SELECT r.name
-        FROM roles r
-        INNER JOIN account_roles ar ON r.id = ar.role_id
-        WHERE ar.account_id = :accountId
-        """, nativeQuery = true)
+            SELECT r.name
+            FROM roles r
+            INNER JOIN account_roles ar ON r.id = ar.role_id
+            WHERE ar.account_id = :accountId
+            """, nativeQuery = true)
     List<String> findRoleNamesByAccountId(@Param("accountId") String accountId);
 
     /**
@@ -63,7 +63,7 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @param name the RoleType to check
      * @return true if a role with the given name exists, false otherwise
      */
-    boolean existsByName(RoleType name);
+    boolean existsByName(String name);
 
     /**
      * Retrieves the list of Permissions assigned to a role by its ID.
@@ -72,11 +72,11 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @return a list of Permissions associated with the role
      */
     @Query(value = """
-        SELECT p.*
-        FROM permissions p
-        JOIN role_permissions rhp ON rhp.permission_id = p.id
-        WHERE rhp.role_id = :roleId
-        """, nativeQuery = true)
+            SELECT p.*
+            FROM permissions p
+            JOIN role_permissions rhp ON rhp.permission_id = p.id
+            WHERE rhp.role_id = :roleId
+            """, nativeQuery = true)
     List<Permission> findPermissionsByRoleId(@Param("roleId") String roleId);
 
     /**
@@ -118,11 +118,11 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @return list of Object arrays:
      */
     @Query("""
-        SELECT rp.id.roleId, COUNT(rp.id.permissionId)
-        FROM RoleHasPermission rp
-        WHERE rp.id.roleId IN :roleIds
-        GROUP BY rp.id.roleId
-    """)
+                SELECT rp.id.roleId, COUNT(rp.id.permissionId)
+                FROM RoleHasPermission rp
+                WHERE rp.id.roleId IN :roleIds
+                GROUP BY rp.id.roleId
+            """)
     List<Object[]> countPermissionsByRoleIds(List<String> roleIds);
 
     /**
@@ -133,10 +133,10 @@ public interface RoleRepository extends JpaRepository<Role, String>,
      * @return list of Object arrays:
      */
     @Query("""
-        SELECT ar.id.roleId, COUNT(ar.id.accountId)
-        FROM AccountHasRole ar
-        WHERE ar.id.roleId IN :roleIds
-        GROUP BY ar.id.roleId
-    """)
+                SELECT ar.id.roleId, COUNT(ar.id.accountId)
+                FROM AccountHasRole ar
+                WHERE ar.id.roleId IN :roleIds
+                GROUP BY ar.id.roleId
+            """)
     List<Object[]> countUsersByRoleIds(List<String> roleIds);
 }

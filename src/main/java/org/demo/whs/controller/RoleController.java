@@ -76,7 +76,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<RoleResponse>> updateRole(
 
             @PathVariable
