@@ -30,7 +30,6 @@ public class RoleMapper {
         }
 
         return Role.builder()
-                .code(request.getCode())
                 .name(request.getName())
                 .description(request.getDescription())
                 .isDefault(request.getIsDefault())
