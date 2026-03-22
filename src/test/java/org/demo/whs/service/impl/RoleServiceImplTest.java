@@ -102,6 +102,19 @@ class RoleServiceImplTest {
                                     .toList())
                             .build();
                 });
+
+        lenient().when(roleMapper.toDetailResponse(any(Role.class), anyLong(), anyLong()))
+                .thenAnswer(invocation -> {
+                    Role r = invocation.getArgument(0);
+                    Long permissionCount = invocation.getArgument(1);
+                    Long userCount = invocation.getArgument(2);
+
+                    return RoleResponse.builder()
+                            .id(r.getId())
+                            .permissionCount(permissionCount)
+                            .userCount(userCount)
+                            .build();
+                });
     }
 
     // =====================================================
