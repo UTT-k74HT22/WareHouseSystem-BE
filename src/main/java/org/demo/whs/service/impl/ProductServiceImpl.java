@@ -19,6 +19,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.ProductMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.CategoryRepository;
+import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
 import org.demo.whs.security.SecurityUtils;
@@ -49,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final UnitsOfMeasureRepository unitsOfMeasureRepository;
     private final AccountRepository accountRepository;
+    private final InventoryRepository inventoryRepository;
     private final ProductMapper productMapper;
     private final IdentifierGenerator identifierGenerator;
 
@@ -387,14 +389,17 @@ public class ProductServiceImpl implements ProductService {
 
     /**
      * Validate batch tracking changes.
-     * TODO: In future, check if batch inventory exists before disabling batch tracking.
+     * Prevents disabling batch tracking when batch inventory exists.
      */
     private void validateBatchTrackingChange(Products product, Boolean newValue) {
         if (product.getRequiresBatchTracking() && !newValue) {
-            // Disabling batch tracking
-            // TODO: Check if batch inventory exists
-            // For now, we allow it
-            log.warn("Disabling batch tracking for product ID={}, SKU={}", product.getId(), product.getSku());
+            // Disabling batch tracking - check if batch inventory exists
+            if (inventoryRepository.existsBatchInventoryByProductId(product.getId())) {
+                log.warn("Cannot disable batch tracking - batch inventory exists for product ID={}, SKU={}",
+                        product.getId(), product.getSku());
+                throw new BadRequestException(ErrorCode.PROD_006);
+            }
+            log.info("Disabling batch tracking for product ID={}, SKU={}", product.getId(), product.getSku());
         }
     }
 
