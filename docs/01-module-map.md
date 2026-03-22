@@ -76,6 +76,36 @@
   - `StockMovementsController` / `StockMovementsServiceImpl`
   - `BatchController` / `BatchServiceImpl`
 
+### G. Report Module (Planned - WHS-52)
+- **Responsibility:** tạo, quản lý và xuất báo cáo cho hệ thống kho.
+- **Jira Tasks:** WHS-52 (Parent), WHS-67 (On-demand), WHS-68 (Async), WHS-69 (Schedule)
+- **Planned Key Classes:**
+  - Controller: `ReportController`
+  - Service: `ReportService` / `ReportServiceImpl`
+  - Repository: `ReportRepositoryCustom` / `ReportRepositoryCustomImpl`
+  - Entities: `ReportRequest`, `ReportSchedule`
+  - DTOs: `Report/*Request`, `Report/*Response`
+  - Config: `ReportConfig`
+- **Report Types:**
+  - Current Stock Report
+  - Stock Valuation Report
+  - Movements Report
+  - Batch Traceability Report
+  - Low Stock Report
+  - Expiring Batches Report
+- **Export Formats:** PDF (JasperReports), Excel (Apache POI), CSV
+- **Processing Modes:** On-demand (sync), Async (RabbitMQ), Scheduled (Spring Scheduler)
+- **Boundary:** Report module sẽ query data từ Inventory, Inbound, Outbound, Batch modules. Không duplicate data, chỉ aggregate và format.
+
+### H. Export/Import Module (Planned - WHS-37, WHS-38, WHS-39)
+- **Responsibility:** import/export dữ liệu sản phẩm, vị trí.
+- **Jira Tasks:** WHS-37 (Location Bulk Import), WHS-38 (Product Import), WHS-39 (Product Export)
+- **Planned Endpoints:**
+  - `GET /api/v1/products/export` - Export sản phẩm ra Excel
+  - `POST /api/v1/products/import` - Import sản phẩm từ Excel
+  - `POST /api/v1/locations/bulk` - Import vị trí hàng loạt từ CSV
+- **Boundary:** Async processing, validation, error reporting.
+
 ## 3) Data and control flow boundaries
 
 ### Implemented flow (Auth/Product/Warehouse/Location/UOM/Email)
