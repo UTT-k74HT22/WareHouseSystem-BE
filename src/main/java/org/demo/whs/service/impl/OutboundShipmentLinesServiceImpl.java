@@ -141,7 +141,7 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
                 .collect(java.util.stream.Collectors.toMap(Products::getId, p -> p));
         java.util.Map<String, Locations> locationsMap = locationRepository.findAllById(locationIds).stream()
                 .collect(java.util.stream.Collectors.toMap(Locations::getId, l -> l));
-        java.util.Map<String, Batch> batchesMap = batchIds.isEmpty() ? java.util.Map.of() :
+        java.util.Map<String, Batch> batchesMap = batchIds.isEmpty() ? java.util.Collections.emptyMap() :
                 batchRepository.findAllById(batchIds).stream().collect(java.util.stream.Collectors.toMap(Batch::getId, b -> b));
 
         return lines.stream()
