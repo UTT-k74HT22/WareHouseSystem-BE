@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
-import org.demo.whs.entity.enums.RoleType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,4 +25,7 @@ public class RoleResponse {
     private String updatedBy;
 
     private List<PermissionResponse> permissions;
+
+    private Long permissionCount;
+    private Long userCount;
 }

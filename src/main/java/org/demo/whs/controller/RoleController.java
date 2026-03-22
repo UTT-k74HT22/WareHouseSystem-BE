@@ -2,6 +2,7 @@ package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
@@ -49,12 +50,13 @@ public class RoleController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
-
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @RequestParam(required = false) Boolean isDefault,
+            @RequestParam(required = false) @Size(max = 100, message = "Search keyword max 50 chars") String search,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
 
-        PageResponse<RoleResponse> response = roleService.getRoles(pageable);
+        PageResponse<RoleResponse> response = roleService.getRoles(isDefault, search, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
     }

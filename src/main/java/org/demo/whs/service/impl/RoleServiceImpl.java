@@ -13,17 +13,19 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.repository.specification.RoleSpecification;
 import org.demo.whs.service.RoleService;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Implementation of RoleService that handles CRUD operations for Role entities,
- * including role creation, retrieval, update, and deletion.
+ * Implementation of RoleService.
  */
 @Slf4j
 @Service
@@ -75,14 +77,49 @@ public class RoleServiceImpl implements RoleService {
     }
 
     /**
-     * Retrieves a paginated list of roles.
+     * Get roles with filtering + pagination.
      *
-     * @param pageable pagination information
-     * @return a page of RoleResponse objects
+     * @param isDefault filter by default role
+     * @param search    keyword search
+     * @param pageable  pagination info
+     * @return paginated roles
      */
     @Override
-    public PageResponse<RoleResponse> getRoles(Pageable pageable) {
-        return null; // implement later
+    @Transactional(readOnly = true)
+    public PageResponse<RoleResponse> getRoles(Boolean isDefault, String search, Pageable pageable) {
+
+        Page<Role> rolePage = roleRepository.findAll(
+                RoleSpecification.filter(isDefault, search),
+                pageable
+        );
+
+        List<Role> roles = rolePage.getContent();
+
+        if (roles.isEmpty()) {
+            return PageResponse.from(rolePage.map(roleMapper::toResponse));
+        }
+
+        List<String> roleIds = roles.stream()
+                .map(Role::getId)
+                .toList();
+
+        Map<String, Long> permissionCountMap = mapToCountMapSafe(
+                roleRepository.countPermissionsByRoleIds(roleIds)
+        );
+
+        Map<String, Long> userCountMap = mapToCountMapSafe(
+                roleRepository.countUsersByRoleIds(roleIds)
+        );
+
+        Page<RoleResponse> responsePage = rolePage.map(role ->
+                roleMapper.toDetailResponse(
+                        role,
+                        permissionCountMap.getOrDefault(role.getId(), 0L),
+                        userCountMap.getOrDefault(role.getId(), 0L)
+                )
+        );
+
+        return PageResponse.from(responsePage);
     }
 
     /**
@@ -112,7 +149,7 @@ public class RoleServiceImpl implements RoleService {
      */
     @Override
     public RoleResponse updateRole(String id, UpdateRoleRequest request) {
-        return null; // implement later
+        return null;
     }
 
     /**
@@ -122,7 +159,6 @@ public class RoleServiceImpl implements RoleService {
      */
     @Override
     public void deleteRole(String id) {}
-
 
 
     /**
@@ -167,5 +203,32 @@ public class RoleServiceImpl implements RoleService {
                 .replaceAll("\\s+", "_");
 
         return "role_" + normalized;
+    }
+
+    /**
+     * Safe mapping for aggregation results.
+     * Prevent:
+     * - NullPointerException
+     * - ClassCastException
+     */
+    private Map<String, Long> mapToCountMapSafe(List<Object[]> data) {
+
+        if (data == null || data.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return data.stream()
+                .filter(Objects::nonNull)
+                .filter(arr -> arr.length >= 2 && arr[0] != null)
+                .collect(Collectors.toMap(
+                        arr -> String.valueOf(arr[0]),
+                        arr -> {
+                            Object count = arr[1];
+                            if (count == null) return 0L;
+                            if (count instanceof Number num) {
+                                return num.longValue();
+                            }
+                            return 0L;
+                        }
+                ));
     }
 }

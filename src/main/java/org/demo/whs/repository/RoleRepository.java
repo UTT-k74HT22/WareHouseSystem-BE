@@ -4,6 +4,7 @@ import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,7 +17,8 @@ import java.util.Optional;
  * Repository interface for managing Role entities.
  */
 @Repository
-public interface RoleRepository extends JpaRepository<Role, String> {
+public interface RoleRepository extends JpaRepository<Role, String>,
+        JpaSpecificationExecutor<Role> {
 
     /**
      * Retrieves the list of role names assigned to a given username.
@@ -107,4 +109,34 @@ public interface RoleRepository extends JpaRepository<Role, String> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Role r SET r.isDefault = false WHERE r.isDefault = true")
     void updateAllIsDefaultToFalse();
+
+    /**
+     * Count number of permissions assigned to each role.
+     * This is a batch query to avoid N+1 problem.
+     *
+     * @param roleIds list of role IDs
+     * @return list of Object arrays:
+     */
+    @Query("""
+        SELECT rp.id.roleId, COUNT(rp.id.permissionId)
+        FROM RoleHasPermission rp
+        WHERE rp.id.roleId IN :roleIds
+        GROUP BY rp.id.roleId
+    """)
+    List<Object[]> countPermissionsByRoleIds(List<String> roleIds);
+
+    /**
+     * Count number of users assigned to each role.
+     * This is a batch query to improve performance and prevent N+1 queries.
+     *
+     * @param roleIds list of role IDs
+     * @return list of Object arrays:
+     */
+    @Query("""
+        SELECT ar.id.roleId, COUNT(ar.id.accountId)
+        FROM AccountHasRole ar
+        WHERE ar.id.roleId IN :roleIds
+        GROUP BY ar.id.roleId
+    """)
+    List<Object[]> countUsersByRoleIds(List<String> roleIds);
 }
