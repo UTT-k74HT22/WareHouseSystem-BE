@@ -11,6 +11,7 @@ import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RoleMapper;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.RoleRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,9 @@ class RoleServiceImplTest {
 
     @InjectMocks
     private RoleServiceImpl roleService;
+
+    @Mock
+    private AccountHasRoleRepository accountHasRoleRepository;
 
     private Role role1;
     private Role role2;
@@ -379,5 +383,69 @@ class RoleServiceImplTest {
         verify(roleRepository).save(any(Role.class));
     }
 
+    // =====================================================
+// ===================== DELETE ROLE ==================
+// =====================================================
 
+    @Test
+    void deleteRole_success() {
+        // Given
+        role.setIsDefault(false); // không phải role mặc định
+        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
+        when(accountHasRoleRepository.countByIdRoleId("role-123")).thenReturn(0L);
+
+        // When
+        assertDoesNotThrow(() -> roleService.deleteRole("role-123"));
+
+        // Then
+        verify(roleRepository).delete(role);
+    }
+
+    @Test
+    void deleteRole_notFound_throwsNotFoundException() {
+        // Given
+        when(roleRepository.findById("role-404")).thenReturn(Optional.empty());
+
+        // When / Then
+        assertThrows(NotFoundException.class, () -> roleService.deleteRole("role-404"));
+    }
+
+    @Test
+    void deleteRole_isDefault_throwsBadRequestException() {
+        // Given
+        role.setIsDefault(true);
+        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
+
+        // When / Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> roleService.deleteRole("role-123"));
+
+        assertEquals("ROLE_005", exception.getErrorCode());
+    }
+
+    @Test
+    void deleteRole_roleInUse_throwsBadRequestException() {
+        // Given
+        role.setIsDefault(false);
+        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
+        when(accountHasRoleRepository.countByIdRoleId("role-123")).thenReturn(5L); // role đang dùng
+
+        // When / Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> roleService.deleteRole("role-123"));
+
+        assertEquals("ROLE_006", exception.getErrorCode());
+    }
+
+    @Test
+    void deleteRole_invalidId_throwsBadRequestException() {
+        // Given
+        String invalidId = ""; // empty id
+
+        // When / Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> roleService.deleteRole(invalidId));
+
+        assertEquals("COM_001", exception.getErrorCode());
+    }
 }

@@ -13,6 +13,7 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.specification.RoleSpecification;
 import org.demo.whs.service.RoleService;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
 
+    private final AccountHasRoleRepository accountHasRoleRepository;
     private final RoleRepository roleRepository;
     private final RoleMapper roleMapper;
 
@@ -185,7 +187,32 @@ public class RoleServiceImpl implements RoleService {
      * @param id the ID of the role to delete
      */
     @Override
-    public void deleteRole(String id) {}
+    @Transactional
+    public void deleteRole(String id) {
+        log.info("Deleting role with id={}", id);
+
+        if (id == null || id.isEmpty()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        if (Boolean.TRUE.equals(role.getIsDefault())) {
+            log.warn("Cannot delete default role, id={}", id);
+            throw new BadRequestException(ErrorCode.ROLE_005);
+        }
+
+        long userCount = accountHasRoleRepository.countByIdRoleId(id);
+        if (userCount > 0) {
+            log.warn("ROle is being used Id={}, userCount{}", id, userCount);
+            throw new BadRequestException(ErrorCode.ROLE_006);
+        }
+
+        roleRepository.delete(role);
+
+        log.info("Role deleted successfully roleId={}, roleName={}", id, role.getName());
+    }
 
 
     /**

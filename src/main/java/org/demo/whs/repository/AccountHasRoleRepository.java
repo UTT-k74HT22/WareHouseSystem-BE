@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface AccountHasRoleRepository extends JpaRepository<AccountHasRole, AccountRoleId> {
+
+    long countByIdRoleId(String roleId);
 }
