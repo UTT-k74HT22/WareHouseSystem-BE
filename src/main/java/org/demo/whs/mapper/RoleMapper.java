@@ -30,7 +30,6 @@ public class RoleMapper {
         }
 
         return Role.builder()
-                .code(request.getCode())
                 .name(request.getName())
                 .description(request.getDescription())
                 .isDefault(request.getIsDefault())
@@ -118,6 +117,27 @@ public class RoleMapper {
                 .createdAt(role.getCreatedAt())
                 .updatedBy(role.getUpdatedBy())
                 .updatedAt(role.getUpdatedAt())
+                .build();
+    }
+
+    public RoleResponse toDetailResponse(Role role, Long permissionCount, Long userCount) {
+
+        if (role == null) {
+            return null;
+        }
+
+        return RoleResponse.builder()
+                .id(role.getId())
+                .code(role.getCode())
+                .name(role.getName())
+                .description(role.getDescription())
+                .isDefault(role.getIsDefault())
+                .createdBy(role.getCreatedBy())
+                .createdAt(role.getCreatedAt())
+                .updatedBy(role.getUpdatedBy())
+                .updatedAt(role.getUpdatedAt())
+                .permissionCount(permissionCount)
+                .userCount(userCount)
                 .build();
     }
 }

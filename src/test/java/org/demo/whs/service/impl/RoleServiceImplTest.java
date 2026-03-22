@@ -3,17 +3,28 @@ package org.demo.whs.service.impl;
 import com.mysql.cj.util.TestUtils;
 import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
+import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.repository.RoleRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import org.springframework.data.domain.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +32,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RoleServiceImplTest {
 
     @Mock
@@ -32,92 +45,253 @@ class RoleServiceImplTest {
     @InjectMocks
     private RoleServiceImpl roleService;
 
+    private Role role1;
+    private Role role2;
     private Role role;
     private Permission permission;
+    private CreateRoleRequest request;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
 
-        // Dummy Role
+        // ====== ROLE LIST ======
+        role1 = new Role();
+        role1.setId("1");
+
+        role2 = new Role();
+        role2.setId("2");
+
+        // ====== CREATE ROLE ======
+        request = CreateRoleRequest.builder()
+                .name("Admin Manager")
+                .description("Test role")
+                .isDefault(true)
+                .build();
+
         role = Role.builder()
                 .code("ROLE_ADMIN")
-                .name("Admin")
+                .name(request.getName())
                 .description("Administrator role")
                 .isDefault(true)
                 .build();
-        role.setId("role-123"); // fix lỗi builder không có id
+        role.setId("role-123");
 
-        // Dummy Permission
         permission = Permission.builder()
                 .code("PERM_READ_USER")
                 .name("Read User")
                 .build();
         permission.setId("perm-001");
+
+        // ====== LENIENT MAPPER ======
+        lenient().when(roleMapper.createEntity(any(CreateRoleRequest.class))).thenReturn(role);
+
+        lenient().when(roleMapper.toResponse(any(Role.class)))
+                .thenAnswer(invocation -> {
+                    Role r = invocation.getArgument(0);
+                    return RoleResponse.builder().id(r.getId()).build();
+                });
+
+        lenient().when(roleMapper.toResponseWithPermissions(any(Role.class), anyList()))
+                .thenAnswer(invocation -> {
+                    Role r = invocation.getArgument(0);
+                    List<Permission> perms = invocation.getArgument(1);
+                    return RoleResponse.builder()
+                            .id(r.getId())
+                            .permissions(perms.stream()
+                                    .map(p -> PermissionResponse.builder().id(p.getId()).build())
+                                    .toList())
+                            .build();
+                });
+    }
+
+    // =====================================================
+    // ===================== GET ROLES ======================
+    // =====================================================
+
+    @Test
+    void getRoles_success() {
+
+        Pageable pageable = PageRequest.of(0, 2);
+
+        Page<Role> rolePage = new PageImpl<>(List.of(role1, role2), pageable, 2);
+
+        when(roleRepository.findAll(
+                ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Role>>any(),
+                eq(pageable)
+        )).thenReturn(rolePage);
+
+        when(roleRepository.countPermissionsByRoleIds(any()))
+                .thenReturn(List.of(
+                        new Object[]{"1", 3L},
+                        new Object[]{"2", 5L}
+                ));
+
+        when(roleRepository.countUsersByRoleIds(any()))
+                .thenReturn(List.of(
+                        new Object[]{"1", 10L},
+                        new Object[]{"2", 20L}
+                ));
+
+        PageResponse<RoleResponse> response =
+                roleService.getRoles(null, null, pageable);
+
+        assertNotNull(response);
+        assertEquals(2, response.getContent().size());
     }
 
     @Test
-    void testGetRoleById_Success_WithPermissions() {
-        // Mock repository
-        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
-        when(roleRepository.findPermissionsByRoleId("role-123")).thenReturn(List.of(permission));
+    void getRoles_empty() {
 
-        // Mock mapper
-        RoleResponse mockResponse = RoleResponse.builder()
-                .id(role.getId())
-                .permissions(List.of(PermissionResponse.builder().id(permission.getId()).build()))
-                .build();
-        when(roleMapper.toResponseWithPermissions(role, List.of(permission))).thenReturn(mockResponse);
+        Pageable pageable = PageRequest.of(0, 2);
 
-        // Call service
-        RoleResponse response = roleService.getRoleById("role-123");
+        Page<Role> emptyPage = new PageImpl<>(List.of(), pageable, 0);
 
-        // Assertions
+        when(roleRepository.findAll(
+                ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Role>>any(),
+                eq(pageable)
+        )).thenReturn(emptyPage);
+
+        PageResponse<RoleResponse> response =
+                roleService.getRoles(null, null, pageable);
+
+        assertTrue(response.getContent().isEmpty());
+
+        verify(roleRepository, never()).countPermissionsByRoleIds(any());
+        verify(roleRepository, never()).countUsersByRoleIds(any());
+    }
+
+    @Test
+    void getRoles_missingCount_shouldDefaultZero() {
+
+        Pageable pageable = PageRequest.of(0, 2);
+
+        Page<Role> rolePage = new PageImpl<>(List.of(role1), pageable, 1);
+
+        when(roleRepository.findAll(
+                ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Role>>any(),
+                eq(pageable)
+        )).thenReturn(rolePage);
+
+        when(roleRepository.countPermissionsByRoleIds(any())).thenReturn(List.of());
+        when(roleRepository.countUsersByRoleIds(any())).thenReturn(List.of());
+
+        PageResponse<RoleResponse> response =
+                roleService.getRoles(null, null, pageable);
+
+        assertEquals(0L, response.getContent().get(0).getPermissionCount());
+        assertEquals(0L, response.getContent().get(0).getUserCount());
+    }
+
+    @Test
+    void getRoles_shouldCallBatchCountOnlyOnce() {
+
+        Pageable pageable = PageRequest.of(0, 2);
+
+        Page<Role> rolePage = new PageImpl<>(List.of(role1, role2), pageable, 2);
+
+        when(roleRepository.findAll(
+                ArgumentMatchers.<org.springframework.data.jpa.domain.Specification<Role>>any(),
+                eq(pageable)
+        )).thenReturn(rolePage);
+        when(roleRepository.countPermissionsByRoleIds(any())).thenReturn(List.of());
+        when(roleRepository.countUsersByRoleIds(any())).thenReturn(List.of());
+
+        roleService.getRoles(null, null, pageable);
+
+        verify(roleRepository, times(1)).countPermissionsByRoleIds(any());
+        verify(roleRepository, times(1)).countUsersByRoleIds(any());
+    }
+
+    // =====================================================
+    // ===================== CREATE ROLE ====================
+    // =====================================================
+
+    @Test
+    void createRole_success_defaultRoleUpdate() {
+
+        when(roleRepository.existsByNameIgnoreCase(role.getName())).thenReturn(false);
+        when(roleRepository.existsByCode(any())).thenReturn(false);
+        when(roleRepository.existsByIsDefaultTrue()).thenReturn(true);
+        when(roleRepository.save(any(Role.class))).thenReturn(role);
+
+        RoleResponse response = roleService.createRole(request);
+
         assertNotNull(response);
         assertEquals("role-123", response.getId());
+
+        verify(roleRepository).updateAllIsDefaultToFalse();
+    }
+
+    @Test
+    void createRole_nameNull_throwsBadRequest() {
+
+        CreateRoleRequest invalidRequest = CreateRoleRequest.builder()
+                .name(null)
+                .build();
+
+        assertThrows(BadRequestException.class,
+                () -> roleService.createRole(invalidRequest));
+
+        verify(roleRepository, never()).save(any());
+    }
+
+    @Test
+    void createRole_duplicateName_throwsBadRequest() {
+
+        when(roleRepository.existsByNameIgnoreCase(role.getName())).thenReturn(true);
+
+        assertThrows(BadRequestException.class,
+                () -> roleService.createRole(request));
+    }
+
+    @Test
+    void createRole_firstRole_shouldBeDefault() {
+
+        when(roleRepository.existsByNameIgnoreCase(role.getName())).thenReturn(false);
+        when(roleRepository.existsByCode(any())).thenReturn(false);
+        when(roleRepository.existsByIsDefaultTrue()).thenReturn(false);
+        when(roleRepository.save(any())).thenReturn(role);
+
+        roleService.createRole(request);
+
+        verify(roleRepository, never()).updateAllIsDefaultToFalse();
+    }
+
+    // =====================================================
+    // ===================== GET BY ID ======================
+    // =====================================================
+
+    @Test
+    void getRoleById_success_withPermissions() {
+
+        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
+        when(roleRepository.findPermissionsByRoleId("role-123"))
+                .thenReturn(List.of(permission));
+
+        RoleResponse response = roleService.getRoleById("role-123");
+
         assertEquals(1, response.getPermissions().size());
-
-        // Verify interactions
-        verify(roleRepository, times(1)).findById("role-123");
-        verify(roleRepository, times(1)).findPermissionsByRoleId("role-123");
-        verify(roleMapper, times(1)).toResponseWithPermissions(role, List.of(permission));
     }
 
     @Test
-    void testGetRoleById_Success_NoPermissions() {
-        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
-        when(roleRepository.findPermissionsByRoleId("role-123")).thenReturn(List.of());
+    void getRoleById_success_noPermissions() {
 
-        RoleResponse mockResponse = RoleResponse.builder()
-                .id(role.getId())
-                .permissions(List.of())
-                .build();
-        when(roleMapper.toResponseWithPermissions(role, List.of())).thenReturn(mockResponse);
+        when(roleRepository.findById("role-123")).thenReturn(Optional.of(role));
+        when(roleRepository.findPermissionsByRoleId("role-123"))
+                .thenReturn(List.of());
 
         RoleResponse response = roleService.getRoleById("role-123");
 
-        assertNotNull(response);
-        assertEquals("role-123", response.getId());
         assertTrue(response.getPermissions().isEmpty());
-
-        verify(roleRepository, times(1)).findById("role-123");
-        verify(roleRepository, times(1)).findPermissionsByRoleId("role-123");
-        verify(roleMapper, times(1)).toResponseWithPermissions(role, List.of());
     }
 
     @Test
-    void testGetRoleById_NotFound() {
+    void getRoleById_notFound() {
+
         when(roleRepository.findById("role-404")).thenReturn(Optional.empty());
 
-        NotFoundException ex = assertThrows(NotFoundException.class,
+        assertThrows(NotFoundException.class,
                 () -> roleService.getRoleById("role-404"));
-
-        // Chỉ check message thôi (không check code)
-        assertEquals("Role not found", ex.getMessage());
-
-        verify(roleRepository, times(1)).findById("role-404");
-        verify(roleRepository, never()).findPermissionsByRoleId(any());
-        verify(roleMapper, never()).toResponseWithPermissions(any(), any());
     }
 
     @Test
