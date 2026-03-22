@@ -28,10 +28,10 @@ public interface RoleService {
     /**
      * Get a role by its ID.
      *
-     * @param id the ID of the role
+     * @param roleId the ID of the role
      * @return the role details
      */
-    RoleResponse getRoleById(String id);
+    RoleResponse getRoleById(String roleId);
 
     /**
      * Update an existing role.

@@ -3,8 +3,10 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,10 @@ import java.util.Optional;
  */
 @Repository
 public interface LocationRepository extends JpaRepository<Locations, String> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM Locations l WHERE l.id = :id")
+    Optional<Locations> findByIdForUpdate(@Param("id") String id);
 
     /**
      * Checks if a location code exists within a specific warehouse.

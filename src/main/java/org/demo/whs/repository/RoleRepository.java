@@ -1,9 +1,11 @@
 package org.demo.whs.repository;
 
+import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,18 +14,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository interface for managing {@link Role} entities.
- *
+ * Repository interface for managing Role entities.
  */
 @Repository
 public interface RoleRepository extends JpaRepository<Role, String>,
         JpaSpecificationExecutor<Role> {
 
     /**
-     * Retrieve all role names assigned to a user by username.
+     * Retrieves the list of role names assigned to a given username.
      *
      * @param username the username of the account
-     * @return list of role names (e.g. ["ADMIN", "USER"])
+     * @return a list of role names associated with the user
      */
     @Query(value = """
         SELECT r.name
@@ -35,10 +36,10 @@ public interface RoleRepository extends JpaRepository<Role, String>,
     List<String> findRoleNamesByUsername(@Param("username") String username);
 
     /**
-     * Retrieve all role names assigned to a user by account ID.
+     * Retrieves the list of role names assigned to a given account ID.
      *
-     * @param accountId the account ID (UUID)
-     * @return list of role names (e.g. ["ADMIN", "MANAGER"])
+     * @param accountId the ID of the account
+     * @return a list of role names associated with the account
      */
     @Query(value = """
         SELECT r.name
@@ -49,20 +50,65 @@ public interface RoleRepository extends JpaRepository<Role, String>,
     List<String> findRoleNamesByAccountId(@Param("accountId") String accountId);
 
     /**
-     * Find a role by its enum name.
+     * Finds a Role by its RoleType enum name.
      *
-     * @param name role type enum
-     * @return optional role entity
+     * @param name the RoleType of the role
+     * @return an Optional containing the Role if found, empty otherwise
      */
     Optional<Role> findByName(RoleType name);
 
     /**
-     * Check whether a role exists by its name.
+     * Checks if a role exists with the given RoleType name.
      *
-     * @param name role type enum
-     * @return {@code true} if exists, otherwise {@code false}
+     * @param name the RoleType to check
+     * @return true if a role with the given name exists, false otherwise
      */
     boolean existsByName(RoleType name);
+
+    /**
+     * Retrieves the list of Permissions assigned to a role by its ID.
+     *
+     * @param roleId the ID of the role
+     * @return a list of Permissions associated with the role
+     */
+    @Query(value = """
+        SELECT p.*
+        FROM permissions p
+        JOIN role_permissions rhp ON rhp.permission_id = p.id
+        WHERE rhp.role_id = :roleId
+        """, nativeQuery = true)
+    List<Permission> findPermissionsByRoleId(@Param("roleId") String roleId);
+
+    /**
+     * Checks if a role exists with the given name (case-insensitive).
+     *
+     * @param name the name of the role
+     * @return true if a role with the given name exists, false otherwise
+     */
+    boolean existsByNameIgnoreCase(String name);
+
+    /**
+     * Checks if any role is marked as default.
+     *
+     * @return true if a default role exists, false otherwise
+     */
+    boolean existsByIsDefaultTrue();
+
+    /**
+     * Checks if a role exists with the given code.
+     *
+     * @param code the code of the role
+     * @return true if a role with the code exists, false otherwise
+     */
+    boolean existsByCode(String code);
+
+    /**
+     * Updates all roles in the database to set isDefault = false.
+     * Typically used before assigning a new default role.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Role r SET r.isDefault = false WHERE r.isDefault = true")
+    void updateAllIsDefaultToFalse();
 
     /**
      * Count number of permissions assigned to each role.

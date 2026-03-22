@@ -35,6 +35,14 @@ public interface StockTransfersService {
     PageResponse<StockTransfersResponse> getAll(Integer page, Integer size);
 
     /**
+     * Submits a stock transfer for approval, changing its status from DRAFT to PENDING.
+     *
+     * @param id the unique identifier of the stock transfer to submit
+     * @return the response containing the details of the submitted stock transfer
+     */
+    StockTransfersResponse submit(String id);
+
+    /**
      * Marks a stock transfer as complete based on its unique identifier.
      *
      * @param id the unique identifier of the stock transfer to mark as complete
