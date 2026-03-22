@@ -45,7 +45,7 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         log.info("Create outbound shipment line, request={}", request);
 
         // 1. Validate Shipment
-        OutboundShipments shipment = outboundShipmentsRepository.findById(request.getOutboundShipmentId())
+        OutboundShipments shipment = outboundShipmentsRepository.findByIdWithLock(request.getOutboundShipmentId())
                 .orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
 
         if (shipment.getStatus() != OutboundShipmentsStatus.DRAFT) {
@@ -60,9 +60,32 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             throw new BadRequestException("Sales order line does not belong to the shipment's sales order", ErrorCode.COM_001);
         }
 
-        BigDecimal remainingQuantity = soLine.getQuantityOrdered().subtract(soLine.getQuantityShipped());
-        if (request.getQuantityShipped().compareTo(remainingQuantity) > 0) {
-            throw new BadRequestException("Shipped quantity exceeds remaining quantity for this order line", ErrorCode.COM_001);
+        if (!soLine.getProductId().equals(request.getProductId())) {
+            throw new BadRequestException("Product ID must match Sales Order Line product", ErrorCode.COM_001);
+        }
+
+        // Check for duplicate line (same shipment, SOL, location, and batch)
+        List<OutboundShipmentLines> existingLines = outboundShipmentLinesRepository
+                .findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
+                        request.getOutboundShipmentId(),
+                        request.getSalesOrderLineId(),
+                        request.getLocationId(),
+                        request.getBatchId()
+                );
+        if (!existingLines.isEmpty()) {
+            throw new BadRequestException("This item pick already exists in this shipment. Please update the existing line instead.", ErrorCode.COM_001);
+        }
+
+        // Validate total quantity against Sales Order Line
+        BigDecimal currentShipmentQuantity = outboundShipmentLinesRepository.sumShippedForSoLine(
+                request.getOutboundShipmentId(),
+                request.getSalesOrderLineId()
+        );
+        currentShipmentQuantity = currentShipmentQuantity == null ? BigDecimal.ZERO : currentShipmentQuantity;
+
+        BigDecimal totalPlanned = soLine.getQuantityShipped().add(currentShipmentQuantity).add(request.getQuantityShipped());
+        if (totalPlanned.compareTo(soLine.getQuantityOrdered()) > 0) {
+            throw new BadRequestException("Total planned shipment quantity exceeds ordered quantity for this line", ErrorCode.COM_001);
         }
 
         // 3. Validate Product
@@ -103,12 +126,41 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     @Transactional(readOnly = true)
     public List<OutboundShipmentLinesResponse> getByShipmentId(String shipmentId) {
         log.info("Get outbound shipment lines by shipmentId={}", shipmentId);
-        return outboundShipmentLinesRepository.findByOutboundShipmentId(shipmentId).stream()
+        List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(shipmentId);
+        
+        if (lines.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch fetch related entities to avoid N+1
+        List<String> productIds = lines.stream().map(OutboundShipmentLines::getProductId).distinct().collect(Collectors.toList());
+        List<String> locationIds = lines.stream().map(OutboundShipmentLines::getLocationId).distinct().collect(Collectors.toList());
+        List<String> batchIds = lines.stream().map(OutboundShipmentLines::getBatchId).filter(id -> id != null && !id.isBlank()).distinct().collect(Collectors.toList());
+
+        java.util.Map<String, Products> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Products::getId, p -> p));
+        java.util.Map<String, Locations> locationsMap = locationRepository.findAllById(locationIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Locations::getId, l -> l));
+        java.util.Map<String, Batch> batchesMap = batchIds.isEmpty() ? java.util.Map.of() :
+                batchRepository.findAllById(batchIds).stream().collect(java.util.stream.Collectors.toMap(Batch::getId, b -> b));
+
+        return lines.stream()
                 .map(line -> {
                     OutboundShipmentLinesResponse response = outboundShipmentLinesMapper.toResponse(line);
-                    Products product = productRepository.findById(line.getProductId()).orElse(null);
-                    Locations location = locationRepository.findById(line.getLocationId()).orElse(null);
-                    enrichResponse(response, product, location, line.getBatchId());
+                    Products product = productsMap.get(line.getProductId());
+                    Locations location = locationsMap.get(line.getLocationId());
+                    Batch batch = batchesMap.get(line.getBatchId());
+                    
+                    if (product != null) {
+                        response.setSku(product.getSku());
+                        response.setProductName(product.getName());
+                    }
+                    if (location != null) {
+                        response.setLocationName(location.getName());
+                    }
+                    if (batch != null) {
+                        response.setBatchNumber(batch.getBatchNumber());
+                    }
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -134,7 +186,7 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         log.info("Update outbound shipment line, id={}, request={}", id, request);
         OutboundShipmentLines line = findById(id);
         
-        OutboundShipments shipment = outboundShipmentsRepository.findById(line.getOutboundShipmentId())
+        OutboundShipments shipment = outboundShipmentsRepository.findByIdWithLock(line.getOutboundShipmentId())
                 .orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
 
         if (shipment.getStatus() != OutboundShipmentsStatus.DRAFT) {
@@ -145,9 +197,19 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             SalesOrderLines soLine = salesOrderLinesRepository.findById(line.getSalesOrderLineId())
                     .orElseThrow(() -> new NotFoundException("Sales order line not found", ErrorCode.COM_001));
             
-            BigDecimal remainingQuantity = soLine.getQuantityOrdered().subtract(soLine.getQuantityShipped());
-            if (request.getQuantityShipped().compareTo(remainingQuantity) > 0) {
-                throw new BadRequestException("Shipped quantity exceeds remaining quantity for this order line", ErrorCode.COM_001);
+            // Validate total quantity against Sales Order Line
+            BigDecimal currentShipmentQuantity = outboundShipmentLinesRepository.sumShippedForSoLine(
+                    line.getOutboundShipmentId(),
+                    line.getSalesOrderLineId()
+            );
+            currentShipmentQuantity = currentShipmentQuantity == null ? BigDecimal.ZERO : currentShipmentQuantity;
+
+            // Subtract the original quantity of the line being updated and add the new quantity
+            BigDecimal otherLinesQuantity = currentShipmentQuantity.subtract(line.getQuantityShipped());
+            BigDecimal totalPlanned = soLine.getQuantityShipped().add(otherLinesQuantity).add(request.getQuantityShipped());
+
+            if (totalPlanned.compareTo(soLine.getQuantityOrdered()) > 0) {
+                throw new BadRequestException("Total planned shipment quantity exceeds ordered quantity for this line", ErrorCode.COM_001);
             }
         }
 
@@ -179,7 +241,7 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         log.info("Remove outbound shipment line, id={}", id);
         OutboundShipmentLines line = findById(id);
         
-        OutboundShipments shipment = outboundShipmentsRepository.findById(line.getOutboundShipmentId())
+        OutboundShipments shipment = outboundShipmentsRepository.findByIdWithLock(line.getOutboundShipmentId())
                 .orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
 
         if (shipment.getStatus() != OutboundShipmentsStatus.DRAFT) {

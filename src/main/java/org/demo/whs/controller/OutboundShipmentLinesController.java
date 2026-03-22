@@ -31,7 +31,16 @@ import java.util.List;
 public class OutboundShipmentLinesController {
 
     private final OutboundShipmentLinesService outboundShipmentLinesService;
-
+    /**
+     * Tạo mới một Outbound Shipment Line (chi tiết xuất kho).
+     *
+     * Nghiệp vụ:
+     * - Thêm sản phẩm cần xuất vào shipment
+     * - Xác định cụ thể: product, location, batch, quantity
+     * Kết quả:
+     * - Tạo mới shipment line
+     * - Gán lineNumber tự tăng
+     */
     @PostMapping
     @Operation(summary = "Create a new outbound shipment line")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
@@ -39,7 +48,15 @@ public class OutboundShipmentLinesController {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.create(request);
         return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment line created successfully"), HttpStatus.CREATED);
     }
-
+    /**
+     * Lấy danh sách tất cả Shipment Line theo Shipment ID.
+     *
+     * Nghiệp vụ:
+     * - Dùng để hiển thị danh sách hàng cần xuất trong shipment
+     * - Bao gồm thông tin product, location, batch
+     * Kết quả:
+     * - Trả về danh sách các line thuộc shipment
+     */
     @GetMapping("/shipment/{shipmentId}")
     @Operation(summary = "Get all lines for a specific outbound shipment")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
@@ -47,7 +64,15 @@ public class OutboundShipmentLinesController {
         List<OutboundShipmentLinesResponse> response = outboundShipmentLinesService.getByShipmentId(shipmentId);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment lines retrieved successfully"));
     }
+    /**
+     * Lấy chi tiết một Outbound Shipment Line theo ID.
+     * Nghiệp vụ:
+     * - Dùng để xem thông tin cụ thể của một line
+     * - Bao gồm product, location, batch, quantity
 
+     * Kết quả:
+     * - Trả về thông tin chi tiết của shipment line
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get an outbound shipment line by its ID")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
@@ -55,7 +80,13 @@ public class OutboundShipmentLinesController {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line retrieved successfully"));
     }
-
+    /**
+     * Cập nhật Outbound Shipment Line.
+     * Nghiệp vụ:
+     * - Cho phép chỉnh sửa quantity hoặc location trước khi bắt đầu xử lý kho
+     * Kết quả:
+     * - Line được cập nhật thông tin mới
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update an outbound shipment line (DRAFT status only)")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
@@ -63,7 +94,13 @@ public class OutboundShipmentLinesController {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.update(id, request);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line updated successfully"));
     }
-
+    /**
+     * Cập nhật Outbound Shipment Line.
+     * Nghiệp vụ:
+     * - Cho phép chỉnh sửa quantity hoặc location trước khi bắt đầu xử lý kho
+     * Kết quả:
+     * - Line được cập nhật thông tin mới
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove an outbound shipment line (DRAFT status only)")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
