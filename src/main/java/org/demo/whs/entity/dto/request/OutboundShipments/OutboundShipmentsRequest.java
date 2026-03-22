@@ -26,7 +26,6 @@ public class OutboundShipmentsRequest {
     @NotNull(message = "Shipment date is required")
     private LocalDate shipmentDate;
 
-    private String trackingNumber;
     private String carrier;
     private String notes;
 }

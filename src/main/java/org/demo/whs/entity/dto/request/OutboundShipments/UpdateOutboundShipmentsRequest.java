@@ -16,7 +16,6 @@ import java.time.LocalDate;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateOutboundShipmentsRequest {
     private LocalDate shipmentDate;
-    private String trackingNumber;
     private String carrier;
     private String notes;
 }

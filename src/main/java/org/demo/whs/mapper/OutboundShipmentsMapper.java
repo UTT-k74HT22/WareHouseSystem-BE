@@ -25,7 +25,6 @@ public class OutboundShipmentsMapper {
                 .warehouseId(request.getWarehouseId())
                 .shipmentDate(request.getShipmentDate())
                 .status(OutboundShipmentsStatus.DRAFT)
-                .trackingNumber(request.getTrackingNumber())
                 .carrier(request.getCarrier())
                 .notes(request.getNotes())
                 .build();
@@ -62,9 +61,6 @@ public class OutboundShipmentsMapper {
 
         if (request.getShipmentDate() != null) {
             entity.setShipmentDate(request.getShipmentDate());
-        }
-        if (request.getTrackingNumber() != null) {
-            entity.setTrackingNumber(request.getTrackingNumber());
         }
         if (request.getCarrier() != null) {
             entity.setCarrier(request.getCarrier());

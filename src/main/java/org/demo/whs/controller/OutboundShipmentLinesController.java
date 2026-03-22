@@ -43,7 +43,7 @@ public class OutboundShipmentLinesController {
      */
     @PostMapping
     @Operation(summary = "Create a new outbound shipment line")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> create(@Valid @RequestBody OutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.create(request);
         return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment line created successfully"), HttpStatus.CREATED);
@@ -59,7 +59,7 @@ public class OutboundShipmentLinesController {
      */
     @GetMapping("/shipment/{shipmentId}")
     @Operation(summary = "Get all lines for a specific outbound shipment")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<List<OutboundShipmentLinesResponse>>> getByShipmentId(@PathVariable String shipmentId) {
         List<OutboundShipmentLinesResponse> response = outboundShipmentLinesService.getByShipmentId(shipmentId);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment lines retrieved successfully"));
@@ -75,7 +75,7 @@ public class OutboundShipmentLinesController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get an outbound shipment line by its ID")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> getById(@PathVariable String id) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line retrieved successfully"));
@@ -89,7 +89,7 @@ public class OutboundShipmentLinesController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Update an outbound shipment line (DRAFT status only)")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> update(@PathVariable String id, @Valid @RequestBody UpdateOutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.update(id, request);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line updated successfully"));
@@ -103,7 +103,7 @@ public class OutboundShipmentLinesController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove an outbound shipment line (DRAFT status only)")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<Void>> remove(@PathVariable String id) {
         outboundShipmentLinesService.remove(id);
         return ResponseEntity.ok(BaseResponse.success(null, "Outbound shipment line removed successfully"));
