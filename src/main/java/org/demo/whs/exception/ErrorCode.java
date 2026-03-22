@@ -29,6 +29,8 @@ public enum ErrorCode {
     ROLE_002("ROLE_002", "Permission list cannot be empty"),
     ROLE_003("ROLE_003", "Invalid permission IDs"),
     ROLE_004("ROLE_004", "Role name already exists"),
+    ROLE_005("ROLE_005", "Cannot delete default role"),
+    ROLE_006("ROLE_006", "Role is being used by users"),
     // OTP errors
     OTP_001("OTP_001", "OTP type is required"),
     OTP_002("OTP_002", "Account not found"),
