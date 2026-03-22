@@ -14,10 +14,12 @@ import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobSummaryRespon
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.helpers.producer.BackgroundJobProducerService;
 import org.demo.whs.mapper.BackgroundJobMapper;
 import org.demo.whs.repository.BackgroundJobRepository;
 import org.demo.whs.repository.BackgroundJobStepLogRepository;
 import org.demo.whs.service.BackgroundJobService;
+import org.demo.whs.service.JobStatusUpdater;
 import org.demo.whs.service.StorageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -26,9 +28,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Core service scaffold for background job APIs.
@@ -42,6 +47,8 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
     private final BackgroundJobStepLogRepository backgroundJobStepLogRepository;
     private final BackgroundJobMapper backgroundJobMapper;
     private final StorageService storageService;
+    private final JobStatusUpdater jobStatusUpdater;
+    private final Optional<BackgroundJobProducerService> backgroundJobProducerService;
 
     @Value("${app.minio.presigned-url-expiry:3600}")
     private long presignedUrlExpirySeconds;
@@ -80,19 +87,27 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public BackgroundJobStatusResponse retryJob(String jobId, String requestedBy, RetryBackgroundJobRequest request) {
         BackgroundJob job = getOwnedJob(jobId, requestedBy);
-        log.info("Retry requested for background job id={} by requestedBy={} reason={}", jobId, requestedBy, request == null ? null : request.getReason());
-        return backgroundJobMapper.toStatusResponse(job, null, null);
+        String reason = request == null ? null : request.getReason();
+
+        BackgroundJob retriedJob = jobStatusUpdater.resetForRetry(job.getId(), reason);
+        dispatchAfterCommit(retriedJob);
+
+        log.info("Retry requested for background job id={} by requestedBy={} reason={}", jobId, requestedBy, reason);
+        return backgroundJobMapper.toStatusResponse(retriedJob, null, null);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public BackgroundJobStatusResponse cancelJob(String jobId, String requestedBy, CancelBackgroundJobRequest request) {
         BackgroundJob job = getOwnedJob(jobId, requestedBy);
-        log.info("Cancel requested for background job id={} by requestedBy={} reason={}", jobId, requestedBy, request == null ? null : request.getReason());
-        return backgroundJobMapper.toStatusResponse(job, null, null);
+        String reason = request == null ? null : request.getReason();
+
+        BackgroundJob cancelledJob = jobStatusUpdater.markCancelled(job.getId(), reason);
+        log.info("Cancel requested for background job id={} by requestedBy={} reason={}", jobId, requestedBy, reason);
+        return backgroundJobMapper.toStatusResponse(cancelledJob, null, null);
     }
 
     @Override
@@ -112,11 +127,11 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
 
     private BackgroundJob getOwnedJob(String jobId, String requestedBy) {
         if (requestedBy == null || requestedBy.isBlank()) {
-            throw new NotFoundException("Background job not found with ID: " + jobId, ErrorCode.COM_004);
+            throw new NotFoundException("Background job not found with ID: " + jobId, ErrorCode.JOB_001);
         }
 
         return backgroundJobRepository.findByIdAndRequestedBy(jobId, requestedBy)
-                .orElseThrow(() -> new NotFoundException("Background job not found with ID: " + jobId, ErrorCode.COM_004));
+                .orElseThrow(() -> new NotFoundException("Background job not found with ID: " + jobId, ErrorCode.JOB_001));
     }
 
     private int resolvePage(BackgroundJobFilterRequest request) {
@@ -125,5 +140,24 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
 
     private int resolveSize(BackgroundJobFilterRequest request) {
         return request == null || request.getSize() == null ? 20 : request.getSize();
+    }
+
+    private void dispatchAfterCommit(BackgroundJob job) {
+        if (backgroundJobProducerService.isEmpty()) {
+            log.warn("BackgroundJobProducerService not available, skip queue dispatch for job id={}", job.getId());
+            return;
+        }
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            backgroundJobProducerService.get().sendJobToQueue(job);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                backgroundJobProducerService.get().sendJobToQueue(job);
+            }
+        });
     }
 }

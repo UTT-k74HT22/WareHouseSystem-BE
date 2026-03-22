@@ -131,6 +131,16 @@ public enum ErrorCode {
 
     // OrderLine errors
     ORDER_001("ORDER_001", "OrderLine not found"),
+    // Background job errors
+    JOB_001("JOB_001", "Background job not found"),
+    JOB_002("JOB_002", "Invalid background job status transition"),
+    JOB_003("JOB_003", "Background job is not retryable"),
+    JOB_004("JOB_004", "Background job is not cancellable"),
+    JOB_005("JOB_005", "Background job processor not found"),
+    JOB_006("JOB_006", "Background job export format is not supported"),
+    JOB_007("JOB_007", "Background job report type is not supported"),
+    JOB_008("JOB_008", "Background job payload is invalid"),
+
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
     COM_002("COM_002", "Internal server error - please contact support"),

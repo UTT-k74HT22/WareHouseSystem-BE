@@ -37,8 +37,7 @@ public class EmailConsumerService {
      * @param messageDTO Email log from queue
      */
     @RabbitListener(queues = "#{emailProperties.queueName}",
-            containerFactory = "emailListenerContainerFactory"
-    )
+            containerFactory = "emailListenerContainerFactory")
     @Transactional
     public void consumeEmail(EmailMessageDTO messageDTO) {
         log.info("Consuming email from queue for recipient: {}", messageDTO.getRecipient());
