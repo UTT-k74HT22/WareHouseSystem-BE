@@ -215,6 +215,8 @@ public enum ErrorCode {
     PERM_011("PERM_011", "Permission code cannot be changed"),
     PERM_012("PERM_012", "Permission resource cannot be changed");
 
+    // Role Permission errors
+
     private final String code;
     private final String message;
 }
