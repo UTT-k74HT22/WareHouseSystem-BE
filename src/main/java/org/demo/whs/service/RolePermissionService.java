@@ -33,5 +33,5 @@ public interface RolePermissionService {
      * @param pageable pagination information
      * @return paginated list of permissions assigned to the role
      */
-    PageResponse<PermissionResponse> getRolePermissions(String roleId, Pageable pageable);
+    PageResponse<PermissionResponse> getRolePermissions(String roleId, String search, Pageable pageable);
 }

@@ -1,8 +1,11 @@
 package org.demo.whs.repository;
 
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
+import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.RoleHasPermission;
 import org.demo.whs.entity.RolePermissionId;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -26,4 +29,15 @@ public interface RolePermissionRepository extends JpaRepository<RoleHasPermissio
     """)
     List<String> findRoleIdsByPermissionId(@Param("permissionId") String permissionId);
 
+    @Query("""
+    SELECT p FROM Permission p
+    JOIN RoleHasPermission rp ON rp.id.permissionId = p.id
+    WHERE rp.id.roleId = :roleId
+    AND (:resource IS NULL OR LOWER(p.resource) = LOWER(:resource))
+""")
+    Page<Permission> findPermissionsByRoleId(
+            @Param("roleId") String roleId,
+            @Param("resource") String resource,
+            Pageable pageable
+    );
 }
