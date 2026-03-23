@@ -26,4 +26,8 @@ public interface RolePermissionRepository extends JpaRepository<RoleHasPermissio
     """)
     List<String> findRoleIdsByPermissionId(@Param("permissionId") String permissionId);
 
+    int deleteByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
+
+    boolean existsByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
+
 }
