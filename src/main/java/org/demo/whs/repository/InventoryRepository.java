@@ -142,4 +142,13 @@ public interface InventoryRepository extends
     List<Inventory> findByProductIdAndBatchIdIn(String productId, Collection<String> batchIds);
 
     List<Inventory> findByProductIdAndWarehouseIdAndBatchIdIn(String productId, String warehouseId, Collection<String> batchIds);
+
+    @Query("""
+        SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+        FROM Inventory i
+        WHERE i.productId = :productId
+            AND i.batchId IS NOT NULL
+            AND (i.onHandQuantity > 0 OR i.quarantineQuantity > 0 OR i.reservedQuantity > 0)
+        """)
+    boolean existsBatchInventoryByProductId(@Param("productId") String productId);
 }
