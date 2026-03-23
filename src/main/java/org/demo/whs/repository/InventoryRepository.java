@@ -105,6 +105,14 @@ public interface InventoryRepository extends
         """)
     boolean existsActiveInventoryByWarehouseId(@Param("warehouseId") String warehouseId);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+        FROM Inventory i
+        WHERE i.locationId = :locationId
+            AND (i.onHandQuantity > 0 OR i.quarantineQuantity > 0 OR i.reservedQuantity > 0)
+        """)
+    boolean existsActiveInventoryByLocationId(@Param("locationId") String locationId);
+
     /**
      * Find inventory by product, warehouse, location, and batch.
      * Used for validation or retrieval when all dimensions are specified.
