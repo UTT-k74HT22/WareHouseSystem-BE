@@ -59,7 +59,14 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
         //Step 2: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
         Inventory inventory = getInventoryForUpdate(request.getInventoryId());
-        validateWarehouseOwnership(inventory.getWarehouseId());
+
+        boolean isAdmin = roles.stream()
+                .anyMatch("ADMIN"::equalsIgnoreCase);
+
+        if (!isAdmin) {
+            validateWarehouseOwnership(inventory.getWarehouseId());
+        }
+
         BigDecimal quantityBefore = inventory.getOnHandQuantity();
         BigDecimal quantityAfter = request.getQuantityAfter();
         BigDecimal adjustmentQuantity = quantityAfter.subtract(quantityBefore);
@@ -408,6 +415,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
     private void validateWarehouseOwnership(String warehouseId) {
         String accountId = getCurrentActorId();
+
         Employee employee = employeeRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new BadRequestException("Employee not found for current user", ErrorCode.AUTH_003));
         if (!employee.getWarehouseId().equals(warehouseId)) {

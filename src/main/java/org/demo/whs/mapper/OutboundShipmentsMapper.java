@@ -1,19 +1,25 @@
 package org.demo.whs.mapper;
 
+import org.demo.whs.entity.OutboundShipmentLines;
 import org.demo.whs.entity.OutboundShipments;
 import org.demo.whs.entity.dto.request.OutboundShipments.OutboundShipmentsRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.UpdateOutboundShipmentsRequest;
 import org.demo.whs.entity.dto.response.OutboundShipments.OutboundShipmentsResponse;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Mapper class for Outbound Shipments.
  */
 @Component
+@RequiredArgsConstructor
 public class OutboundShipmentsMapper {
+
+    private final OutboundShipmentLinesMapper outboundShipmentLinesMapper;
 
     public OutboundShipments toEntity(OutboundShipmentsRequest request) {
         if (request == null) {
@@ -30,6 +36,20 @@ public class OutboundShipmentsMapper {
                 .build();
     }
 
+    public OutboundShipmentsResponse toResponse(OutboundShipments entity, List<OutboundShipmentLines> lines) {
+        if (entity == null) {
+            return null;
+        }
+
+        OutboundShipmentsResponse response = toResponse(entity);
+        if (lines != null) {
+            response.setLines(lines.stream()
+                    .map(outboundShipmentLinesMapper::toResponse)
+                    .collect(Collectors.toList()));
+        }
+        return response;
+    }
+    
     public OutboundShipmentsResponse toResponse(OutboundShipments entity) {
         if (entity == null) {
             return null;

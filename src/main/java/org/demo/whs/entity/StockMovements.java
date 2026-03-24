@@ -34,6 +34,9 @@ public class StockMovements extends BaseEntity {
     @Column(name = "location_id", columnDefinition = ("CHAR(36)"))
     private String locationId;
 
+    @Column(name = "to_location_id", columnDefinition = ("CHAR(36)"))
+    private String toLocationId;
+
     @Column(name = "batch_id", columnDefinition = ("CHAR(36)"))
     private String batchId;
 

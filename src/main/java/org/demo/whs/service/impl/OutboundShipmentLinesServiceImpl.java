@@ -92,12 +92,15 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         Products product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.COM_001));
 
-        // 4. Validate Location
-        Locations location = locationRepository.findById(request.getLocationId())
-                .orElseThrow(() -> new NotFoundException("Location not found", ErrorCode.COM_001));
+        // 4. Validate Location (Optional)
+        Locations location = null;
+        if (request.getLocationId() != null && !request.getLocationId().isBlank()) {
+            location = locationRepository.findById(request.getLocationId())
+                    .orElseThrow(() -> new NotFoundException("Location not found", ErrorCode.COM_001));
 
-        if (!location.getWarehouseId().equals(shipment.getWarehouseId())) {
-            throw new BadRequestException("Location does not belong to the shipment's warehouse", ErrorCode.COM_001);
+            if (!location.getWarehouseId().equals(shipment.getWarehouseId())) {
+                throw new BadRequestException("Location does not belong to the shipment's warehouse", ErrorCode.COM_001);
+            }
         }
 
         // 5. Validate Batch (if provided)

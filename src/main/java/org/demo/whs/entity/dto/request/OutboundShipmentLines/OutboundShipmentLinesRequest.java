@@ -29,7 +29,6 @@ public class OutboundShipmentLinesRequest {
 
     private String batchId;
 
-    @NotBlank(message = "Location ID is required")
     private String locationId;
 
     @NotNull(message = "Quantity shipped is required")

@@ -11,8 +11,10 @@ import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.ReferenceType;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -83,4 +85,17 @@ public interface InventoryService {
      * @return Updated inventory data
      */
     InventoryResponse decrease(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request);
+
+    /**
+     * Moves inventory from one location to another within the same warehouse.
+     *
+     * @param fromLocationId Source location ID
+     * @param toLocationId   Destination location ID
+     * @param productId      Product ID
+     * @param batchId        Batch ID
+     * @param quantity       Quantity to move
+     * @param referenceType  Reference type
+     * @param referenceId    Reference ID
+     */
+    void moveInventory(String fromLocationId, String toLocationId, String productId, String batchId, BigDecimal quantity, ReferenceType referenceType, String referenceId, String orderLineId, boolean consumeReserved);
 }

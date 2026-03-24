@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -117,4 +118,14 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @return count of locations
      */
     long countByWarehouseId(String warehouseId);
+
+    /**
+     * Finds active locations by warehouse and type.
+     *
+     * @param warehouseId the warehouse ID
+     * @param type        the location type
+     * @param status      the location status
+     * @return list of matching locations
+     */
+    List<Locations> findByWarehouseIdAndTypeAndStatus(String warehouseId, LocationType type, LocationStatus status);
 }
