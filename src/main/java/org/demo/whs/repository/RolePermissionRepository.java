@@ -1,10 +1,11 @@
 package org.demo.whs.repository;
 
-import io.lettuce.core.dynamic.annotation.Param;
+
 import org.demo.whs.entity.RoleHasPermission;
 import org.demo.whs.entity.RolePermissionId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -25,5 +26,12 @@ public interface RolePermissionRepository extends JpaRepository<RoleHasPermissio
         WHERE rp.id.permissionId = :permissionId
     """)
     List<String> findRoleIdsByPermissionId(@Param("permissionId") String permissionId);
+
+    @Query("""
+    SELECT rp.id.permissionId
+    FROM RoleHasPermission rp
+    WHERE rp.id.roleId = :roleId
+""")
+    List<String> findPermissionIdsByRoleId(@Param("roleId") String roleId);
 
 }
