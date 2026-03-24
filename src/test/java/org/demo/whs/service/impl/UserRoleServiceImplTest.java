@@ -1,6 +1,11 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.AccountHasRole;
+import org.demo.whs.entity.Account;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.mapper.AccountMapper;
+import org.springframework.data.domain.*;
 import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
@@ -37,6 +42,8 @@ class UserRoleServiceImplTest {
     private UserRoleMapper userRoleMapper;
     @Mock
     private RoleMapper roleMapper;
+    @Mock
+    private AccountMapper accountMapper;
 
     @InjectMocks
     private UserRoleServiceImpl service;
@@ -156,5 +163,61 @@ class UserRoleServiceImplTest {
         service.assignRolesToUser(userId, request);
 
         verify(accountHasRoleRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void getRoleUsers_success() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Account account = new Account();
+        account.setId("user-1");
+        account.setUsername("admin");
+
+        Page<Account> page = new PageImpl<>(List.of(account), pageable, 1);
+
+        AccountResponse response = mock(AccountResponse.class);
+
+        when(roleRepository.existsById(roleId1)).thenReturn(true);
+        when(accountRepository.findUsersByRoleId(roleId1, pageable)).thenReturn(page);
+        when(accountMapper.toAccountResponse(account)).thenReturn(response);
+
+        PageResponse<AccountResponse> result = service.getRoleUsers(roleId1, pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+
+        verify(accountRepository).findUsersByRoleId(roleId1, pageable);
+    }
+
+    @Test
+    void getRoleUsers_roleNotFound_throwException() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(roleRepository.existsById(roleId1)).thenReturn(false);
+
+        assertThrows(NotFoundException.class,
+                () -> service.getRoleUsers(roleId1, pageable));
+
+        verify(accountRepository, never()).findUsersByRoleId(any(), any());
+    }
+
+    @Test
+    void getRoleUsers_emptyResult() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Account> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(roleRepository.existsById(roleId1)).thenReturn(true);
+        when(accountRepository.findUsersByRoleId(roleId1, pageable)).thenReturn(emptyPage);
+
+        PageResponse<AccountResponse> result = service.getRoleUsers(roleId1, pageable);
+
+        assertNotNull(result);
+        assertTrue(result.getContent().isEmpty());
+
+        verify(accountRepository).findUsersByRoleId(roleId1, pageable);
     }
 }

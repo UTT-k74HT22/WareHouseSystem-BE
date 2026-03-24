@@ -12,12 +12,14 @@ import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.mapper.AccountMapper;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.mapper.UserRoleMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.service.UserRoleService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     private final AccountHasRoleRepository accountHasRoleRepository;
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
+    private final AccountMapper accountMapper;
 
     @Override
     @Transactional
@@ -108,6 +111,25 @@ public class UserRoleServiceImpl implements UserRoleService {
 
     @Override
     public PageResponse<AccountResponse> getRoleUsers(String roleId, Pageable pageable) {
-        return null;
+        log.info("Fetching users for roleId={} with pageable: page={}, size={}",
+                roleId, pageable.getPageNumber(), pageable.getPageSize());
+
+        if (!roleRepository.existsById(roleId)) {
+            log.warn("Role not found: {}", roleId);
+            throw new NotFoundException(ErrorCode.ROLE_001);
+        }
+
+        Page<Account> page = accountRepository.findUsersByRoleId(roleId, pageable);
+        log.info("Found {} users for roleId={}", page.getTotalElements(), roleId);
+
+        List<AccountResponse> content = page.getContent().stream()
+                .map(accountMapper::toAccountResponse)
+                .peek(dto -> log.debug("Mapped Account {} -> AccountResponse {}", dto.getAccountId(), dto.getUsername()))
+                .collect(Collectors.toList());
+
+        log.info("Returning page {} of size {} with totalPages={} for roleId={}",
+                page.getNumber(), page.getSize(), page.getTotalPages(), roleId);
+
+        return PageResponse.from(page, content);
     }
 }
