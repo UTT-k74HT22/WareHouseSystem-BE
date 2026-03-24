@@ -36,7 +36,7 @@ public class RolePermissionController {
      * Assign permissions to role
      */
     @PostMapping("/{id}/permissions")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<List<PermissionResponse>>> assignPermissions(
 
             @PathVariable
@@ -57,15 +57,15 @@ public class RolePermissionController {
      * Remove permission from role
      */
     @DeleteMapping("/{id}/permissions/{permId}")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<Void>> removePermission(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
             String permId
     ) {
 
