@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.configuration.EmailProperties;
+import org.demo.whs.configuration.RabbitMQEmailProperties;
 import org.demo.whs.entity.EmailLog;
 import org.demo.whs.entity.dto.EmailMessageDTO;
 import org.demo.whs.entity.enums.EmailStatus;
@@ -30,15 +31,15 @@ public class EmailConsumerService {
     private final JavaMailSender mailSender;
     private final EmailLogRepository emailLogRepository;
     private final EmailProperties emailProperties;
+    private final RabbitMQEmailProperties rabbitMQEmailProperties;
 
     /**
      * Listen to email queue and process emails
      *
      * @param messageDTO Email log from queue
      */
-    @RabbitListener(queues = "#{emailProperties.queueName}",
-            containerFactory = "emailListenerContainerFactory"
-    )
+    @RabbitListener(queues = "#{rabbitMQEmailProperties.queue}",
+            containerFactory = "emailListenerContainerFactory")
     @Transactional
     public void consumeEmail(EmailMessageDTO messageDTO) {
         log.info("Consuming email from queue for recipient: {}", messageDTO.getRecipient());
