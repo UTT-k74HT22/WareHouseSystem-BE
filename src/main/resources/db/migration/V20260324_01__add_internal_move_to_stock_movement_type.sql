@@ -1,0 +1,11 @@
+ALTER TABLE stock_movements MODIFY COLUMN movement_type ENUM(
+    'INBOUND',
+    'OUTBOUND',
+    'ADJUSTMENT_INCREASE',
+    'ADJUSTMENT_DECREASE',
+    'TRANSFER_OUT',
+    'TRANSFER_IN',
+    'RESERVE',
+    'UNRESERVE',
+    'INTERNAL_MOVE'
+) NOT NULL;

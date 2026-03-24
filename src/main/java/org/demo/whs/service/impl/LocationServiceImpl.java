@@ -12,6 +12,7 @@ import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -354,6 +355,19 @@ public class LocationServiceImpl implements LocationService {
 
         log.info("Location soft deleted successfully: id={}, code={}",
                 location.getId(), location.getCode());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Locations resolveLocationByType(String warehouseId, LocationType type) {
+        log.info("Resolving location for warehouse: {} and type: {}", warehouseId, type);
+        List<Locations> locations = locationRepository.findByWarehouseIdAndTypeAndStatus(warehouseId, type, LocationStatus.ACTIVE);
+        if (locations.isEmpty()) {
+            log.error("No active location found for warehouse: {} and type: {}", warehouseId, type);
+            throw new BadRequestException(ErrorCode.LOC_001); // Or a more specific error
+        }
+        // Picking the first one for now (as per requirement: If multiple: pick one with available capacity or default)
+        return locations.get(0);
     }
 
     // ============ PRIVATE HELPER METHODS ============

@@ -45,5 +45,7 @@ public class InventoryDecreaseRequest {
     @Builder.Default
     private boolean consumeReserved = false;
 
+    private String orderLineId;
+
     private String notes;
 }

@@ -19,6 +19,7 @@ import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.InventoryReservationStatus;
+import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.ReferenceType;
 import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.exception.BadRequestException;
@@ -423,6 +424,20 @@ public class InventoryServiceImpl implements InventoryService {
                         }
                         inventory.setOnHandQuantity(onHandBefore.subtract(request.getQuantity()));
                         inventory.setReservedQuantity(reservedBefore.subtract(request.getQuantity()));
+
+                        // Release reservation if orderLineId is provided
+                        if (request.getOrderLineId() != null && !request.getOrderLineId().isBlank()) {
+                            inventoryReservationRepository.findByOrderLineId(request.getOrderLineId())
+                                    .ifPresent(reservation -> {
+                                        BigDecimal newResQty = reservation.getQuantity().subtract(request.getQuantity());
+                                        if (newResQty.compareTo(BigDecimal.ZERO) <= 0) {
+                                            inventoryReservationRepository.delete(reservation);
+                                        } else {
+                                            reservation.setQuantity(newResQty);
+                                            inventoryReservationRepository.save(reservation);
+                                        }
+                                    });
+                        }
                     } else {
                         if (inventory.getAvailableQuantity().compareTo(request.getQuantity()) < 0) {
                             throw new ConflictException(ErrorCode.INV_004);
@@ -464,6 +479,154 @@ public class InventoryServiceImpl implements InventoryService {
             throw new ConflictException(ErrorCode.COM_010);
         }
     }
+
+    @Override
+    @Transactional
+    public void moveInventory(
+            String fromLocationId,
+            String toLocationId,
+            String productId,
+            String batchId,
+            BigDecimal quantity,
+            ReferenceType referenceType,
+            String referenceId,
+            String orderLineId,
+            boolean consumeReserved
+    ) {
+        log.info("Moving inventory from {} to {} product {} qty {} consumeReserved={} orderLineId={}",
+                fromLocationId, toLocationId, productId, quantity, consumeReserved, orderLineId);
+
+        // 1. Validate
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Quantity must be > 0", ErrorCode.COM_001);
+        }
+
+        if (fromLocationId == null || toLocationId == null || fromLocationId.equals(toLocationId)) {
+            throw new BadRequestException("Invalid locations", ErrorCode.COM_001);
+        }
+
+        // 2. Lock locations
+        Locations fromLoc = locationRepository.findByIdForUpdate(fromLocationId)
+                .orElseThrow(() -> new NotFoundException("Source location not found", ErrorCode.LOC_001));
+
+        Locations toLoc = locationRepository.findByIdForUpdate(toLocationId)
+                .orElseThrow(() -> new NotFoundException("Destination location not found", ErrorCode.LOC_001));
+
+        String warehouseId = fromLoc.getWarehouseId();
+
+        // 3. Validate location status
+        if (toLoc.getStatus() != LocationStatus.ACTIVE) {
+            throw new ConflictException("Destination location not active", ErrorCode.LOC_002);
+        }
+
+        // 4. Lock inventory
+        Inventory sourceInv = inventoryRepository.findByDimensionForUpdate(
+                productId, warehouseId, fromLocationId, batchId
+        ).orElseThrow(() -> new NotFoundException("Inventory not found at source", ErrorCode.INV_001));
+
+        Inventory destInv = inventoryRepository.findByDimensionForUpdate(
+                productId, warehouseId, toLocationId, batchId
+        ).orElseGet(() -> {
+            Inventory newInv = Inventory.builder()
+                    .productId(productId)
+                    .warehouseId(warehouseId)
+                    .locationId(toLocationId)
+                    .batchId(batchId)
+                    .onHandQuantity(BigDecimal.ZERO)
+                    .reservedQuantity(BigDecimal.ZERO)
+                    .version(0)
+                    .build();
+            return inventoryRepository.saveAndFlush(newInv);
+        });
+
+        // 5. Validate stock and handle reservation
+        if (consumeReserved) {
+            if (sourceInv.getReservedQuantity().compareTo(quantity) < 0) {
+                log.error("Insufficient reserved stock at {}: reserved={}, requested={}", 
+                        fromLocationId, sourceInv.getReservedQuantity(), quantity);
+                throw new ConflictException("Not enough reserved stock", ErrorCode.INV_004);
+            }
+
+            // Update Reservation record if orderLineId is provided
+            if (orderLineId != null && !orderLineId.isBlank()) {
+                InventoryReservation reservation = inventoryReservationRepository.findByOrderLineId(orderLineId)
+                        .orElseThrow(() -> new NotFoundException("Reservation not found for order line", ErrorCode.INV_001));
+
+                if (!reservation.getInventoryId().equals(sourceInv.getId())) {
+                    log.error("Reservation inventory ID mismatch: reservation={}, sourceInv={}", 
+                            reservation.getInventoryId(), sourceInv.getId());
+                    throw new ConflictException("Reservation mismatch with source inventory", ErrorCode.COM_001);
+                }
+
+                BigDecimal newResQty = reservation.getQuantity().subtract(quantity);
+                if (newResQty.compareTo(BigDecimal.ZERO) <= 0) {
+                    inventoryReservationRepository.delete(reservation);
+                } else {
+                    reservation.setQuantity(newResQty);
+                    inventoryReservationRepository.save(reservation);
+                }
+            }
+        } else {
+            if (sourceInv.getAvailableQuantity().compareTo(quantity) < 0) {
+                log.error("Insufficient available stock at {}: available={}, requested={}", 
+                        fromLocationId, sourceInv.getAvailableQuantity(), quantity);
+                throw new ConflictException("Not enough available stock", ErrorCode.INV_004);
+            }
+        }
+
+        BigDecimal sourceBefore = sourceInv.getOnHandQuantity();
+        BigDecimal destBefore = destInv.getOnHandQuantity();
+
+        // 6. Update Inventory quantities
+        sourceInv.setOnHandQuantity(sourceBefore.subtract(quantity));
+        if (consumeReserved) {
+            sourceInv.setReservedQuantity(sourceInv.getReservedQuantity().subtract(quantity));
+        }
+        sourceInv.setLastMovementAt(LocalDateTime.now());
+
+        destInv.setOnHandQuantity(destBefore.add(quantity));
+        destInv.setLastMovementAt(LocalDateTime.now());
+
+        inventoryRepository.save(sourceInv);
+        inventoryRepository.save(destInv);
+
+        // 7. Record movements
+        StockMovements sourceMovement = StockMovements.builder()
+                .movementType(StockMovementsType.INTERNAL_MOVE)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .locationId(fromLocationId)
+                .toLocationId(toLocationId)
+                .batchId(batchId)
+                .quantityChange(quantity.negate())
+                .quantityBefore(sourceBefore)
+                .quantityAfter(sourceInv.getOnHandQuantity())
+                .movementDate(LocalDateTime.now())
+                .referenceType(referenceType)
+                .referenceId(referenceId)
+                .notes("Internal move OUT" + (consumeReserved ? " (Consumed Reserved)" : ""))
+                .build();
+
+        StockMovements destMovement = StockMovements.builder()
+                .movementType(StockMovementsType.INTERNAL_MOVE)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .locationId(toLocationId)
+                .toLocationId(fromLocationId)
+                .batchId(batchId)
+                .quantityChange(quantity)
+                .quantityBefore(destBefore)
+                .quantityAfter(destInv.getOnHandQuantity())
+                .movementDate(LocalDateTime.now())
+                .referenceType(referenceType)
+                .referenceId(referenceId)
+                .notes("Internal move IN")
+                .build();
+
+        stockMovementsService.recordMovement(sourceMovement);
+        stockMovementsService.recordMovement(destMovement);
+    }
+
 
     private Inventory findOrCreateInventoryWithLock(InventoryIncreaseRequest request) {
         Optional<Inventory> existing = inventoryRepository.findByDimensionForUpdate(request.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId());

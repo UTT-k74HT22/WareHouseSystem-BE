@@ -1,11 +1,13 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
 import org.demo.whs.entity.dto.request.Location.SearchLocationRequest;
 import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.LocationType;
 
 /**
  * Service interface for location-related operations.
@@ -81,4 +83,13 @@ public interface LocationService {
      * @param id the unique identifier of the location
      */
     void deleteLocation(String id);
+
+    /**
+     * Resolves an active location by type in a warehouse.
+     *
+     * @param warehouseId the warehouse ID
+     * @param type        the location type
+     * @return the resolved location
+     */
+    Locations resolveLocationByType(String warehouseId, LocationType type);
 }
