@@ -25,7 +25,7 @@ public class BackgroundJobConsumerService {
     private final JobStatusUpdater jobStatusUpdater;
 
     // The queue name is injected from BackgroundJobProperties using Spring Expression Language (SpEL)
-    @RabbitListener(queues = "#{backgroundJobProperties.queueName}",
+    @RabbitListener(queues = "#{backgroundJobProperties.queue}",
             containerFactory = "backgroundJobListenerContainerFactory")
     public void consumeJob(BackgroundJobMessageDTO messageDTO) {
         BackgroundJob job = backgroundJobRepository.findById(messageDTO.getJobId())

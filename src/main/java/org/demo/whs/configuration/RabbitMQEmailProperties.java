@@ -4,20 +4,22 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * RabbitMQEmailProperties: Configuration properties for RabbitMQ email queues and exchanges
+ */
 @Configuration
-@ConfigurationProperties(prefix = "app.rabbitmq.background-job")
+@ConfigurationProperties(prefix = "app.rabbitmq.email")
 @Data
-public class BackgroundJobProperties {
-    private String queue;
+public class RabbitMQEmailProperties {
     private String exchange;
-    private String routingKey;
+    private String queue;
     private String retryQueue;
     private String dlq;
+    private String routingKey;
     private String retryRoutingKey;
     private String dlqRoutingKey;
     private int retryTtlMs;
-    private int concurrentConsumers = 2;
-    private int maxConsumers = 4;
-    private int prefetch = 1;
-    private String exportFolder = "background-jobs/exports";
+    private int concurrentConsumers;
+    private int maxConsumers;
+    private int prefetch;
 }
