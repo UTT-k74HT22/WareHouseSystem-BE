@@ -55,18 +55,15 @@ public class RabbitMQConfig {
         template.setConfirmCallback((correlationData, ack, cause) -> {
             if (ack) {
                 // Message đã được broker nhận thành công
-                System.out.println("Message sent successfully: " + correlationData);
                 logger.info("Message sent successfully: " + correlationData);
             } else {
                 // Message không được broker nhận, có thể do lỗi kết nối hoặc broker từ chối
-                System.err.println("Failed to send message: " + correlationData + ", cause: " + cause);
                 logger.error("Failed to send message: " + correlationData + ", cause: " + cause);
             }
         });
 
         template.setReturnsCallback(returnedMessage -> {
             // Message không thể route đến queue nào, sẽ nhận được callback này nếu setMandatory(true)
-            System.err.println("Returned message: " + returnedMessage);
             logger.error("Returned message: " + returnedMessage);
         });
 

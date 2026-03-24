@@ -8,6 +8,11 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * ExportPayload: Payload object containing all necessary information for exporting a report
+ * NOTE: Đây là payload chung được truyền vào ExportStrategy để export file, nó chứa tất cả thông tin cần thiết cho việc export như tên file, header, dữ liệu rows, và các parameters khác nếu cần
+ * Các ExportStrategy sẽ nhận ExportPayload này và dựa vào đó để generate file tương ứng
+ */
 @Data
 @Builder
 @NoArgsConstructor
