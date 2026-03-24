@@ -36,7 +36,7 @@ public class RolePermissionController {
      * Assign permissions to role
      */
     @PostMapping("/{id}/permissions")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<List<PermissionResponse>>> assignPermissions(
 
             @PathVariable

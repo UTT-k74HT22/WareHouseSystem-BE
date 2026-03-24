@@ -1,18 +1,16 @@
-package org.demo.whs.entity.dto.request.UserRole;
+package org.demo.whs.entity.dto.response.UserRole;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import jakarta.validation.constraints.NotEmpty;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
-@Setter
 @Getter
+@Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class AssignRolesRequest {
-
-    @NotEmpty(message = "Role IDs are required")
+public class UserRolesResponse {
+    private String userId;
     private List<String> roleIds;
 }

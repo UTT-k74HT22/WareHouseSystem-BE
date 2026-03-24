@@ -1,6 +1,7 @@
 package org.demo.whs.mapper;
 
 import org.demo.whs.entity.RoleHasPermission;
+import org.demo.whs.entity.RolePermissionId;
 import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.Permission;
@@ -18,10 +19,15 @@ public class RolePermissionMapper {
     public RoleHasPermission createEntity(String roleId, String permissionId) {
 
         if (roleId == null || permissionId == null) {
-            return null;
+            throw new IllegalArgumentException("roleId and permissionId must not be null");
         }
 
-        return RoleHasPermission.builder().build();
+        return RoleHasPermission.builder()
+                .id(RolePermissionId.builder()
+                        .roleId(roleId)
+                        .permissionId(permissionId)
+                        .build())
+                .build();
     }
 
     /**
