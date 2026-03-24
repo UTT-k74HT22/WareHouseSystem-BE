@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.RoleHasPermission;
+import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
@@ -89,8 +90,30 @@ public class RolePermissionServiceImpl implements RolePermissionService {
     }
 
     @Override
+    @Transactional
     public void removePermission(String roleId, String permissionId) {
+        log.info("Removing permission {} from role {}", permissionId, roleId);
 
+        if (roleId == null || roleId.isBlank()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        if (permissionId == null || permissionId.isBlank()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        int deleted = rolePermissionRepository
+                .deleteByIdRoleIdAndIdPermissionId(roleId, permissionId);
+
+        if (deleted == 0) {
+            log.warn("Permission {} is not assigned to role {}", permissionId, roleId);
+            throw new NotFoundException(ErrorCode.PERM_008);
+        }
+
+        log.info("Removed permission {} from role {}", permissionId, roleId);
     }
 
     @Override
