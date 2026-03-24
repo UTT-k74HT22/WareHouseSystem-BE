@@ -4,6 +4,7 @@ import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.RoleHasPermission;
 import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+
+import org.springframework.data.domain.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,15 +44,20 @@ class RolePermissionServiceImplTest {
     private RolePermissionServiceImpl service;
 
     private AssignPermissionsRequest request;
+    private String roleId;
+    private Pageable pageable;
 
     @BeforeEach
     void setUp() {
         request = new AssignPermissionsRequest();
         request.setPermissionIds(List.of("p1", "p2"));
+
+        roleId = "role-1";
+        pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
     }
 
     // =========================
-    // ✅ SUCCESS CASE
+    // ✅ ASSIGN PERMISSIONS
     // =========================
     @Test
     void assignPermissions_success() {
@@ -88,9 +96,6 @@ class RolePermissionServiceImplTest {
         verify(rolePermissionRepository).saveAll(List.of(e1, e2));
     }
 
-    // =========================
-    // ❌ BAD REQUEST
-    // =========================
     @Test
     void assignPermissions_nullRequest_shouldThrow() {
         assertThrows(BadRequestException.class,
@@ -105,9 +110,6 @@ class RolePermissionServiceImplTest {
                 () -> service.assignPermissions("r1", request));
     }
 
-    // =========================
-    // ❌ ROLE NOT FOUND
-    // =========================
     @Test
     void assignPermissions_roleNotFound_shouldThrow() {
 
@@ -118,16 +120,12 @@ class RolePermissionServiceImplTest {
                 () -> service.assignPermissions("r1", request));
     }
 
-    // =========================
-    // ❌ PERMISSION NOT FOUND
-    // =========================
     @Test
     void assignPermissions_permissionNotFound_shouldThrow() {
 
         when(roleRepository.findById("r1"))
                 .thenReturn(Optional.of(new Role()));
 
-        // trả về thiếu permission
         when(permissionRepository.findAllById(List.of("p1", "p2")))
                 .thenReturn(List.of(new Permission()));
 
@@ -135,9 +133,6 @@ class RolePermissionServiceImplTest {
                 () -> service.assignPermissions("r1", request));
     }
 
-    // =========================
-    // ⚠️ DUPLICATE (ALREADY EXISTS)
-    // =========================
     @Test
     void assignPermissions_existingPermission_shouldSkip() {
 
@@ -147,7 +142,7 @@ class RolePermissionServiceImplTest {
         p1.setId("p1");
 
         Permission p2 = new Permission();
-        p2.setId("p2"); // ✅ FIX
+        p2.setId("p2");
 
         when(roleRepository.findById(roleId))
                 .thenReturn(Optional.of(new Role()));
@@ -155,7 +150,6 @@ class RolePermissionServiceImplTest {
         when(permissionRepository.findAllById(List.of("p1", "p2")))
                 .thenReturn(List.of(p1, p2));
 
-        // p1 đã tồn tại
         when(rolePermissionRepository.findPermissionIdsByRoleId(roleId))
                 .thenReturn(List.of("p1"));
 
@@ -169,7 +163,6 @@ class RolePermissionServiceImplTest {
         List<PermissionResponse> result =
                 service.assignPermissions(roleId, request);
 
-        // ✅ chỉ insert 1 cái (p2)
         verify(rolePermissionRepository)
                 .saveAll(argThat(iterable -> ((List<?>) iterable).size() == 1));
 
@@ -177,10 +170,9 @@ class RolePermissionServiceImplTest {
     }
 
     // =========================
-// REMOVE PERMISSION TEST
-// =========================
+    // REMOVE PERMISSION
+    // =========================
 
-    // ✅ SUCCESS CASE
     @Test
     void removePermission_success() {
 
@@ -204,22 +196,18 @@ class RolePermissionServiceImplTest {
                 .deleteByIdRoleIdAndIdPermissionId(roleId, permissionId);
     }
 
-    // ❌ BAD REQUEST
     @Test
     void removePermission_nullRoleId_shouldThrow() {
-
         assertThrows(BadRequestException.class,
                 () -> service.removePermission(null, "p1"));
     }
 
     @Test
     void removePermission_blankPermissionId_shouldThrow() {
-
         assertThrows(BadRequestException.class,
                 () -> service.removePermission("r1", " "));
     }
 
-    // ❌ ROLE NOT FOUND
     @Test
     void removePermission_roleNotFound_shouldThrow() {
 
@@ -230,7 +218,6 @@ class RolePermissionServiceImplTest {
                 () -> service.removePermission("r1", "p1"));
     }
 
-    // ❌ PERMISSION NOT ASSIGNED
     @Test
     void removePermission_permissionNotAssigned_shouldThrow() {
 
@@ -246,5 +233,96 @@ class RolePermissionServiceImplTest {
 
         assertThrows(NotFoundException.class,
                 () -> service.removePermission(roleId, permissionId));
+    }
+
+    // =========================
+    // GET ROLE PERMISSIONS (NEW)
+    // =========================
+
+    @Test
+    void getRolePermissions_success() {
+
+        Permission permission = new Permission();
+        permission.setId("perm-1");
+
+        PermissionResponse response = PermissionResponse.builder()
+                .id("perm-1")
+                .build();
+
+        Page<Permission> permissionPage =
+                new PageImpl<>(List.of(permission), pageable, 1);
+
+        when(roleRepository.findById(roleId))
+                .thenReturn(Optional.of(new Role()));
+
+        when(rolePermissionRepository.findPermissionsByRoleId(roleId, null, pageable))
+                .thenReturn(permissionPage);
+
+        when(rolePermissionMapper.toResponse(permission))
+                .thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                service.getRolePermissions(roleId, null, pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        assertEquals("perm-1", result.getContent().get(0).getId());
+    }
+
+    @Test
+    void getRolePermissions_roleIdNull_throwBadRequest() {
+        assertThrows(BadRequestException.class, () ->
+                service.getRolePermissions(null, null, pageable)
+        );
+    }
+
+    @Test
+    void getRolePermissions_roleIdEmpty_throwBadRequest() {
+        assertThrows(BadRequestException.class, () ->
+                service.getRolePermissions("", null, pageable)
+        );
+    }
+
+    @Test
+    void getRolePermissions_roleNotFound_throwNotFound() {
+
+        when(roleRepository.findById(roleId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () ->
+                service.getRolePermissions(roleId, null, pageable)
+        );
+    }
+
+    @Test
+    void getRolePermissions_filterByResource_success() {
+
+        String resource = "inventory";
+
+        Permission permission = new Permission();
+        permission.setId("perm-2");
+
+        PermissionResponse response = PermissionResponse.builder()
+                .id("perm-2")
+                .resource(resource)
+                .build();
+
+        Page<Permission> permissionPage =
+                new PageImpl<>(List.of(permission), pageable, 1);
+
+        when(roleRepository.findById(roleId))
+                .thenReturn(Optional.of(new Role()));
+
+        when(rolePermissionRepository.findPermissionsByRoleId(roleId, resource, pageable))
+                .thenReturn(permissionPage);
+
+        when(rolePermissionMapper.toResponse(permission))
+                .thenReturn(response);
+
+        PageResponse<PermissionResponse> result =
+                service.getRolePermissions(roleId, resource, pageable);
+
+        assertEquals(1, result.getContent().size());
+        assertEquals(resource, result.getContent().get(0).getResource());
     }
 }

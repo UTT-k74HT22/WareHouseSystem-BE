@@ -16,6 +16,7 @@ import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.service.RolePermissionService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,7 +118,24 @@ public class RolePermissionServiceImpl implements RolePermissionService {
     }
 
     @Override
-    public PageResponse<PermissionResponse> getRolePermissions(String roleId, Pageable pageable) {
-        return null;
+    @Transactional(readOnly = true)
+    public PageResponse<PermissionResponse> getRolePermissions(
+            String roleId,
+            String resource,
+            Pageable pageable
+    ) {
+
+        if (roleId == null || roleId.isEmpty()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        Page<Permission> page = rolePermissionRepository.findPermissionsByRoleId(roleId, resource, pageable);
+
+        Page<PermissionResponse> responsePage = page.map(rolePermissionMapper::toResponse);
+
+        return PageResponse.from(responsePage);
     }
 }
