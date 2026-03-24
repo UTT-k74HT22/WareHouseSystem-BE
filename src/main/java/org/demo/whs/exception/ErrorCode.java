@@ -213,7 +213,17 @@ public enum ErrorCode {
     PERM_009("PERM_009", "Invalid resource"),
     PERM_010("PERM_010", "Invalid action"),
     PERM_011("PERM_011", "Permission code cannot be changed"),
-    PERM_012("PERM_012", "Permission resource cannot be changed");
+    PERM_012("PERM_012", "Permission resource cannot be changed"),
+
+    //User Role errors
+    USER_ROLE_001("USER_ROLE_001", "User not found"), // 🔧 FIX: dùng riêng cho module này (tránh reuse AUTH_010)
+    USER_ROLE_002("USER_ROLE_002", "Role not found for assignment"), // 🔧 FIX: rõ nghĩa hơn ROLE_001
+    USER_ROLE_003("USER_ROLE_003", "Role already assigned to user"),
+    USER_ROLE_004("USER_ROLE_004", "User does not have this role"),
+    USER_ROLE_005("USER_ROLE_005", "Role assignment list cannot be empty"),
+    USER_ROLE_006("USER_ROLE_006", "Invalid role IDs"),
+    USER_ROLE_007("USER_ROLE_007", "User role mapping not found"),
+    USER_ROLE_008("USER_ROLE_008", "Cannot remove role from user");
 
     // Role Permission errors
 
