@@ -14,6 +14,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.OutboundShipmentsMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.service.InventoryService;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +65,9 @@ class OutboundShipmentsServiceImplTest {
     @Mock private AccountRepository accountRepository;
     @Mock private InventoryService inventoryService;
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private InventoryReservationRepository inventoryReservationRepository;
     @Mock private StockMovementsRepository stockMovementsRepository;
+    @Mock private LocationService locationService;
     @Mock private OutboundShipmentsMapper outboundShipmentsMapper;
     @Mock private IdentifierGenerator identifierGenerator;
 
@@ -81,7 +84,9 @@ class OutboundShipmentsServiceImplTest {
                 accountRepository,
                 inventoryService,
                 inventoryRepository,
+                inventoryReservationRepository,
                 stockMovementsRepository,
+                locationService,
                 outboundShipmentsMapper,
                 identifierGenerator
         );
@@ -363,11 +368,16 @@ class OutboundShipmentsServiceImplTest {
         OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.DRAFT);
         OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PICKING);
+        Locations pickingLocation = buildLocation("loc-picking", LocationType.PICKING);
+        InventoryReservation reservation = buildReservation("res-1", "so-line-1", "prod-1", "loc-reserved", "wh-1", "5.00");
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PICKING)).thenReturn(pickingLocation);
+        when(inventoryReservationRepository.findByOrderLineId(line.getSalesOrderLineId())).thenReturn(Optional.of(reservation));
+        when(outboundShipmentLinesRepository.save(any(OutboundShipmentLines.class))).thenReturn(line);
         when(outboundShipmentsRepository.save(any(OutboundShipments.class))).thenReturn(shipment);
-        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class))).thenReturn(response);
+        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), any())).thenReturn(response);
 
         OutboundShipmentsResponse result = service.startPicking(SHIPMENT_ID);
 
@@ -430,11 +440,18 @@ class OutboundShipmentsServiceImplTest {
     @DisplayName("should_MarkAsPacked_When_ShipmentIsPicking")
     void should_MarkAsPacked_When_ShipmentIsPicking() {
         OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PICKING);
+        OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PACKED);
+        Locations pickingLoc = buildLocation("loc-picking", LocationType.PICKING);
+        Locations packingLoc = buildLocation("loc-packing", LocationType.PACKING);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PICKING)).thenReturn(pickingLoc);
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
+        when(outboundShipmentLinesRepository.save(any(OutboundShipmentLines.class))).thenReturn(line);
         when(outboundShipmentsRepository.save(any(OutboundShipments.class))).thenReturn(shipment);
-        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class))).thenReturn(response);
+        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), anyList())).thenReturn(response);
 
         OutboundShipmentsResponse result = service.markAsPacked(SHIPMENT_ID);
 
@@ -446,10 +463,12 @@ class OutboundShipmentsServiceImplTest {
     @DisplayName("should_ReturnPacked_When_ShipmentAlreadyPacked")
     void should_ReturnPacked_When_ShipmentAlreadyPacked() {
         OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PACKED);
+        OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PACKED);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
-        when(outboundShipmentsMapper.toResponse(shipment)).thenReturn(response);
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(outboundShipmentsMapper.toResponse(shipment, List.of(line))).thenReturn(response);
 
         OutboundShipmentsResponse result = service.markAsPacked(SHIPMENT_ID);
 
@@ -494,17 +513,22 @@ class OutboundShipmentsServiceImplTest {
         SalesOrderLines soLine = buildSalesOrderLine("so-line-1", SALES_ORDER_ID, "10.00", "5.00");
 
         OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        Locations packingLoc = buildLocation("loc-packing", LocationType.PACKING);
+        Locations stagingLoc = buildLocation("loc-staging", LocationType.STAGING);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
-        when(salesOrderLinesRepository.findAllById(any())).thenReturn(List.of(soLine));
+        when(salesOrderLinesRepository.findById(line.getSalesOrderLineId())).thenReturn(Optional.of(soLine));
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
+        doNothing().when(inventoryService).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
         when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
-        when(salesOrderLinesRepository.saveAll(any())).thenReturn(List.of(soLine));
+        when(salesOrderLinesRepository.save(any(SalesOrderLines.class))).thenReturn(soLine);
         when(salesOrdersRepository.findById(SALES_ORDER_ID)).thenReturn(Optional.of(buildSalesOrder(SALES_ORDER_ID, SalesOrdersStatus.CONFIRMED)));
         when(salesOrderLinesRepository.findBySalesOrderId(SALES_ORDER_ID)).thenReturn(List.of(soLine));
         when(salesOrdersRepository.save(any())).thenReturn(null);
         when(outboundShipmentsRepository.save(any())).thenReturn(shipment);
-        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class))).thenReturn(response);
+        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), anyList())).thenReturn(response);
 
         OutboundShipmentsResponse result = service.ship(SHIPMENT_ID);
 
@@ -516,10 +540,12 @@ class OutboundShipmentsServiceImplTest {
     @DisplayName("should_ReturnShipped_When_ShipmentAlreadyShipped")
     void should_ReturnShipped_When_ShipmentAlreadyShipped() {
         OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
-        when(outboundShipmentsMapper.toResponse(shipment)).thenReturn(response);
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(outboundShipmentsMapper.toResponse(shipment, List.of(line))).thenReturn(response);
 
         OutboundShipmentsResponse result = service.ship(SHIPMENT_ID);
 
@@ -574,10 +600,14 @@ class OutboundShipmentsServiceImplTest {
         OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         line.setQuantityShipped(new BigDecimal("20.00"));
         SalesOrderLines soLine = buildSalesOrderLine("so-line-1", SALES_ORDER_ID, "10.00", "5.00");
+        Locations packingLoc = buildLocation("loc-packing", LocationType.PACKING);
+        Locations stagingLoc = buildLocation("loc-staging", LocationType.STAGING);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
-        when(salesOrderLinesRepository.findAllById(any())).thenReturn(List.of(soLine));
+        when(salesOrderLinesRepository.findById(line.getSalesOrderLineId())).thenReturn(Optional.of(soLine));
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
 
         assertThatThrownBy(() -> service.ship(SHIPMENT_ID))
                 .isInstanceOf(BadRequestException.class)
@@ -769,6 +799,32 @@ class OutboundShipmentsServiceImplTest {
         wh.setCreatedAt(LocalDateTime.of(2026, 3, 1, 10, 0, 0));
         wh.setUpdatedAt(LocalDateTime.of(2026, 3, 1, 10, 0, 0));
         return wh;
+    }
+
+    private Locations buildLocation(String id, LocationType type) {
+        Locations loc = Locations.builder()
+                .code("LOC-001")
+                .name("Location 1")
+                .type(type)
+                .status(LocationStatus.ACTIVE)
+                .warehouseId(WAREHOUSE_ID)
+                .build();
+        if (id != null) loc.setId(id);
+        return loc;
+    }
+
+    private InventoryReservation buildReservation(String id, String orderLineId, String productId, 
+                                                     String locationId, String warehouseId, String quantity) {
+        InventoryReservation res = InventoryReservation.builder()
+                .orderLineId(orderLineId)
+                .productId(productId)
+                .locationId(locationId)
+                .warehouseId(warehouseId)
+                .quantity(new BigDecimal(quantity))
+                .status(InventoryReservationStatus.RESERVED)
+                .build();
+        if (id != null) res.setId(id);
+        return res;
     }
 
     private OutboundShipmentsResponse buildResponse(String id, String shipmentNumber, OutboundShipmentsStatus status) {
