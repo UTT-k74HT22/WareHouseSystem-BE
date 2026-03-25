@@ -80,6 +80,8 @@ public class LocationServiceImpl implements LocationService {
         Locations location = locationMapper.toEntity(request);
         location.setCode(locationCode);
 
+        location.setUsedCapacity(BigDecimal.ZERO);
+
         Account currentUser = getCurrentUser();
         setAuditFieldsForCreate(location, currentUser);
         Locations savedLocation = locationRepository.save(location);
