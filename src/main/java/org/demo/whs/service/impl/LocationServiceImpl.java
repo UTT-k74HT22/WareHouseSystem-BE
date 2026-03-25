@@ -16,6 +16,7 @@ import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.LocationMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.InventoryRepository;
@@ -30,6 +31,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -364,10 +367,33 @@ public class LocationServiceImpl implements LocationService {
         List<Locations> locations = locationRepository.findByWarehouseIdAndTypeAndStatus(warehouseId, type, LocationStatus.ACTIVE);
         if (locations.isEmpty()) {
             log.error("No active location found for warehouse: {} and type: {}", warehouseId, type);
-            throw new BadRequestException(ErrorCode.LOC_001); // Or a more specific error
+            throw new BadRequestException(ErrorCode.LOC_001);
         }
-        // Picking the first one for now (as per requirement: If multiple: pick one with available capacity or default)
         return locations.get(0);
+    }
+
+    @Override
+    @Transactional
+    public void increaseUsedCapacity(String locationId, BigDecimal quantity) {
+        log.info("Increasing used capacity for location: {}, quantity: {}", locationId, quantity);
+        int updated = locationRepository.increaseUsedCapacity(locationId, quantity);
+        if (updated == 0) {
+            log.error("Failed to increase capacity - location not found, inactive, or would exceed capacity: {}", locationId);
+            throw new BadRequestException("Location capacity exceeded or location not found/inactive", ErrorCode.LOC_009);
+        }
+        log.info("Successfully increased used capacity for location: {}", locationId);
+    }
+
+    @Override
+    @Transactional
+    public void decreaseUsedCapacity(String locationId, BigDecimal quantity) {
+        log.info("Decreasing used capacity for location: {}, quantity: {}", locationId, quantity);
+        int updated = locationRepository.decreaseUsedCapacity(locationId, quantity);
+        if (updated == 0) {
+            log.error("Failed to decrease capacity - location not found, inactive, or insufficient used capacity: {}", locationId);
+            throw new BadRequestException("Location used capacity insufficient or location not found/inactive", ErrorCode.LOC_010);
+        }
+        log.info("Successfully decreased used capacity for location: {}", locationId);
     }
 
     // ============ PRIVATE HELPER METHODS ============

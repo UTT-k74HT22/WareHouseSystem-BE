@@ -92,4 +92,20 @@ public interface LocationService {
      * @return the resolved location
      */
     Locations resolveLocationByType(String warehouseId, LocationType type);
+
+    /**
+     * Increases the used capacity of a location (when inventory leaves).
+     *
+     * @param locationId the location ID
+     * @param quantity  the quantity to add to used capacity
+     */
+    void increaseUsedCapacity(String locationId, java.math.BigDecimal quantity);
+
+    /**
+     * Decreases the used capacity of a location (when inventory arrives).
+     *
+     * @param locationId the location ID
+     * @param quantity  the quantity to subtract from used capacity
+     */
+    void decreaseUsedCapacity(String locationId, java.math.BigDecimal quantity);
 }

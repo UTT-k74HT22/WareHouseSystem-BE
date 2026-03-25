@@ -8,10 +8,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -128,4 +130,42 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @return list of matching locations
      */
     List<Locations> findByWarehouseIdAndTypeAndStatus(String warehouseId, LocationType type, LocationStatus status);
+
+    /**
+     * Atomically increases used capacity with capacity validation.
+     * Only updates if: location exists AND used + quantity <= capacity
+     *
+     * @param locationId the location ID
+     * @param quantity   the quantity to add
+     * @return number of rows updated (0 if failed)
+     */
+    @Modifying
+    @Query("""
+        UPDATE Locations l
+        SET l.usedCapacity = l.usedCapacity + :quantity
+        WHERE l.id = :locationId
+          AND l.usedCapacity + :quantity <= l.capacity
+          AND l.status = 'ACTIVE'
+        """)
+    int increaseUsedCapacity(@Param("locationId") String locationId,
+                             @Param("quantity") BigDecimal quantity);
+
+    /**
+     * Atomically decreases used capacity with validation.
+     * Only updates if: location exists AND used >= quantity
+     *
+     * @param locationId the location ID
+     * @param quantity   the quantity to subtract
+     * @return number of rows updated (0 if failed)
+     */
+    @Modifying
+    @Query("""
+        UPDATE Locations l
+        SET l.usedCapacity = l.usedCapacity - :quantity
+        WHERE l.id = :locationId
+          AND l.usedCapacity >= :quantity
+          AND l.status = 'ACTIVE'
+        """)
+    int decreaseUsedCapacity(@Param("locationId") String locationId,
+                             @Param("quantity") BigDecimal quantity);
 }
