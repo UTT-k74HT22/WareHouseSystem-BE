@@ -117,7 +117,7 @@ public class WareHouseMapper {
         if (warehouses == null) return Collections.emptyList();
 
         return warehouses.stream()
-                .map(w -> toResponse(w, managerMap.get(w.getManagerId())))
+                .map(w -> toResponse(w, w.getManagerId() != null ? managerMap.get(w.getManagerId()) : null))
                 .toList();
     }
 }
