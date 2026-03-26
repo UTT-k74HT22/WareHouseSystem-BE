@@ -100,11 +100,10 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public OutboundShipmentsResponse getById(String id) {
         log.info("Get outbound shipment by id={}", id);
         OutboundShipments shipment = findById(id);
-        reconcileTransitCapacity(shipment);
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
         return outboundShipmentsMapper.toResponse(shipment, lines);
     }
@@ -152,6 +151,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
 
         Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
+        String actorId = getCurrentActorId();
         log.info("Picking location resolved: {}", pickingLoc.getId());
 
         for (OutboundShipmentLines line : lines) {
@@ -189,13 +189,13 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
             line.setLocationId(pickingLoc.getId());
             line.setBatchId(reservation.getBatchId());
             line.setPickedAt(LocalDateTime.now());
-            line.setPickedBy(getCurrentActorId());
-            outboundShipmentLinesRepository.save(line);
+            line.setPickedBy(actorId);
         }
 
         shipment.setStatus(OutboundShipmentsStatus.PICKING);
-        applyAuditFields(shipment, getCurrentActorId(), false);
+        applyAuditFields(shipment, actorId, false);
 
+        outboundShipmentLinesRepository.saveAll(lines);
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
         syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
         List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
@@ -222,11 +222,13 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
         Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
         Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
-        syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+        lines.stream()
+                .map(line -> line.getLocationId() != null ? line.getLocationId() : pickingLoc.getId())
+                .distinct()
+                .forEach(locationId -> syncTransitLocationUsedCapacity(locationId, List.of(OutboundShipmentsStatus.PICKING)));
 
         for (OutboundShipmentLines line : lines) {
             String sourceLocationId = line.getLocationId() != null ? line.getLocationId() : pickingLoc.getId();
-            syncTransitLocationUsedCapacity(sourceLocationId, List.of(OutboundShipmentsStatus.PICKING));
             moveAndUpdateCapacity(
                     sourceLocationId,
                     packingLoc.getId(),
@@ -241,14 +243,15 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
             );
 
             line.setLocationId(packingLoc.getId());
-            outboundShipmentLinesRepository.save(line);
         }
 
         shipment.setStatus(OutboundShipmentsStatus.PACKED);
         applyAuditFields(shipment, getCurrentActorId(), false);
 
+        outboundShipmentLinesRepository.saveAll(lines);
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
         syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+        syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
         List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
         return outboundShipmentsMapper.toResponse(updatedShipment, updatedLines);
     }
@@ -260,7 +263,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         OutboundShipments shipment = outboundShipmentsRepository.findByIdWithLock(id)
                 .orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
 
-        if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
+        if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED || shipment.getStatus() == OutboundShipmentsStatus.STAGING) {
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
             return outboundShipmentsMapper.toResponse(shipment, lines);
         }
@@ -276,11 +279,14 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
         Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
         String actorId = getCurrentActorId();
+        lines.stream()
+                .map(line -> line.getLocationId() != null ? line.getLocationId() : packingLoc.getId())
+                .distinct()
+                .forEach(locationId -> syncTransitLocationUsedCapacity(locationId, List.of(OutboundShipmentsStatus.PACKED)));
 
         for (OutboundShipmentLines line : lines) {
             // Move PACKING → STAGING
             String sourceLocationId = line.getLocationId() != null ? line.getLocationId() : packingLoc.getId();
-            syncTransitLocationUsedCapacity(sourceLocationId, List.of(OutboundShipmentsStatus.PACKED));
             moveAndUpdateCapacity(
                     sourceLocationId,
                     stagingLoc.getId(),
@@ -293,39 +299,74 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                     true,
                     true
             );
-            // Consume reservation and outbound directly from STAGING
-            removeFromLocation(
-                    stagingLoc.getId(),
-                    shipment.getWarehouseId(),
-                    line.getProductId(),
-                    line.getBatchId(),
-                    line.getQuantityShipped(),
-                    shipment.getId(),
-                    shipment.getShipmentNumber(),
-                    line.getSalesOrderLineId(),
-                    true
+            line.setLocationId(stagingLoc.getId());
+        }
+
+        shipment.setStatus(OutboundShipmentsStatus.STAGING);
+        applyAuditFields(shipment, actorId, false);
+        outboundShipmentLinesRepository.saveAll(lines);
+        outboundShipmentsRepository.save(shipment);
+        syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+        syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+
+        List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
+        return outboundShipmentsMapper.toResponse(shipment, updatedLines);
+    }
+
+    @Override
+    @Transactional
+    public OutboundShipmentsResponse confirmDispatch(String id) {
+        log.info("Confirm dispatch for shipment, id={}", id);
+        OutboundShipments shipment = outboundShipmentsRepository.findByIdWithLock(id)
+                .orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
+
+        if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
+            List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
+            return outboundShipmentsMapper.toResponse(shipment, lines);
+        }
+        if (shipment.getStatus() != OutboundShipmentsStatus.STAGING) {
+            throw new BadRequestException("Shipment must be in STAGING status to confirm dispatch", ErrorCode.COM_001);
+        }
+
+        List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
+        if (lines.isEmpty()) {
+            throw new BadRequestException("Shipment must have at least one line to confirm dispatch", ErrorCode.COM_001);
+        }
+
+        Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
+        String actorId = getCurrentActorId();
+        List<SalesOrderLines> updatedSalesOrderLines = new java.util.ArrayList<>(lines.size());
+        syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+
+        for (OutboundShipmentLines line : lines) {
+            InventoryReservation reservation = inventoryReservationRepository.findByOrderLineId(line.getSalesOrderLineId())
+                    .orElseThrow(() -> new NotFoundException("Reservation not found for order line", ErrorCode.INV_001));
+
+            confirmDispatchFromSource(
+                    line.getLocationId() != null ? line.getLocationId() : stagingLoc.getId(),
+                    shipment,
+                    line,
+                    reservation
             );
             line.setLocationId(null);
-            outboundShipmentLinesRepository.save(line);
 
-            // 3. Update Sales Order Line
             SalesOrderLines soLine = salesOrderLinesRepository.findById(line.getSalesOrderLineId())
                     .orElseThrow(() -> new NotFoundException("Sales order line not found", ErrorCode.COM_001));
-
             BigDecimal newShipped = soLine.getQuantityShipped().add(line.getQuantityShipped());
             if (newShipped.compareTo(soLine.getQuantityOrdered()) > 0) {
                 throw new BadRequestException("Over shipped quantity for order line", ErrorCode.COM_001);
             }
             soLine.setQuantityShipped(newShipped);
-            salesOrderLinesRepository.save(soLine);
+            updatedSalesOrderLines.add(soLine);
         }
 
         shipment.setStatus(OutboundShipmentsStatus.SHIPPED);
         shipment.setShippedAt(LocalDateTime.now());
         shipment.setConfirmedBy(actorId);
         applyAuditFields(shipment, actorId, false);
+        outboundShipmentLinesRepository.saveAll(lines);
+        salesOrderLinesRepository.saveAll(updatedSalesOrderLines.stream().distinct().collect(Collectors.toList()));
         outboundShipmentsRepository.save(shipment);
-        syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
         locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
 
         updateSalesOrderStatus(shipment.getSalesOrderId());
@@ -349,15 +390,19 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
 
         if (shipment.getStatus() == OutboundShipmentsStatus.PICKING
-                || shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
+                || shipment.getStatus() == OutboundShipmentsStatus.PACKED
+                || shipment.getStatus() == OutboundShipmentsStatus.STAGING) {
 
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
             Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
             Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
+            Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
             if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
                 syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
-            } else {
+            } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
                 syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+            } else {
+                syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
             }
 
             for (OutboundShipmentLines line : lines) {
@@ -378,10 +423,9 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                                         false
                                 );
                                 line.setLocationId(reservation.getLocationId());
-                                outboundShipmentLinesRepository.save(line);
                             });
 
-                } else {
+                } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
                     // Revert: PACKED → PICKING
                     moveAndUpdateCapacity(
                             line.getLocationId() != null ? line.getLocationId() : packingLoc.getId(),
@@ -396,9 +440,23 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                             true
                     );
                     line.setLocationId(pickingLoc.getId());
-                    outboundShipmentLinesRepository.save(line);
+                } else {
+                    moveAndUpdateCapacity(
+                            line.getLocationId() != null ? line.getLocationId() : stagingLoc.getId(),
+                            packingLoc.getId(),
+                            line.getProductId(),
+                            line.getBatchId(),
+                            line.getQuantityShipped(),
+                            shipment.getId(),
+                            line.getSalesOrderLineId(),
+                            false,
+                            true,
+                            true
+                    );
+                    line.setLocationId(packingLoc.getId());
                 }
             }
+            outboundShipmentLinesRepository.saveAll(lines);
         }
 
         shipment.setStatus(OutboundShipmentsStatus.CANCELLED);
@@ -458,23 +516,6 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
     }
 
-    private void reconcileTransitCapacity(OutboundShipments shipment) {
-        if (shipment == null) {
-            return;
-        }
-
-        if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
-            Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
-            syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
-        } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
-            Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
-            syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
-        } else if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
-            Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
-            locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
-        }
-    }
-
     private void syncTransitLocationUsedCapacity(String locationId, List<OutboundShipmentsStatus> statuses) {
         BigDecimal expected = outboundShipmentLinesRepository
                 .sumQuantityByLocationIdAndShipmentStatuses(locationId, statuses);
@@ -498,17 +539,6 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         if (from.equals(to)) {
             return;
         }
-        inventoryService.moveInventory(
-                from,
-                to,
-                productId,
-                batchId,
-                qty,
-                ReferenceType.OUTBOUND_SHIPMENT,
-                shipmentId,
-                lineId,
-                consumeReserved
-        );
         if (updateSourceUsedCapacity) {
             int decreased = locationService.decreaseUsedCapacity(from, qty);
             if (decreased == 0) {
@@ -523,34 +553,29 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
     }
 
-    private void removeFromLocation(
-            String locationId,
-            String warehouseId,
-            String productId,
-            String batchId,
-            BigDecimal qty,
-            String shipmentId,
-            String shipmentNumber,
-            String orderLineId,
-            boolean consumeReserved
+    private void confirmDispatchFromSource(
+            String stagingLocationId,
+            OutboundShipments shipment,
+            OutboundShipmentLines line,
+            InventoryReservation reservation
     ) {
-        validateIntegerQuantity(qty);
+        validateIntegerQuantity(line.getQuantityShipped());
 
         inventoryService.decrease(
                 InventoryDecreaseRequest.builder()
-                        .warehouseId(warehouseId)
-                        .productId(productId)
-                        .locationId(locationId)
-                        .batchId(batchId)
-                        .quantity(qty)
+                        .warehouseId(shipment.getWarehouseId())
+                        .productId(line.getProductId())
+                        .locationId(reservation.getLocationId())
+                        .batchId(line.getBatchId() != null ? line.getBatchId() : reservation.getBatchId())
+                        .quantity(line.getQuantityShipped())
                         .referenceType(ReferenceType.OUTBOUND_SHIPMENT)
-                        .referenceId(shipmentId)
-                        .referenceNumber(shipmentNumber)
-                        .consumeReserved(consumeReserved)
-                        .orderLineId(orderLineId)
+                        .referenceId(shipment.getId())
+                        .referenceNumber(shipment.getShipmentNumber())
+                        .consumeReserved(true)
+                        .orderLineId(line.getSalesOrderLineId())
                         .build()
         );
-        int decreased = locationService.decreaseUsedCapacity(locationId, qty);
+        int decreased = locationService.decreaseUsedCapacity(stagingLocationId, line.getQuantityShipped());
         if (decreased == 0) {
             throw new ConflictException("Location used capacity update failed", ErrorCode.COM_001);
         }

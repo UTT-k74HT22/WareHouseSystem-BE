@@ -237,7 +237,7 @@ class OutboundShipmentsControllerTest {
     @Test
     @DisplayName("Should ship outbound shipment")
     void should_Ship_When_RequestIsValid() throws Exception {
-        OutboundShipmentsResponse response = buildResponse("ship-1", "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        OutboundShipmentsResponse response = buildResponse("ship-1", "SHIP-001", OutboundShipmentsStatus.STAGING);
 
         when(outboundShipmentsService.ship("ship-1")).thenReturn(response);
 
@@ -245,9 +245,25 @@ class OutboundShipmentsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value("ship-1"))
-                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+                .andExpect(jsonPath("$.data.status").value("STAGING"));
 
         verify(outboundShipmentsService).ship("ship-1");
+    }
+
+    @Test
+    @DisplayName("Should confirm dispatch for outbound shipment")
+    void should_ConfirmDispatch_When_RequestIsValid() throws Exception {
+        OutboundShipmentsResponse response = buildResponse("ship-1", "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+
+        when(outboundShipmentsService.confirmDispatch("ship-1")).thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/outbound-shipments/{id}/confirm-dispatch", "ship-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("ship-1"))
+                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+
+        verify(outboundShipmentsService).confirmDispatch("ship-1");
     }
 
     // ==================== CANCEL ====================

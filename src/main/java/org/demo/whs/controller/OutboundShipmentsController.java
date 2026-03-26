@@ -138,11 +138,19 @@ public class OutboundShipmentsController {
      * - Tồn kho bị trừ thực tế
      */
     @PutMapping("/{id}/ship")
-    @Operation(summary = "Transition: PACKED -> SHIPPED")
+    @Operation(summary = "Transition: PACKED -> STAGING")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> ship(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.ship(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment confirmed and inventory decreased"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Shipment moved to STAGING successfully"));
+    }
+
+    @PutMapping("/{id}/confirm-dispatch")
+    @Operation(summary = "Transition: STAGING -> SHIPPED")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> confirmDispatch(@PathVariable String id) {
+        OutboundShipmentsResponse response = outboundShipmentsService.confirmDispatch(id);
+        return ResponseEntity.ok(BaseResponse.success(response, "Shipment dispatched and inventory decreased successfully"));
     }
     /**
      * Hủy Outbound Shipment.

@@ -528,61 +528,38 @@ class OutboundShipmentsServiceImplTest {
 
         OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
         line.setLocationId("loc-packing");
-        SalesOrderLines soLine = buildSalesOrderLine("so-line-1", SALES_ORDER_ID, "10.00", "5.00");
 
-        OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.STAGING);
         Locations packingLoc = buildLocation("loc-packing", LocationType.PACKING);
         Locations stagingLoc = buildLocation("loc-staging", LocationType.STAGING);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
-        when(salesOrderLinesRepository.findById(line.getSalesOrderLineId())).thenReturn(Optional.of(soLine));
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
         when(locationService.decreaseUsedCapacity("loc-packing", new BigDecimal("5.00"))).thenReturn(1);
         when(locationService.increaseUsedCapacity("loc-staging", new BigDecimal("5.00"))).thenReturn(1);
-        doNothing().when(inventoryService).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
-        when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
-        when(salesOrderLinesRepository.save(any(SalesOrderLines.class))).thenReturn(soLine);
-        when(salesOrdersRepository.findById(SALES_ORDER_ID)).thenReturn(Optional.of(buildSalesOrder(SALES_ORDER_ID, SalesOrdersStatus.CONFIRMED)));
-        when(salesOrderLinesRepository.findBySalesOrderId(SALES_ORDER_ID)).thenReturn(List.of(soLine));
-        when(salesOrdersRepository.save(any())).thenReturn(null);
         when(outboundShipmentsRepository.save(any())).thenReturn(shipment);
         when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), anyList())).thenReturn(response);
 
         OutboundShipmentsResponse result = service.ship(SHIPMENT_ID);
 
-        assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.SHIPPED);
-        assertThat(line.getLocationId()).isNull();
-        verify(inventoryService).moveInventory(
-                eq("loc-packing"),
-                eq("loc-staging"),
-                eq("prod-1"),
-                isNull(),
-                eq(new BigDecimal("5.00")),
-                eq(ReferenceType.OUTBOUND_SHIPMENT),
-                eq(SHIPMENT_ID),
-                eq("so-line-1"),
-                eq(false)
-        );
+        assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.STAGING);
+        assertThat(line.getLocationId()).isEqualTo("loc-staging");
+        verify(inventoryService, never()).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
         verify(inventoryService, never()).unreserve(any(InventoryUnreserveRequest.class));
-        verify(inventoryService).decrease(argThat(request ->
-                request.isConsumeReserved()
-                        && "so-line-1".equals(request.getOrderLineId())
-                        && "loc-staging".equals(request.getLocationId())
-                        && new BigDecimal("5.00").compareTo(request.getQuantity()) == 0
-        ));
-        verify(locationService, times(2)).decreaseUsedCapacity(anyString(), eq(new BigDecimal("5.00")));
+        verify(inventoryService, never()).decrease(any(InventoryDecreaseRequest.class));
+        verify(locationService).decreaseUsedCapacity("loc-packing", new BigDecimal("5.00"));
         verify(locationService).increaseUsedCapacity("loc-staging", new BigDecimal("5.00"));
-        verify(outboundShipmentLinesRepository).save(line);
+        verify(outboundShipmentLinesRepository).saveAll(List.of(line));
     }
 
     @Test
-    @DisplayName("should_ReturnShipped_When_ShipmentAlreadyShipped")
-    void should_ReturnShipped_When_ShipmentAlreadyShipped() {
-        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+    @DisplayName("should_ReturnStaging_When_ShipmentAlreadyInStaging")
+    void should_ReturnStaging_When_ShipmentAlreadyInStaging() {
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.STAGING);
         OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
-        OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.STAGING);
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
@@ -590,7 +567,7 @@ class OutboundShipmentsServiceImplTest {
 
         OutboundShipmentsResponse result = service.ship(SHIPMENT_ID);
 
-        assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.SHIPPED);
+        assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.STAGING);
         verify(inventoryService, never()).decrease(any());
     }
 
@@ -632,27 +609,74 @@ class OutboundShipmentsServiceImplTest {
     }
 
     @Test
-    @DisplayName("should_ThrowBadRequest_When_ShipOverShippedQuantity")
-    void should_ThrowBadRequest_When_ShipOverShippedQuantity() {
-        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.PACKED);
+    @DisplayName("should_ThrowBadRequest_When_ConfirmDispatchOverShippedQuantity")
+    void should_ThrowBadRequest_When_ConfirmDispatchOverShippedQuantity() {
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.STAGING);
         shipment.setSalesOrderId(SALES_ORDER_ID);
         shipment.setWarehouseId(WAREHOUSE_ID);
 
         OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
+        line.setLocationId("loc-staging");
+        line.setBatchId("batch-1");
         line.setQuantityShipped(new BigDecimal("20.00"));
         SalesOrderLines soLine = buildSalesOrderLine("so-line-1", SALES_ORDER_ID, "10.00", "5.00");
-        Locations packingLoc = buildLocation("loc-packing", LocationType.PACKING);
         Locations stagingLoc = buildLocation("loc-staging", LocationType.STAGING);
+        InventoryReservation reservation = buildReservation("res-1", "so-line-1", "prod-1", "loc-storage", WAREHOUSE_ID, "20.00");
+        reservation.setBatchId("batch-1");
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
         when(salesOrderLinesRepository.findById(line.getSalesOrderLineId())).thenReturn(Optional.of(soLine));
-        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
+        when(locationService.decreaseUsedCapacity("loc-staging", new BigDecimal("20.00"))).thenReturn(1);
+        when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
+        when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> service.ship(SHIPMENT_ID))
+        assertThatThrownBy(() -> service.confirmDispatch(SHIPMENT_ID))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Over shipped");
+    }
+
+    @Test
+    @DisplayName("should_ConfirmDispatch_When_ShipmentIsInStaging")
+    void should_ConfirmDispatch_When_ShipmentIsInStaging() {
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.STAGING);
+        shipment.setSalesOrderId(SALES_ORDER_ID);
+        shipment.setWarehouseId(WAREHOUSE_ID);
+
+        OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
+        line.setLocationId("loc-staging");
+        line.setBatchId("batch-1");
+        SalesOrderLines soLine = buildSalesOrderLine("so-line-1", SALES_ORDER_ID, "10.00", "5.00");
+        InventoryReservation reservation = buildReservation("res-1", "so-line-1", "prod-1", "loc-storage", WAREHOUSE_ID, "5.00");
+        reservation.setBatchId("batch-1");
+
+        OutboundShipmentsResponse response = buildResponse(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.SHIPPED);
+        Locations stagingLoc = buildLocation("loc-staging", LocationType.STAGING);
+
+        when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
+        when(locationService.decreaseUsedCapacity("loc-staging", new BigDecimal("5.00"))).thenReturn(1);
+        when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
+        when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
+        when(salesOrderLinesRepository.findById("so-line-1")).thenReturn(Optional.of(soLine));
+        when(salesOrdersRepository.findById(SALES_ORDER_ID)).thenReturn(Optional.of(buildSalesOrder(SALES_ORDER_ID, SalesOrdersStatus.CONFIRMED)));
+        when(salesOrderLinesRepository.findBySalesOrderId(SALES_ORDER_ID)).thenReturn(List.of(soLine));
+        when(outboundShipmentsRepository.save(any())).thenReturn(shipment);
+        when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), anyList())).thenReturn(response);
+
+        OutboundShipmentsResponse result = service.confirmDispatch(SHIPMENT_ID);
+
+        assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.SHIPPED);
+        assertThat(line.getLocationId()).isNull();
+        verify(inventoryService).decrease(argThat(request ->
+                request.isConsumeReserved()
+                        && "so-line-1".equals(request.getOrderLineId())
+                        && "loc-storage".equals(request.getLocationId())
+                        && new BigDecimal("5.00").compareTo(request.getQuantity()) == 0
+        ));
+        verify(locationService).decreaseUsedCapacity("loc-staging", new BigDecimal("5.00"));
     }
 
     // ==================== CANCEL ====================
@@ -696,21 +720,11 @@ class OutboundShipmentsServiceImplTest {
 
         assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.CANCELLED);
         assertThat(line.getLocationId()).isEqualTo("loc-storage");
-        verify(inventoryService).moveInventory(
-                eq("loc-picking"),
-                eq("loc-storage"),
-                eq("prod-1"),
-                isNull(),
-                eq(new BigDecimal("5.00")),
-                eq(ReferenceType.OUTBOUND_SHIPMENT),
-                eq(SHIPMENT_ID),
-                eq("so-line-1"),
-                eq(false)
-        );
+        verify(inventoryService, never()).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
         verify(inventoryService, never()).unreserve(any(InventoryUnreserveRequest.class));
         verify(locationService).decreaseUsedCapacity("loc-picking", new BigDecimal("5.00"));
         verify(locationService, never()).increaseUsedCapacity("loc-storage", new BigDecimal("5.00"));
-        verify(outboundShipmentLinesRepository).save(line);
+        verify(outboundShipmentLinesRepository).saveAll(List.of(line));
     }
 
     @Test
@@ -737,21 +751,11 @@ class OutboundShipmentsServiceImplTest {
 
         assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.CANCELLED);
         assertThat(line.getLocationId()).isEqualTo("loc-picking");
-        verify(inventoryService).moveInventory(
-                eq("loc-packing"),
-                eq("loc-picking"),
-                eq("prod-1"),
-                isNull(),
-                eq(new BigDecimal("5.00")),
-                eq(ReferenceType.OUTBOUND_SHIPMENT),
-                eq(SHIPMENT_ID),
-                eq("so-line-1"),
-                eq(false)
-        );
+        verify(inventoryService, never()).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
         verify(inventoryService, never()).unreserve(any(InventoryUnreserveRequest.class));
         verify(locationService).decreaseUsedCapacity("loc-packing", new BigDecimal("5.00"));
         verify(locationService).increaseUsedCapacity("loc-picking", new BigDecimal("5.00"));
-        verify(outboundShipmentLinesRepository).save(line);
+        verify(outboundShipmentLinesRepository).saveAll(List.of(line));
     }
 
     @Test
@@ -803,17 +807,7 @@ class OutboundShipmentsServiceImplTest {
         OutboundShipmentsResponse result = service.cancel(SHIPMENT_ID);
 
         assertThat(result.getStatus()).isEqualTo(OutboundShipmentsStatus.CANCELLED);
-        verify(inventoryService).moveInventory(
-                eq("loc-picking"),
-                eq("loc-storage"),
-                eq("prod-1"),
-                isNull(),
-                eq(new BigDecimal("5.00")),
-                eq(ReferenceType.OUTBOUND_SHIPMENT),
-                eq(SHIPMENT_ID),
-                eq("so-line-1"),
-                eq(false)
-        );
+        verify(inventoryService, never()).moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), any(), any(), anyBoolean());
         verify(locationService, never()).increaseUsedCapacity("loc-storage", new BigDecimal("5.00"));
     }
 

@@ -6,8 +6,6 @@ import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.OutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.UpdateOutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.response.OutboundShipmentLines.OutboundShipmentLinesResponse;
-import org.demo.whs.entity.enums.LocationStatus;
-import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -128,10 +126,9 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<OutboundShipmentLinesResponse> getByShipmentId(String shipmentId) {
         log.info("Get outbound shipment lines by shipmentId={}", shipmentId);
-        outboundShipmentsRepository.findById(shipmentId).ifPresent(this::reconcileTransitCapacity);
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(shipmentId);
         
         if (lines.isEmpty()) {
@@ -177,11 +174,10 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public OutboundShipmentLinesResponse getById(String id) {
         log.info("Get outbound shipment line by id={}", id);
         OutboundShipmentLines line = findById(id);
-        outboundShipmentsRepository.findById(line.getOutboundShipmentId()).ifPresent(this::reconcileTransitCapacity);
         OutboundShipmentLinesResponse response = outboundShipmentLinesMapper.toResponse(line);
         
         Products product = productRepository.findById(line.getProductId()).orElse(null);
@@ -299,44 +295,4 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         }
     }
 
-    private void reconcileTransitCapacity(OutboundShipments shipment) {
-        if (shipment == null) {
-            return;
-        }
-
-        if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
-            Locations pickingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
-                    shipment.getWarehouseId(),
-                    LocationType.PICKING,
-                    LocationStatus.ACTIVE
-            ).stream().findFirst().orElse(null);
-            if (pickingLoc != null) {
-                syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
-            }
-        } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
-            Locations packingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
-                    shipment.getWarehouseId(),
-                    LocationType.PACKING,
-                    LocationStatus.ACTIVE
-            ).stream().findFirst().orElse(null);
-            if (packingLoc != null) {
-                syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
-            }
-        } else if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
-            Locations stagingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
-                    shipment.getWarehouseId(),
-                    LocationType.STAGING,
-                    LocationStatus.ACTIVE
-            ).stream().findFirst().orElse(null);
-            if (stagingLoc != null) {
-                locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
-            }
-        }
-    }
-
-    private void syncTransitLocationUsedCapacity(String locationId, List<OutboundShipmentsStatus> statuses) {
-        BigDecimal expected = outboundShipmentLinesRepository
-                .sumQuantityByLocationIdAndShipmentStatuses(locationId, statuses);
-        locationRepository.forceUpdateUsedCapacity(locationId, expected == null ? BigDecimal.ZERO : expected);
-    }
 }
