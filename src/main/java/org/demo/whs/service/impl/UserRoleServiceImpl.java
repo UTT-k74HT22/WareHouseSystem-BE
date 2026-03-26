@@ -19,6 +19,7 @@ import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.service.UserRoleService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,7 +134,26 @@ public class UserRoleServiceImpl implements UserRoleService {
 
     @Override
     public PageResponse<RoleResponse> getUserRoles(String userId, Pageable pageable) {
-        return null;
+
+        log.info("Get roles for user {} with page={}", userId, pageable);
+
+        long roleCount = accountHasRoleRepository.countByIdAccountId(userId);
+        if (roleCount == 0) {
+            log.warn("User {} not found or has no roles", userId);
+            throw new NotFoundException(ErrorCode.USER_ROLE_001);
+        }
+
+        Page<Role> page = roleRepository.findRolesByUserId(userId, pageable);
+        if (page.isEmpty()) {
+            log.warn("No roles found for user {}", userId);
+            throw new NotFoundException(ErrorCode.USER_ROLE_002);
+        }
+
+        List<RoleResponse> roleResponses = page.stream()
+                .map(roleMapper::toResponse)
+                .toList();
+
+        return PageResponse.from(page, roleResponses);
     }
 
     @Override
