@@ -11,6 +11,7 @@ import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.AccountStatus;
+import org.demo.whs.entity.enums.ActionType;
 import org.demo.whs.entity.enums.OtpType;
 import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.AuthenticationFailedException;
@@ -24,8 +25,10 @@ import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.security.JwtProvider;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.AuthService;
 import org.demo.whs.service.OtpService;
+import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.service.RedisService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.demo.whs.exception.ErrorCode.*;
 
@@ -52,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
     private final RedisService redisService;
+    private final PermissionCacheService permissionCacheService;
 
     /**
      * Authenticates a user based on the provided login request.
@@ -249,6 +254,37 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Password changed successfully for user: {}", username);
     }
+
+    @Override
+    public boolean checkPermission(String resource, ActionType action) {
+
+        // 🔥 1. Lấy accountId từ SecurityContext
+        String accountId = SecurityUtils.getCurrentAccountId();
+
+        if (accountId == null) {
+            log.warn("Unauthenticated access attempt");
+            throw new UnauthorizedException(ErrorCode.AUTH_005);
+        }
+
+        // 🔥 2. Build permission code theo chuẩn hệ thống
+        String permissionCode = generatePermissionCode(resource, action);
+
+        // 🔥 3. Lấy permission từ cache
+        Set<String> permissions = permissionCacheService.getPermissions(accountId);
+
+        if (permissions == null || permissions.isEmpty()) {
+            log.warn("No permissions found for accountId={}", accountId);
+            return false;
+        }
+
+        boolean allowed = permissions.contains(permissionCode);
+
+        log.info("Check permission: accountId={}, permission={}, allowed={}",
+                accountId, permissionCode, allowed);
+
+        return allowed;
+    }
+
     // ================= PRIVATE METHODS =================
 
     private void validateDuplicateUser(RegisterRequest request) {
@@ -307,5 +343,30 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Invalid refresh token");
             throw new UnauthorizedException(AUTH_006);
         }
+    }
+
+    /**
+     * Generate permission code theo chuẩn hệ thống.
+     *
+     * Format:
+     * PERM_<RESOURCE>_<ACTION>
+     *
+     * Ví dụ:
+     * PERM_USER_CREATE
+     */
+    private String generatePermissionCode(String resource, ActionType action) {
+
+        if (resource == null || resource.isBlank()) {
+            throw new IllegalArgumentException("Resource cannot be null or blank");
+        }
+
+        if (action == null) {
+            throw new IllegalArgumentException("Action cannot be null");
+        }
+
+        return "PERM_" +
+                resource.trim().toUpperCase() +
+                "_" +
+                action.name();
     }
 }
