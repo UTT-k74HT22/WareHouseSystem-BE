@@ -520,6 +520,10 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         inventory.setLastMovementAt(now);
         Inventory savedInventory = inventoryRepository.save(inventory);
 
+        if (!isQuarantine) {
+            locationService.increaseUsedCapacity(receiptLine.getLocationId(), receiptLine.getQuantityReceived());
+        }
+
         return new InventorySnapshot(savedInventory, onHandBefore, onHandAfter);
     }
 
