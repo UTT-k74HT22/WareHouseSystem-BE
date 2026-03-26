@@ -458,9 +458,11 @@ class OutboundShipmentLinesServiceImplTest {
     void should_ReturnLines_When_ShipmentHasLines() {
         OutboundShipmentLines line = buildLine(LINE_ID, SHIPMENT_ID);
         Locations location = buildLocation(LOCATION_ID);
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, OutboundShipmentsStatus.DRAFT);
 
         OutboundShipmentLinesResponse response = buildResponse(LINE_ID, SHIPMENT_ID);
 
+        when(outboundShipmentsRepository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
         lenient().when(locationRepository.findAllById(any())).thenReturn(List.of(location));
         lenient().when(batchRepository.findAllById(any())).thenReturn(null);
@@ -490,9 +492,11 @@ class OutboundShipmentLinesServiceImplTest {
         OutboundShipmentLines line = buildLine(LINE_ID, SHIPMENT_ID);
         Products product = buildProduct(PRODUCT_ID);
         Locations location = buildLocation(LOCATION_ID);
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, OutboundShipmentsStatus.DRAFT);
         OutboundShipmentLinesResponse response = buildResponse(LINE_ID, SHIPMENT_ID);
 
         when(outboundShipmentLinesRepository.findById(LINE_ID)).thenReturn(Optional.of(line));
+        when(outboundShipmentsRepository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById(LOCATION_ID)).thenReturn(Optional.of(location));
         when(outboundShipmentLinesMapper.toResponse(line)).thenReturn(response);
@@ -500,6 +504,26 @@ class OutboundShipmentLinesServiceImplTest {
         OutboundShipmentLinesResponse result = service.getById(LINE_ID);
 
         assertThat(result.getId()).isEqualTo(LINE_ID);
+    }
+
+    @Test
+    @DisplayName("should_ReturnLineById_When_LocationIsNull")
+    void should_ReturnLineById_When_LocationIsNull() {
+        OutboundShipmentLines line = buildLine(LINE_ID, SHIPMENT_ID);
+        line.setLocationId(null);
+        Products product = buildProduct(PRODUCT_ID);
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, OutboundShipmentsStatus.SHIPPED);
+        OutboundShipmentLinesResponse response = buildResponse(LINE_ID, SHIPMENT_ID);
+
+        when(outboundShipmentLinesRepository.findById(LINE_ID)).thenReturn(Optional.of(line));
+        when(outboundShipmentsRepository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(outboundShipmentLinesMapper.toResponse(line)).thenReturn(response);
+
+        OutboundShipmentLinesResponse result = service.getById(LINE_ID);
+
+        assertThat(result.getId()).isEqualTo(LINE_ID);
+        verify(locationRepository, never()).findById(anyString());
     }
 
     @Test

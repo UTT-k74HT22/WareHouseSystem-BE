@@ -28,6 +28,7 @@ import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,6 +90,9 @@ class StockTransfersServiceImplTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Mock
+    private LocationService locationService;
+
     private StockTransfersServiceImpl stockTransfersService;
 
     @BeforeEach
@@ -102,6 +106,7 @@ class StockTransfersServiceImplTest {
                 batchRepository,
                 accountRepository,
                 employeeRepository,
+                locationService,
                 new StockTransfersMapper(),
                 new StockMovementsMapper(),
                 new IdentifierGenerator()

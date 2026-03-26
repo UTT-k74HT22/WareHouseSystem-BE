@@ -8,11 +8,14 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.enums.InventoryReservationStatus;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.ReferenceType;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.mapper.InventoryMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.service.StockMovementsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,6 +70,9 @@ class InventoryServiceImplTest {
 
     @Mock
     private SalesOrderLinesRepository salesOrderLinesRepository;
+
+    @Mock
+    private LocationService locationService;
 
     @InjectMocks
     private InventoryServiceImpl inventoryService;
@@ -232,6 +238,7 @@ class InventoryServiceImplTest {
 
         assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("20");
         verify(stockMovementsService).recordMovement(any());
+        verifyNoInteractions(locationService);
     }
 
     // --- UNRESERVE TESTS ---
@@ -253,6 +260,8 @@ class InventoryServiceImplTest {
                 .build();
 
         when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(res));
+        when(inventoryReservationRepository.sumQuantityByInventoryIdAndStatus("inv-1", InventoryReservationStatus.RESERVED))
+                .thenReturn(BigDecimal.TEN);
         when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inv));
         when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new StockMovements());
@@ -261,6 +270,37 @@ class InventoryServiceImplTest {
 
         assertThat(inv.getReservedQuantity()).isEqualByComparingTo("0");
         verify(inventoryReservationRepository).delete(res);
+        verifyNoInteractions(locationService);
+    }
+
+    @Test
+    @DisplayName("unreserve_shouldHealReservedAggregate_When_InventoryReservedIsStale")
+    void unreserve_shouldHealReservedAggregate_When_InventoryReservedIsStale() {
+
+        InventoryReservation res = InventoryReservation.builder().id("r1").inventoryId("inv-1")
+                .productId("p1").warehouseId("w1").quantity(BigDecimal.TEN).status(InventoryReservationStatus.RESERVED).build();
+
+        Inventory inv = Inventory.builder().id("inv-1").reservedQuantity(new BigDecimal("20")).onHandQuantity(new BigDecimal("10")).build();
+
+        InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
+                .productId("p1")
+                .warehouseId("w1")
+                .orderLineId("OL-1")
+                .quantity(BigDecimal.TEN)
+                .build();
+
+        when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(res));
+        when(inventoryReservationRepository.sumQuantityByInventoryIdAndStatus("inv-1", InventoryReservationStatus.RESERVED))
+                .thenReturn(BigDecimal.TEN);
+        when(inventoryRepository.findByIdForUpdate("inv-1")).thenReturn(Optional.of(inv));
+        when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new StockMovements());
+
+        inventoryService.unreserve(request);
+
+        assertThat(inv.getReservedQuantity()).isEqualByComparingTo("0");
+        verify(inventoryReservationRepository).delete(res);
+        verifyNoInteractions(locationService);
     }
 
     // --- DECREASE TESTS ---
@@ -320,6 +360,36 @@ class InventoryServiceImplTest {
     }
 
     @Test
+    @DisplayName("decrease_shouldHealReservedAggregate_WhenConsumingReservedForOrderLine")
+    void decrease_shouldHealReservedAggregate_WhenConsumingReservedForOrderLine() throws InterruptedException {
+        setupLock();
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId("p1").warehouseId("w1").locationId("loc-staging").quantity(BigDecimal.TEN)
+                .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
+                .consumeReserved(true).orderLineId("OL-1").build();
+
+        Inventory inventory = Inventory.builder().id("inv-1").productId("p1").warehouseId("w1")
+                .locationId("loc-staging").onHandQuantity(BigDecimal.TEN).reservedQuantity(BigDecimal.ZERO).build();
+        InventoryReservation reservation = InventoryReservation.builder().id("res-1").inventoryId("inv-1")
+                .productId("p1").warehouseId("w1").locationId("loc-staging").quantity(BigDecimal.TEN)
+                .orderLineId("OL-1").status(InventoryReservationStatus.RESERVED).build();
+
+        when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
+                .thenReturn(Optional.of(inventory));
+        when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(reservation));
+        when(inventoryReservationRepository.sumQuantityByInventoryIdAndStatus("inv-1", InventoryReservationStatus.RESERVED))
+                .thenReturn(BigDecimal.ZERO);
+        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+
+        inventoryService.decrease(request);
+
+        assertThat(inventory.getOnHandQuantity()).isEqualByComparingTo("0");
+        assertThat(inventory.getReservedQuantity()).isEqualByComparingTo("0");
+        verify(inventoryReservationRepository).delete(reservation);
+        verify(stockMovementsService).recordDecrease(eq(request), any(), any());
+    }
+
+    @Test
     @DisplayName("decrease_shouldThrowConflict_WhenInsufficientAvailable")
     void decrease_shouldThrowConflict_WhenInsufficientAvailable() throws InterruptedException {
         // Arrange
@@ -336,5 +406,241 @@ class InventoryServiceImplTest {
         // Act & Assert
         assertThatThrownBy(() -> inventoryService.decrease(request))
                 .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    @DisplayName("moveInventory_shouldMoveOnHandAndReservation_WhenOrderLineProvided")
+    void moveInventory_shouldMoveOnHandAndReservation_WhenOrderLineProvided() {
+        Locations fromLocation = Locations.builder()
+                .id("loc-from")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.STORAGE)
+                .build();
+        Locations toLocation = Locations.builder()
+                .id("loc-to")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.PICKING)
+                .build();
+        Inventory sourceInventory = Inventory.builder()
+                .id("inv-from")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-from")
+                .batchId("batch-1")
+                .onHandQuantity(new BigDecimal("50.00"))
+                .reservedQuantity(new BigDecimal("10.00"))
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        Inventory destinationInventory = Inventory.builder()
+                .id("inv-to")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-to")
+                .batchId("batch-1")
+                .onHandQuantity(new BigDecimal("20.00"))
+                .reservedQuantity(new BigDecimal("3.00"))
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        InventoryReservation reservation = InventoryReservation.builder()
+                .id("res-1")
+                .inventoryId("inv-from")
+                .locationId("loc-from")
+                .orderLineId("so-line-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .batchId("batch-1")
+                .quantity(new BigDecimal("5.00"))
+                .status(InventoryReservationStatus.RESERVED)
+                .build();
+
+        when(locationRepository.findByIdForUpdate("loc-from")).thenReturn(Optional.of(fromLocation));
+        when(locationRepository.findByIdForUpdate("loc-to")).thenReturn(Optional.of(toLocation));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-from", "batch-1"))
+                .thenReturn(Optional.of(sourceInventory));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-to", "batch-1"))
+                .thenReturn(Optional.of(destinationInventory));
+        when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        inventoryService.moveInventory(
+                "loc-from",
+                "loc-to",
+                "prod-1",
+                "batch-1",
+                new BigDecimal("5.00"),
+                ReferenceType.OUTBOUND_SHIPMENT,
+                "ship-1",
+                "so-line-1",
+                false
+        );
+
+        assertThat(sourceInventory.getOnHandQuantity()).isEqualByComparingTo("45.00");
+        assertThat(sourceInventory.getReservedQuantity()).isEqualByComparingTo("5.00");
+        assertThat(destinationInventory.getOnHandQuantity()).isEqualByComparingTo("25.00");
+        assertThat(destinationInventory.getReservedQuantity()).isEqualByComparingTo("8.00");
+        assertThat(reservation.getInventoryId()).isEqualTo("inv-to");
+        assertThat(reservation.getLocationId()).isEqualTo("loc-to");
+        verify(inventoryReservationRepository).save(reservation);
+        verify(stockMovementsService, times(2)).recordMovement(any());
+        verifyNoInteractions(locationService);
+    }
+
+    @Test
+    void moveInventory_shouldHealReservationPointer_When_ReservationInventoryIdIsStale() {
+        Locations fromLocation = Locations.builder()
+                .id("loc-from")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.STORAGE)
+                .build();
+        Locations toLocation = Locations.builder()
+                .id("loc-to")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.PICKING)
+                .build();
+        Inventory sourceInventory = Inventory.builder()
+                .id("inv-from")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-from")
+                .batchId("batch-1")
+                .onHandQuantity(new BigDecimal("30.00"))
+                .reservedQuantity(new BigDecimal("10.00"))
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        Inventory destinationInventory = Inventory.builder()
+                .id("inv-to")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-to")
+                .batchId("batch-1")
+                .onHandQuantity(BigDecimal.ZERO)
+                .reservedQuantity(BigDecimal.ZERO)
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        InventoryReservation reservation = InventoryReservation.builder()
+                .id("res-1")
+                .inventoryId("stale-inv-id")
+                .locationId("stale-loc-id")
+                .orderLineId("so-line-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .batchId("batch-1")
+                .quantity(new BigDecimal("10.00"))
+                .status(InventoryReservationStatus.RESERVED)
+                .build();
+
+        when(locationRepository.findByIdForUpdate("loc-from")).thenReturn(Optional.of(fromLocation));
+        when(locationRepository.findByIdForUpdate("loc-to")).thenReturn(Optional.of(toLocation));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-from", "batch-1"))
+                .thenReturn(Optional.of(sourceInventory));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-to", "batch-1"))
+                .thenReturn(Optional.of(destinationInventory));
+        when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        inventoryService.moveInventory(
+                "loc-from",
+                "loc-to",
+                "prod-1",
+                "batch-1",
+                new BigDecimal("10.00"),
+                ReferenceType.OUTBOUND_SHIPMENT,
+                "ship-1",
+                "so-line-1",
+                false
+        );
+
+        assertThat(sourceInventory.getOnHandQuantity()).isEqualByComparingTo("20.00");
+        assertThat(sourceInventory.getReservedQuantity()).isEqualByComparingTo("0.00");
+        assertThat(destinationInventory.getOnHandQuantity()).isEqualByComparingTo("10.00");
+        assertThat(destinationInventory.getReservedQuantity()).isEqualByComparingTo("10.00");
+        assertThat(reservation.getInventoryId()).isEqualTo("inv-to");
+        assertThat(reservation.getLocationId()).isEqualTo("loc-to");
+        verify(inventoryReservationRepository).save(reservation);
+    }
+
+    @Test
+    void moveInventory_shouldHealReservedQuantity_When_OrderReservationIsSufficient() {
+        Locations fromLocation = Locations.builder()
+                .id("loc-from")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.PACKING)
+                .build();
+        Locations toLocation = Locations.builder()
+                .id("loc-to")
+                .warehouseId("wh-1")
+                .status(LocationStatus.ACTIVE)
+                .type(LocationType.STAGING)
+                .build();
+        Inventory sourceInventory = Inventory.builder()
+                .id("inv-from")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-from")
+                .batchId("batch-1")
+                .onHandQuantity(new BigDecimal("10.00"))
+                .reservedQuantity(new BigDecimal("0.00"))
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        Inventory destinationInventory = Inventory.builder()
+                .id("inv-to")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .locationId("loc-to")
+                .batchId("batch-1")
+                .onHandQuantity(BigDecimal.ZERO)
+                .reservedQuantity(BigDecimal.ZERO)
+                .quarantineQuantity(BigDecimal.ZERO)
+                .version(0)
+                .build();
+        InventoryReservation reservation = InventoryReservation.builder()
+                .id("res-1")
+                .inventoryId("inv-from")
+                .locationId("loc-from")
+                .orderLineId("so-line-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .batchId("batch-1")
+                .quantity(new BigDecimal("10.00"))
+                .status(InventoryReservationStatus.RESERVED)
+                .build();
+
+        when(locationRepository.findByIdForUpdate("loc-from")).thenReturn(Optional.of(fromLocation));
+        when(locationRepository.findByIdForUpdate("loc-to")).thenReturn(Optional.of(toLocation));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-from", "batch-1"))
+                .thenReturn(Optional.of(sourceInventory));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-to", "batch-1"))
+                .thenReturn(Optional.of(destinationInventory));
+        when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        inventoryService.moveInventory(
+                "loc-from",
+                "loc-to",
+                "prod-1",
+                "batch-1",
+                new BigDecimal("10.00"),
+                ReferenceType.OUTBOUND_SHIPMENT,
+                "ship-1",
+                "so-line-1",
+                false
+        );
+
+        assertThat(sourceInventory.getOnHandQuantity()).isEqualByComparingTo("0.00");
+        assertThat(sourceInventory.getReservedQuantity()).isEqualByComparingTo("0.00");
+        assertThat(destinationInventory.getOnHandQuantity()).isEqualByComparingTo("10.00");
+        assertThat(destinationInventory.getReservedQuantity()).isEqualByComparingTo("10.00");
+        assertThat(reservation.getInventoryId()).isEqualTo("inv-to");
+        assertThat(reservation.getLocationId()).isEqualTo("loc-to");
     }
 }

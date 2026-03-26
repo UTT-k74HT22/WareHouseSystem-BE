@@ -15,6 +15,7 @@ import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.LocationMapper;
@@ -376,26 +377,47 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     @Transactional
-    public void increaseUsedCapacity(String locationId, BigDecimal quantity) {
-        log.info("Increasing used capacity for location: {}, quantity: {}", locationId, quantity);
-        int updated = locationRepository.increaseUsedCapacity(locationId, quantity);
-        if (updated == 0) {
-            log.error("Failed to increase capacity - location not found, inactive, or would exceed capacity: {}", locationId);
-            throw new BadRequestException("Location capacity exceeded or location not found/inactive", ErrorCode.LOC_009);
+    public int increaseUsedCapacity(String locationId, BigDecimal quantity) {
+        Locations location = locationRepository.findByIdForUpdate(locationId)
+                .orElseThrow(() -> new NotFoundException("Location not found", ErrorCode.LOC_001));
+
+        if (isTransitLocation(location.getType())) {
+            BigDecimal currentUsed = location.getUsedCapacity() == null ? BigDecimal.ZERO : location.getUsedCapacity();
+            BigDecimal newUsed = currentUsed.add(quantity);
+            int updated = locationRepository.forceUpdateUsedCapacity(locationId, newUsed);
+
+            if (updated == 0) {
+                throw new ConflictException("Location capacity exceeded or invalid", ErrorCode.LOC_002);
+            }
+
+            return updated;
         }
-        log.info("Successfully increased used capacity for location: {}", locationId);
+
+        int updated = locationRepository.increaseUsedCapacity(locationId, quantity);
+
+        if (updated == 0) {
+            throw new ConflictException("Location capacity exceeded or invalid",ErrorCode.LOC_002);
+        }
+
+        return updated;
     }
 
     @Override
     @Transactional
-    public void decreaseUsedCapacity(String locationId, BigDecimal quantity) {
-        log.info("Decreasing used capacity for location: {}, quantity: {}", locationId, quantity);
+    public int decreaseUsedCapacity(String locationId, BigDecimal quantity) {
         int updated = locationRepository.decreaseUsedCapacity(locationId, quantity);
+
         if (updated == 0) {
-            log.error("Failed to decrease capacity - location not found, inactive, or insufficient used capacity: {}", locationId);
-            throw new BadRequestException("Location used capacity insufficient or location not found/inactive", ErrorCode.LOC_010);
+            throw new ConflictException("Location used capacity is insufficient or invalid", ErrorCode.LOC_002);
         }
-        log.info("Successfully decreased used capacity for location: {}", locationId);
+
+        return updated;
+    }
+
+    private boolean isTransitLocation(LocationType type) {
+        return type == LocationType.PICKING
+                || type == LocationType.PACKING
+                || type == LocationType.STAGING;
     }
 
     // ============ PRIVATE HELPER METHODS ============

@@ -18,6 +18,7 @@ import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockAdjustmentsService;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -45,6 +46,7 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     private final StockMovementsMapper stockMovementsMapper;
     private final RoleRepository roleRepository;
     private final IdentifierGenerator identifierGenerator;
+    private final LocationService locationService;
 
     @Override
     @Transactional
@@ -230,7 +232,6 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         LocalDateTime now = LocalDateTime.now();
         applyInventoryAfterQuantity(inventory, quantityAfter, actorId, now);
         inventoryRepository.save(inventory);
-
         //Step 7: Update stock adjustment record with approval details and save
         adjustment.setStatus(StockAdjustmentsStatus.APPROVED);
         adjustment.setApprovedBy(actorId);

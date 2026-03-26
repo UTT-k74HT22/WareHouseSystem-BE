@@ -6,6 +6,8 @@ import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.OutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.UpdateOutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.response.OutboundShipmentLines.OutboundShipmentLinesResponse;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -126,9 +128,10 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<OutboundShipmentLinesResponse> getByShipmentId(String shipmentId) {
         log.info("Get outbound shipment lines by shipmentId={}", shipmentId);
+        outboundShipmentsRepository.findById(shipmentId).ifPresent(this::reconcileTransitCapacity);
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(shipmentId);
         
         if (lines.isEmpty()) {
@@ -137,7 +140,11 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
 
         // Batch fetch related entities to avoid N+1
         List<String> productIds = lines.stream().map(OutboundShipmentLines::getProductId).distinct().collect(Collectors.toList());
-        List<String> locationIds = lines.stream().map(OutboundShipmentLines::getLocationId).distinct().collect(Collectors.toList());
+        List<String> locationIds = lines.stream()
+                .map(OutboundShipmentLines::getLocationId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
         List<String> batchIds = lines.stream().map(OutboundShipmentLines::getBatchId).filter(id -> id != null && !id.isBlank()).distinct().collect(Collectors.toList());
 
         java.util.Map<String, Products> productsMap = productRepository.findAllById(productIds).stream()
@@ -170,14 +177,15 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public OutboundShipmentLinesResponse getById(String id) {
         log.info("Get outbound shipment line by id={}", id);
         OutboundShipmentLines line = findById(id);
+        outboundShipmentsRepository.findById(line.getOutboundShipmentId()).ifPresent(this::reconcileTransitCapacity);
         OutboundShipmentLinesResponse response = outboundShipmentLinesMapper.toResponse(line);
         
         Products product = productRepository.findById(line.getProductId()).orElse(null);
-        Locations location = locationRepository.findById(line.getLocationId()).orElse(null);
+        Locations location = line.getLocationId() == null ? null : locationRepository.findById(line.getLocationId()).orElse(null);
         enrichResponse(response, product, location, line.getBatchId());
         
         return response;
@@ -289,5 +297,46 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         if (batchId != null && !batchId.isBlank()) {
             batchRepository.findById(batchId).ifPresent(batch -> response.setBatchNumber(batch.getBatchNumber()));
         }
+    }
+
+    private void reconcileTransitCapacity(OutboundShipments shipment) {
+        if (shipment == null) {
+            return;
+        }
+
+        if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
+            Locations pickingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
+                    shipment.getWarehouseId(),
+                    LocationType.PICKING,
+                    LocationStatus.ACTIVE
+            ).stream().findFirst().orElse(null);
+            if (pickingLoc != null) {
+                syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+            }
+        } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
+            Locations packingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
+                    shipment.getWarehouseId(),
+                    LocationType.PACKING,
+                    LocationStatus.ACTIVE
+            ).stream().findFirst().orElse(null);
+            if (packingLoc != null) {
+                syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+            }
+        } else if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
+            Locations stagingLoc = locationRepository.findByWarehouseIdAndTypeAndStatus(
+                    shipment.getWarehouseId(),
+                    LocationType.STAGING,
+                    LocationStatus.ACTIVE
+            ).stream().findFirst().orElse(null);
+            if (stagingLoc != null) {
+                locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
+            }
+        }
+    }
+
+    private void syncTransitLocationUsedCapacity(String locationId, List<OutboundShipmentsStatus> statuses) {
+        BigDecimal expected = outboundShipmentLinesRepository
+                .sumQuantityByLocationIdAndShipmentStatuses(locationId, statuses);
+        locationRepository.forceUpdateUsedCapacity(locationId, expected == null ? BigDecimal.ZERO : expected);
     }
 }
