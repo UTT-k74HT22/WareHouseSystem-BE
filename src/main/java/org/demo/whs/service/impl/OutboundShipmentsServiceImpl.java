@@ -396,13 +396,6 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
             Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
             Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
             Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
-            if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
-                syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
-            } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
-                syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
-            } else {
-                syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
-            }
 
             for (OutboundShipmentLines line : lines) {
                 if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
@@ -456,6 +449,14 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                 }
             }
             outboundShipmentLinesRepository.saveAll(lines);
+
+            if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
+                syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+            } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
+                syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+            } else {
+                syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+            }
         }
 
         shipment.setStatus(OutboundShipmentsStatus.CANCELLED);
