@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.AccountHasRole;
+import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -98,8 +99,37 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
+    @Transactional
     public void removeRoleFromUser(String userId, String roleId) {
 
+        log.info("Revoking role {} from user {}", roleId, userId);
+
+        boolean exists = accountHasRoleRepository
+                .existsByIdAccountIdAndIdRoleId(userId, roleId);
+
+        if (!exists) {
+            throw new BadRequestException(ErrorCode.USER_ROLE_004);
+        }
+
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+
+        long count = accountHasRoleRepository.countByIdAccountId(userId);
+
+        if (count == 1) {
+            log.warn("Cannot remove last role of user {}", userId);
+            throw new BadRequestException(ErrorCode.USER_ROLE_008);
+        }
+
+        accountHasRoleRepository
+                .deleteByIdAccountIdAndIdRoleId(userId, roleId);
+
+        log.info("Deleted role {} from user {}", roleId, userId);
+
+        long actualCount = accountHasRoleRepository.countByIdAccountId(userId);
+        if (actualCount == 0) {
+            throw new IllegalStateException("User must have at least one role");
+        }
     }
 
     @Override

@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserRoleServiceImplTest {
-
     @Mock
     private AccountRepository accountRepository;
     @Mock
@@ -153,6 +152,89 @@ class UserRoleServiceImplTest {
         service.assignRolesToUser(userId, request);
 
         verify(accountHasRoleRepository, never()).saveAll(any());
+    }
+
+    // ================= REMOVE ROLE =================
+
+    @Test
+    void removeRoleFromUser_success() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(2L)   // trước delete
+                .thenReturn(1L);  // sau delete
+
+        assertDoesNotThrow(() -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository)
+                .deleteByIdAccountIdAndIdRoleId(userId, roleId1);
+    }
+
+    @Test
+    void removeRoleFromUser_mappingNotExists_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(false);
+
+        assertThrows(BadRequestException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_roleNotFound_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_lastRole_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(1L);
+
+        assertThrows(BadRequestException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_raceCondition_throwIllegalState() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(2L)   // trước delete
+                .thenReturn(0L);  // sau delete (race condition)
+
+        assertThrows(IllegalStateException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
     }
 
     // ================= GET USER ROLES =================

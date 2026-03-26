@@ -142,6 +142,8 @@ public interface RoleRepository extends JpaRepository<Role, String>,
             """)
     List<Object[]> countUsersByRoleIds(List<String> roleIds);
 
+    Optional<Role> findByIsDefaultTrue();
+
     @Query("""
         SELECT r FROM Role r
         JOIN AccountHasRole ur ON ur.id.roleId = r.id
