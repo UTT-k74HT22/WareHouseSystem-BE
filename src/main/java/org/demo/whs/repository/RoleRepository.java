@@ -139,4 +139,6 @@ public interface RoleRepository extends JpaRepository<Role, String>,
                 GROUP BY ar.id.roleId
             """)
     List<Object[]> countUsersByRoleIds(List<String> roleIds);
+
+    Optional<Role> findByIsDefaultTrue();
 }

@@ -64,15 +64,15 @@ public class UserRoleController {
      * API: DELETE /api/v1/users/{id}/roles/{roleId}
      */
     @DeleteMapping("/{roleId}")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<Void>> removeRoleFromUser(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String roleId
     ) {
 
