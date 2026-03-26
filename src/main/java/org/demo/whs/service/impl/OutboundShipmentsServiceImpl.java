@@ -364,15 +364,14 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         shipment.setShippedAt(LocalDateTime.now());
         shipment.setConfirmedBy(actorId);
         applyAuditFields(shipment, actorId, false);
-        outboundShipmentLinesRepository.saveAll(lines);
+        outboundShipmentLinesRepository.saveAllAndFlush(lines);
         salesOrderLinesRepository.saveAll(updatedSalesOrderLines.stream().distinct().collect(Collectors.toList()));
-        outboundShipmentsRepository.save(shipment);
+        outboundShipmentsRepository.saveAndFlush(shipment);
         locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
 
         updateSalesOrderStatus(shipment.getSalesOrderId());
 
-        List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-        return outboundShipmentsMapper.toResponse(shipment, updatedLines);
+        return outboundShipmentsMapper.toResponse(shipment, lines);
     }
 
     @Override
@@ -551,6 +550,18 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                 throw new ConflictException("Destination location used capacity update failed", ErrorCode.COM_001);
             }
         }
+
+        inventoryService.moveInventory(
+                from,
+                to,
+                productId,
+                batchId,
+                qty,
+                ReferenceType.OUTBOUND_SHIPMENT,
+                shipmentId,
+                lineId,
+                consumeReserved
+        );
     }
 
     private void confirmDispatchFromSource(
@@ -561,11 +572,13 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
     ) {
         validateIntegerQuantity(line.getQuantityShipped());
 
+        String currentLocationId = line.getLocationId() != null ? line.getLocationId() : stagingLocationId;
+
         inventoryService.decrease(
                 InventoryDecreaseRequest.builder()
                         .warehouseId(shipment.getWarehouseId())
                         .productId(line.getProductId())
-                        .locationId(reservation.getLocationId())
+                        .locationId(currentLocationId)
                         .batchId(line.getBatchId() != null ? line.getBatchId() : reservation.getBatchId())
                         .quantity(line.getQuantityShipped())
                         .referenceType(ReferenceType.OUTBOUND_SHIPMENT)
