@@ -10,6 +10,7 @@ import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RoleMapper;
@@ -17,12 +18,14 @@ import org.demo.whs.mapper.UserRoleMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
-
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import org.springframework.data.domain.*;
 
 import java.util.*;
 
@@ -31,7 +34,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserRoleServiceImplTest {
-
     @Mock
     private AccountRepository accountRepository;
     @Mock
@@ -59,23 +61,21 @@ class UserRoleServiceImplTest {
         roleId2 = "role-2";
     }
 
-    // ================= SUCCESS =================
+    // ================= ASSIGN ROLES =================
+
     @Test
     void assignRolesToUser_success() {
 
-        // 🔧 FIX: set bằng setter thay vì constructor
         AssignRolesRequest request = new AssignRolesRequest();
         request.setRoleIds(List.of(roleId1, roleId2));
 
         Role role1 = new Role();
         role1.setId(roleId1);
-
         Role role2 = new Role();
         role2.setId(roleId2);
 
         AccountHasRole entity1 = new AccountHasRole();
         entity1.setId(new AccountRoleId(userId, roleId1));
-
         AccountHasRole entity2 = new AccountHasRole();
         entity2.setId(new AccountRoleId(userId, roleId2));
 
@@ -97,8 +97,6 @@ class UserRoleServiceImplTest {
         assertEquals(2, result.size());
         verify(accountHasRoleRepository).saveAll(any());
     }
-
-    // ================= VALIDATION =================
 
     @Test
     void assignRolesToUser_requestNull_throwException() {
@@ -141,8 +139,6 @@ class UserRoleServiceImplTest {
                 () -> service.assignRolesToUser(userId, request));
     }
 
-    // ================= DUPLICATE =================
-
     @Test
     void assignRolesToUser_duplicateRole_skipInsert() {
 
@@ -163,6 +159,149 @@ class UserRoleServiceImplTest {
         service.assignRolesToUser(userId, request);
 
         verify(accountHasRoleRepository, never()).saveAll(any());
+    }
+
+    // ================= REMOVE ROLE =================
+
+    @Test
+    void removeRoleFromUser_success() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(2L)   // trước delete
+                .thenReturn(1L);  // sau delete
+
+        assertDoesNotThrow(() -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository)
+                .deleteByIdAccountIdAndIdRoleId(userId, roleId1);
+    }
+
+    @Test
+    void removeRoleFromUser_mappingNotExists_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(false);
+
+        assertThrows(BadRequestException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_roleNotFound_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_lastRole_throwException() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(1L);
+
+        assertThrows(BadRequestException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+
+        verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
+    }
+
+    @Test
+    void removeRoleFromUser_raceCondition_throwIllegalState() {
+
+        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
+                .thenReturn(true);
+
+        when(roleRepository.findById(roleId1))
+                .thenReturn(Optional.of(new Role()));
+
+        when(accountHasRoleRepository.countByIdAccountId(userId))
+                .thenReturn(2L)   // trước delete
+                .thenReturn(0L);  // sau delete (race condition)
+
+        assertThrows(IllegalStateException.class,
+                () -> service.removeRoleFromUser(userId, roleId1));
+    }
+
+    // ================= GET USER ROLES =================
+
+    @Test
+    void getUserRoles_success() {
+
+        Role role1 = new Role();
+        role1.setId(roleId1);
+        Role role2 = new Role();
+        role2.setId(roleId2);
+
+        Page<Role> page = new PageImpl<>(List.of(role1, role2), PageRequest.of(0, 10), 2);
+
+        RoleResponse res1 = mock(RoleResponse.class);
+        RoleResponse res2 = mock(RoleResponse.class);
+
+        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(2L);
+        when(roleRepository.findRolesByUserId(eq(userId), any(Pageable.class))).thenReturn(page);
+        when(roleMapper.toResponse(role1)).thenReturn(res1);
+        when(roleMapper.toResponse(role2)).thenReturn(res2);
+
+        PageResponse<RoleResponse> response = service.getUserRoles(userId, PageRequest.of(0, 10));
+
+        assertNotNull(response);
+        assertEquals(2, response.getContent().size());
+        assertTrue(response.getContent().contains(res1));
+        assertTrue(response.getContent().contains(res2));
+
+        verify(accountHasRoleRepository).countByIdAccountId(userId);
+        verify(roleRepository).findRolesByUserId(eq(userId), any(Pageable.class));
+    }
+
+    @Test
+    void getUserRoles_userNotFound_throwException() {
+
+        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(0L);
+
+        NotFoundException ex = assertThrows(NotFoundException.class,
+                () -> service.getUserRoles(userId, PageRequest.of(0, 10)));
+
+        assertEquals("USER_ROLE_001", ex.getErrorCode());
+        verify(accountHasRoleRepository).countByIdAccountId(userId);
+        verifyNoInteractions(roleRepository);
+    }
+
+    @Test
+    void getUserRoles_noRolesInPage_throwException() {
+
+        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(1L);
+
+        Page<Role> emptyPage = Page.empty();
+        when(roleRepository.findRolesByUserId(eq(userId), any(Pageable.class))).thenReturn(emptyPage);
+
+        NotFoundException ex = assertThrows(NotFoundException.class,
+                () -> service.getUserRoles(userId, PageRequest.of(0, 10)));
+
+        assertEquals("USER_ROLE_002", ex.getErrorCode());
+        verify(accountHasRoleRepository).countByIdAccountId(userId);
+        verify(roleRepository).findRolesByUserId(eq(userId), any(Pageable.class));
     }
 
     @Test

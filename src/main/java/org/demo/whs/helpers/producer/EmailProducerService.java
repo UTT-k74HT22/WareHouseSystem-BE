@@ -2,11 +2,12 @@ package org.demo.whs.helpers.producer;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.configuration.EmailProperties;
+import org.demo.whs.configuration.RabbitMQEmailProperties;
 import org.demo.whs.entity.EmailLog;
 import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.mapper.EmailMapper;
 import org.demo.whs.repository.EmailLogRepository;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Service;
 public class EmailProducerService {
 
     private final RabbitTemplate rabbitTemplate;
-    private final EmailProperties emailProperties;
+    private final RabbitMQEmailProperties rabbitMQEmailProperties;
     private final EmailMapper emailMapper;
     private final EmailLogRepository emailLogRepository;
 
@@ -30,12 +31,19 @@ public class EmailProducerService {
      */
     public void sendEmailToQueue(EmailLog emailLog) {
         try {
-            log.info("Sending email to queue: {} for recipient: {}", emailProperties.getQueueName(), emailLog.getRecipient());
+            log.info("Sending email to queue: {} for recipient: {}", rabbitMQEmailProperties.getQueue(), emailLog.getRecipient());
 
             rabbitTemplate.convertAndSend(
-                    emailProperties.getExchangeName(),
-                    emailProperties.getRoutingKey(),
-                    emailMapper.toMessageDto(emailLog)
+                    rabbitMQEmailProperties.getExchange(),
+                    rabbitMQEmailProperties.getRoutingKey(),
+                    emailMapper.toMessageDto(emailLog),
+                    message -> {
+                        message.getMessageProperties().setMessageId(emailLog.getId());
+                        message.getMessageProperties().setCorrelationId(emailLog.getId());
+                        message.getMessageProperties().setHeader("emailLogId", emailLog.getId());
+                        return message;
+                    },
+                    new CorrelationData(emailLog.getId())
             );
 
             log.info("Email successfully sent to queue for recipient: {}", emailLog.getRecipient());
