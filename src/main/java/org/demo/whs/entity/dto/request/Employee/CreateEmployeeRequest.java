@@ -28,7 +28,7 @@ public class CreateEmployeeRequest {
     private String password;
 
     @NotNull(message = "Role is required")
-    private RoleType role;
+    private String role;
 
     @NotBlank(message = "First name is required")
     @Size(max = 50, message = "First name must not exceed 50 characters")

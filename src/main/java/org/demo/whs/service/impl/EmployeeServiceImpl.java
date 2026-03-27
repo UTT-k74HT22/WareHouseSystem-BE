@@ -77,11 +77,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Transactional
     public EmployeeResponse create(CreateEmployeeRequest request) {
         String employeeCode = identifierGenerator.generateSystemManaged(
-                request.getEmployeeCode(),
-                "Employee code",
-                "EMP",
-                20,
-                employeeRepository::existsByEmployeeCode
+                request.getEmployeeCode(), "Employee code", "EMP", 20, employeeRepository::existsByEmployeeCode
         );
         log.info("Creating employee with employeeCode={}", employeeCode);
 

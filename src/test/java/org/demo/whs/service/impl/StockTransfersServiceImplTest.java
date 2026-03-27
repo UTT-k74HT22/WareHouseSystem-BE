@@ -26,6 +26,7 @@ import org.demo.whs.repository.EmployeeRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
+import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
 import org.demo.whs.service.LocationService;
@@ -91,6 +92,9 @@ class StockTransfersServiceImplTest {
     private EmployeeRepository employeeRepository;
 
     @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
     private LocationService locationService;
 
     private StockTransfersServiceImpl stockTransfersService;
@@ -106,6 +110,7 @@ class StockTransfersServiceImplTest {
                 batchRepository,
                 accountRepository,
                 employeeRepository,
+                roleRepository,
                 locationService,
                 new StockTransfersMapper(),
                 new StockMovementsMapper(),
@@ -123,6 +128,7 @@ class StockTransfersServiceImplTest {
                 .build();
         account.setId("acc-1");
         lenient().when(accountRepository.findByUsername("tester")).thenReturn(Optional.of(account));
+        lenient().when(roleRepository.findRoleNamesByAccountId("acc-1")).thenReturn(List.of("USER"));
 
         Employee employee = Employee.builder()
                 .accountId("acc-1")
@@ -231,6 +237,34 @@ class StockTransfersServiceImplTest {
         assertThat(movementCaptor.getAllValues())
                 .extracting(StockMovements::getMovementType)
                 .containsExactlyInAnyOrder(StockMovementsType.TRANSFER_OUT, StockMovementsType.TRANSFER_IN);
+    }
+
+    @Test
+    void should_AllowAdminToCompleteTransfer_WithoutEmployeeWarehouseBinding() {
+        when(roleRepository.findRoleNamesByAccountId("acc-1")).thenReturn(List.of("ADMIN"));
+        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
+
+        StockTransfers transfer = buildPendingTransfer("trf-admin-complete", "loc-1", "loc-2", "12.00");
+        mockActiveTransferDimensions(transfer);
+
+        Inventory sourceInventory = buildInventory("loc-1", "30.00", "0.00");
+        sourceInventory.setId("inv-src-admin");
+
+        Inventory destinationInventory = buildInventory("loc-2", "3.00", "0.00");
+        destinationInventory.setId("inv-dst-admin");
+
+        when(stockTransfersRepository.findByIdForUpdate("trf-admin-complete")).thenReturn(Optional.of(transfer));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
+                .thenReturn(Optional.of(sourceInventory));
+        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-2", "batch-1"))
+                .thenReturn(Optional.of(destinationInventory));
+        when(stockTransfersRepository.save(any(StockTransfers.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        StockTransfersResponse response = stockTransfersService.complete("trf-admin-complete");
+
+        assertThat(response.getStatus()).isEqualTo(StockTransfersStatus.COMPLETED);
+        assertThat(sourceInventory.getOnHandQuantity()).isEqualByComparingTo("18.00");
+        assertThat(destinationInventory.getOnHandQuantity()).isEqualByComparingTo("15.00");
     }
 
     @Test
@@ -460,6 +494,41 @@ class StockTransfersServiceImplTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("You do not have permission to access this warehouse")
                 .hasFieldOrPropertyWithValue("errorCode", "AUTH_003");
+    }
+
+    @Test
+    void should_AllowAdminToCreateTransfer_WithoutEmployeeWarehouseBinding() {
+        when(roleRepository.findRoleNamesByAccountId("acc-1")).thenReturn(List.of("ADMIN"));
+        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
+
+        StockTransfersRequest request = buildTransferRequest("5.00");
+
+        Locations from = new Locations();
+        from.setId("loc-1");
+        from.setWarehouseId("wh-1");
+        from.setStatus(LocationStatus.ACTIVE);
+        from.setType(LocationType.STORAGE);
+
+        Locations to = new Locations();
+        to.setId("loc-2");
+        to.setWarehouseId("wh-1");
+        to.setStatus(LocationStatus.ACTIVE);
+        to.setType(LocationType.STORAGE);
+
+        when(productRepository.existsById("prod-1")).thenReturn(true);
+        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(from));
+        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(to));
+        when(stockTransfersRepository.existsByTransferNumber(anyString())).thenReturn(false);
+        when(stockTransfersRepository.save(any(StockTransfers.class))).thenAnswer(invocation -> {
+            StockTransfers transfer = invocation.getArgument(0);
+            transfer.setId("trf-admin-create");
+            return transfer;
+        });
+
+        StockTransfersResponse response = stockTransfersService.createTransfer(request);
+
+        assertThat(response.getStatus()).isEqualTo(StockTransfersStatus.DRAFT);
+        assertThat(response.getId()).isEqualTo("trf-admin-create");
     }
 
     @Test

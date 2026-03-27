@@ -34,7 +34,7 @@ public interface AccountRegistrationService {
     RegisterAccount register(
             String username,
             String rawPassword,
-            RoleType role,
+            String role,
             String firstName,
             String lastName,
             String email,

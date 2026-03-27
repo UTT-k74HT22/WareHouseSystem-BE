@@ -262,7 +262,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void assignUserRole(Account account) {
-        Role userRole = roleRepository.findByName(RoleType.USER)
+        Role userRole = roleRepository.findByName(String.valueOf(RoleType.USER))
                 .orElseThrow(() -> new BadRequestException(ROLE_001));
 
         AccountRoleId accountRoleId = AccountRoleId.builder()
