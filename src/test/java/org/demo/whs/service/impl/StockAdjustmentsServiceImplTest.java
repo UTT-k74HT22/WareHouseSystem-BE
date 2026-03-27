@@ -17,6 +17,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.StockAdjustmentsMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,6 +65,9 @@ class StockAdjustmentsServiceImplTest {
     @Mock
     private RoleRepository roleRepository;
 
+    @Mock
+    private LocationService locationService;
+
     private StockAdjustmentsServiceImpl stockAdjustmentsService;
 
     private static final String ACTOR_ID = "acc-1";
@@ -80,7 +84,8 @@ class StockAdjustmentsServiceImplTest {
                 new StockAdjustmentsMapper(),
                 new StockMovementsMapper(),
                 roleRepository,
-                new IdentifierGenerator()
+                new IdentifierGenerator(),
+                locationService
         );
 
         SecurityContextHolder.getContext().setAuthentication(
@@ -455,6 +460,7 @@ class StockAdjustmentsServiceImplTest {
             ArgumentCaptor<StockMovements> cap = ArgumentCaptor.forClass(StockMovements.class);
             verify(stockMovementsRepository).save(cap.capture());
             assertThat(cap.getValue().getMovementType()).isEqualTo(StockMovementsType.ADJUSTMENT_INCREASE);
+            verifyNoInteractions(locationService);
         }
 
         @Test
@@ -475,6 +481,7 @@ class StockAdjustmentsServiceImplTest {
             ArgumentCaptor<StockMovements> cap = ArgumentCaptor.forClass(StockMovements.class);
             verify(stockMovementsRepository).save(cap.capture());
             assertThat(cap.getValue().getMovementType()).isEqualTo(StockMovementsType.ADJUSTMENT_DECREASE);
+            verifyNoInteractions(locationService);
         }
     }
 

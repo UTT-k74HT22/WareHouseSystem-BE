@@ -15,7 +15,9 @@ import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.LocationMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.InventoryRepository;
@@ -30,6 +32,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +80,8 @@ public class LocationServiceImpl implements LocationService {
 
         Locations location = locationMapper.toEntity(request);
         location.setCode(locationCode);
+
+        location.setUsedCapacity(BigDecimal.ZERO);
 
         Account currentUser = getCurrentUser();
         setAuditFieldsForCreate(location, currentUser);
@@ -364,10 +370,54 @@ public class LocationServiceImpl implements LocationService {
         List<Locations> locations = locationRepository.findByWarehouseIdAndTypeAndStatus(warehouseId, type, LocationStatus.ACTIVE);
         if (locations.isEmpty()) {
             log.error("No active location found for warehouse: {} and type: {}", warehouseId, type);
-            throw new BadRequestException(ErrorCode.LOC_001); // Or a more specific error
+            throw new BadRequestException(ErrorCode.LOC_001);
         }
-        // Picking the first one for now (as per requirement: If multiple: pick one with available capacity or default)
         return locations.get(0);
+    }
+
+    @Override
+    @Transactional
+    public int increaseUsedCapacity(String locationId, BigDecimal quantity) {
+        Locations location = locationRepository.findByIdForUpdate(locationId)
+                .orElseThrow(() -> new NotFoundException("Location not found", ErrorCode.LOC_001));
+
+        if (isTransitLocation(location.getType())) {
+            BigDecimal currentUsed = location.getUsedCapacity() == null ? BigDecimal.ZERO : location.getUsedCapacity();
+            BigDecimal newUsed = currentUsed.add(quantity);
+            int updated = locationRepository.forceUpdateUsedCapacity(locationId, newUsed);
+
+            if (updated == 0) {
+                throw new ConflictException("Location capacity exceeded or invalid", ErrorCode.LOC_002);
+            }
+
+            return updated;
+        }
+
+        int updated = locationRepository.increaseUsedCapacity(locationId, quantity);
+
+        if (updated == 0) {
+            throw new ConflictException("Location capacity exceeded or invalid",ErrorCode.LOC_002);
+        }
+
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public int decreaseUsedCapacity(String locationId, BigDecimal quantity) {
+        int updated = locationRepository.decreaseUsedCapacity(locationId, quantity);
+
+        if (updated == 0) {
+            throw new ConflictException("Location used capacity is insufficient or invalid", ErrorCode.LOC_002);
+        }
+
+        return updated;
+    }
+
+    private boolean isTransitLocation(LocationType type) {
+        return type == LocationType.PICKING
+                || type == LocationType.PACKING
+                || type == LocationType.STAGING;
     }
 
     // ============ PRIVATE HELPER METHODS ============

@@ -51,21 +51,45 @@
 Tạo Đơn bán hàng (DRAFT)
     ↓
 Xác nhận Đơn bán hàng (CONFIRMED)
-    → Đặt trước tồn kho
+    → Đặt trước tồn kho (reserve)
     ↓
 Tạo Lô xuất hàng (DRAFT)
-    → Tạo Danh sách picking với khuyến nghị FIFO
+    → Thêm các dòng sản phẩm
     ↓
-Pick Items (PICKING)
-    → Scan/xác minh sản phẩm
+Bắt đầu Picking (DRAFT → PICKING)
+    → Di chuyển inventory từ reserved location → PICKING location
+    → Validate quantity vs reservation
     ↓
-Đóng gói & Xuất hàng (PACKED)
+Đóng gói (PICKING → PACKED)
+    → Di chuyển inventory từ PICKING → PACKING location
     ↓
-Xác nhận Lô xuất hàng (SHIPPED)
-    → Giảm tồn kho (on-hand & reserved)
-    → Ghi nhận movement
-    → Cập nhật trạng thái đơn bán hàng
+Xác nhận Xuất hàng (PACKED → SHIPPED)
+    → Di chuyển từ PACKING → STAGING
+    → Giảm tồn kho (decrease from STAGING)
+    → Cập nhật shipped_quantity cho SO lines
+    → Cập nhật SO status (PARTIALLY_SHIPPED / COMPLETED)
+    → Ghi nhận stock movement (OUTBOUND)
     → Thông báo khách hàng
+```
+
+### State Diagrams
+
+#### OutboundShipments Status Flow
+```
+[DRAFT] ──(start-picking)──> [PICKING] ──(mark-as-packed)──> [PACKED] ──(ship)──> [SHIPPED]
+    │                           │                              │                         │
+    │                           │                              │                         │
+    └─────────(cancel)─────────┴──────────────────(cancel)────┴─────────(cancel)─────────┘
+                                                                              (không thể cancel nếu đã SHIPPED)
+```
+
+#### SalesOrders Status Flow
+```
+[DRAFT] ──(confirm)──> [CONFIRMED] ──(tạo shipment)──> [PARTIALLY_SHIPPED] ──(xuất đủ)──> [COMPLETED]
+    │                           │                                    │
+    │                           │                                    │
+    └─────────(cancel)─────────┴─────────(cancel)────────────────────┘
+          (chỉ DRAFT)                  (chỉ CONFIRMED, chưa shipped)
 ```
 
 ---
@@ -135,8 +159,14 @@ Xác nhận Lô xuất hàng (SHIPPED)
 - BR-OUT-05: Số shipment tự động tạo (SHIP-YYYY-NNNN)
 - BR-OUT-06: Không thể xuất nhiều hơn số lượng đặt
 - BR-OUT-07: FIFO khuyến nghị nhưng không bắt buộc
-- BR-OUT-08: Xác nhậh shipment là atomic
-- BR-OUT-09: Cả on-hand và reserved đều giảm khi xuất hàng
+- BR-OUT-08: Xác nhận shipment là atomic
+- BR-OUT-09: Giảm on-hand inventory khi xuất hàng (reserved đã được consume trong picking)
+- BR-OUT-09a: Shipment chỉ được tạo từ SO CONFIRMED hoặc PARTIALLY_SHIPPED
+- BR-OUT-09b: Shipment phải có ít nhất 1 line để bắt đầu picking
+- BR-OUT-09c: Cancel shipment không được nếu đã SHIPPED
+- BR-OUT-09d: Cancel trong PICKING/PACKED sẽ unreserve inventory đã reserved
+- BR-OUT-09e: Ship (xuất hàng) chỉ được khi ở PACKED status
+- BR-OUT-09f: Shipment lines được di chuyển qua các location: reserved → PICKING → PACKING → STAGING → (decrease)
 
 ---
 
@@ -176,20 +206,48 @@ Xác nhận Lô xuất hàng (SHIPPED)
 
 ## 🔗 Tóm tắt Ảnh hưởng API
 
+### Sales Orders (`/api/v1/sales-orders`)
+
 | Method | Endpoint | Mô tả | Vai trò |
-|--------|----------|--------|-------|
-| POST | /api/sales-orders | Tạo SO | SALES_MANAGER |
-| GET | /api/sales-orders | Danh sách SO | VIEWER |
-| GET | /api/sales-orders/{id} | Chi tiết SO | VIEWER |
-| PUT | /api/sales-orders/{id} | Cập nhật SO (chỉ DRAFT) | SALES_MANAGER |
-| PUT | /api/sales-orders/{id}/confirm | Xác nhận SO → đặt trước tồn kho | SALES_MANAGER |
-| PUT | /api/sales-orders/{id}/cancel | Hủy SO → giải phóng tồn kho | SALES_MANAGER |
-| POST | /api/outbound-shipments | Tạo shipment | WAREHOUSE_STAFF |
-| GET | /api/outbound-shipments | Danh sách shipments | VIEWER |
-| GET | /api/outbound-shipments/{id} | Chi tiết shipment | VIEWER |
-| PUT | /api/outbound-shipments/{id}/pick | Đánh dấu đang picking | WAREHOUSE_STAFF |
-| PUT | /api/outbound-shipments/{id}/confirm | Xác nhận shipment → giảm tồn kho | WAREHOUSE_STAFF |
-| GET | /api/outbound-shipments/{id}/pick-list | Tạo PDF danh sách picking | WAREHOUSE_STAFF |
+|--------|----------|-------|-------|
+| POST | /api/v1/sales-orders | Tạo SO (DRAFT) | ADMIN, MANAGER |
+| GET | /api/v1/sales-orders | Danh sách SO (filter, phân trang) | ADMIN, MANAGER |
+| GET | /api/v1/sales-orders/{id} | Chi tiết SO | ADMIN, MANAGER |
+| PUT | /api/v1/sales-orders/{id} | Cập nhật SO (chỉ DRAFT) | ADMIN, MANAGER |
+| PUT | /api/v1/sales-orders/{id}/confirm | Xác nhận SO → đặt trước tồn kho | ADMIN, MANAGER |
+| PUT | /api/v1/sales-orders/{id}/cancel | Hủy SO → giải phóng tồn kho | ADMIN, MANAGER |
+
+### Sales Order Lines (`/api/v1/sales-order-lines`)
+
+| Method | Endpoint | Mô tả | Vai trò |
+|--------|----------|-------|-------|
+| POST | /api/v1/sales-order-lines | Thêm dòng vào SO | ADMIN, MANAGER |
+| GET | /api/v1/sales-order-lines/by-so/{soId} | Danh sách dòng theo SO | ADMIN, MANAGER |
+| GET | /api/v1/sales-order-lines/{id} | Chi tiết dòng | ADMIN, MANAGER |
+| PUT | /api/v1/sales-order-lines/{id} | Cập nhật dòng (chỉ DRAFT) | ADMIN, MANAGER |
+
+### Outbound Shipments (`/api/v1/outbound-shipments`)
+
+| Method | Endpoint | Mô tả | Vai trò |
+|--------|----------|-------|-------|
+| POST | /api/v1/outbound-shipments | Tạo shipment (DRAFT) | ADMIN, MANAGER |
+| GET | /api/v1/outbound-shipments | Danh sách shipments (filter, phân trang) | ADMIN, MANAGER |
+| GET | /api/v1/outbound-shipments/{id} | Chi tiết shipment | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipments/{id} | Cập nhật shipment (chỉ DRAFT) | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipments/{id}/start-picking | Bắt đầu picking (DRAFT → PICKING) | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipments/{id}/mark-as-packed | Đánh dấu đóng gói (PICKING → PACKED) | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipments/{id}/ship | Xác nhận xuất hàng (PACKED → SHIPPED) | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipments/{id}/cancel | Hủy shipment (trừ SHIPPED) | ADMIN, MANAGER |
+
+### Outbound Shipment Lines (`/api/v1/outbound-shipment-lines`)
+
+| Method | Endpoint | Mô tả | Vai trò |
+|--------|----------|-------|-------|
+| POST | /api/v1/outbound-shipment-lines | Thêm dòng vào shipment | ADMIN, MANAGER |
+| GET | /api/v1/outbound-shipment-lines/shipment/{shipmentId} | Danh sách dòng theo shipment | ADMIN, MANAGER |
+| GET | /api/v1/outbound-shipment-lines/{id} | Chi tiết dòng | ADMIN, MANAGER |
+| PUT | /api/v1/outbound-shipment-lines/{id} | Cập nhật dòng (chỉ DRAFT) | ADMIN, MANAGER |
+| DELETE | /api/v1/outbound-shipment-lines/{id} | Xóa dòng (chỉ DRAFT) | ADMIN, MANAGER |
 
 ---
 

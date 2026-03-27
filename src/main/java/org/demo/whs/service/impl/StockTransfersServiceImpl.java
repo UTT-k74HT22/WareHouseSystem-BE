@@ -32,6 +32,7 @@ import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.service.StockTransfersService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -59,6 +60,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     private final BatchRepository batchRepository;
     private final AccountRepository accountRepository;
     private final EmployeeRepository employeeRepository;
+    private final LocationService locationService;
     private final StockTransfersMapper stockTransfersMapper;
     private final StockMovementsMapper stockMovementsMapper;
     private final IdentifierGenerator identifierGenerator;

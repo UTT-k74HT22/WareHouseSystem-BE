@@ -137,7 +137,11 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
 
         // Batch fetch related entities to avoid N+1
         List<String> productIds = lines.stream().map(OutboundShipmentLines::getProductId).distinct().collect(Collectors.toList());
-        List<String> locationIds = lines.stream().map(OutboundShipmentLines::getLocationId).distinct().collect(Collectors.toList());
+        List<String> locationIds = lines.stream()
+                .map(OutboundShipmentLines::getLocationId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
         List<String> batchIds = lines.stream().map(OutboundShipmentLines::getBatchId).filter(id -> id != null && !id.isBlank()).distinct().collect(Collectors.toList());
 
         java.util.Map<String, Products> productsMap = productRepository.findAllById(productIds).stream()
@@ -177,7 +181,7 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         OutboundShipmentLinesResponse response = outboundShipmentLinesMapper.toResponse(line);
         
         Products product = productRepository.findById(line.getProductId()).orElse(null);
-        Locations location = locationRepository.findById(line.getLocationId()).orElse(null);
+        Locations location = line.getLocationId() == null ? null : locationRepository.findById(line.getLocationId()).orElse(null);
         enrichResponse(response, product, location, line.getBatchId());
         
         return response;
@@ -290,4 +294,5 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             batchRepository.findById(batchId).ifPresent(batch -> response.setBatchNumber(batch.getBatchNumber()));
         }
     }
+
 }

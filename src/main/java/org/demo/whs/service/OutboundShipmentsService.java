@@ -47,10 +47,16 @@ public interface OutboundShipmentsService {
     OutboundShipmentsResponse markAsPacked(String id);
 
     /**
-     * Transition: PACKED -> SHIPPED
-     * Confirm shipment and decrease inventory
+     * Transition: PACKED -> STAGING
+     * Move shipment into staging area without decreasing inventory yet
      */
     OutboundShipmentsResponse ship(String id);
+
+    /**
+     * Transition: STAGING -> SHIPPED
+     * Confirm physical dispatch and decrease inventory
+     */
+    OutboundShipmentsResponse confirmDispatch(String id);
 
     /**
      * Transition: Any status except SHIPPED -> CANCELLED

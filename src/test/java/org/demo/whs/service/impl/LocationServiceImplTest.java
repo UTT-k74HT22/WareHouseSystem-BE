@@ -7,8 +7,10 @@ import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.LocationMapper;
 import org.demo.whs.repository.AccountRepository;
@@ -26,11 +28,14 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -231,5 +236,35 @@ class LocationServiceImplTest {
             // Assert
             assertThat(location.getStatus()).isEqualTo(LocationStatus.INACTIVE);
         }
+    }
+
+    @Test
+    void decreaseUsedCapacity_shouldThrowConflict_When_UsedCapacityIsInsufficient() {
+        when(locationRepository.decreaseUsedCapacity("loc-1", new BigDecimal("10.00"))).thenReturn(0);
+
+        assertThatThrownBy(() -> locationService.decreaseUsedCapacity("loc-1", new BigDecimal("10.00")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOC_002.getCode());
+
+        verify(locationRepository).decreaseUsedCapacity("loc-1", new BigDecimal("10.00"));
+    }
+
+    @Test
+    void increaseUsedCapacity_shouldBypassCapacityGuard_When_LocationIsTransitStage() {
+        Locations stagingLocation = new Locations();
+        stagingLocation.setId("loc-stage");
+        stagingLocation.setType(LocationType.STAGING);
+        stagingLocation.setStatus(LocationStatus.ACTIVE);
+        stagingLocation.setCapacity(BigDecimal.ZERO);
+        stagingLocation.setUsedCapacity(BigDecimal.ZERO);
+
+        when(locationRepository.findByIdForUpdate("loc-stage")).thenReturn(Optional.of(stagingLocation));
+        when(locationRepository.forceUpdateUsedCapacity("loc-stage", new BigDecimal("10.00"))).thenReturn(1);
+
+        int updated = locationService.increaseUsedCapacity("loc-stage", new BigDecimal("10.00"));
+
+        assertThat(updated).isEqualTo(1);
+        verify(locationRepository).forceUpdateUsedCapacity("loc-stage", new BigDecimal("10.00"));
+        verify(locationRepository, never()).increaseUsedCapacity("loc-stage", new BigDecimal("10.00"));
     }
 }

@@ -75,6 +75,8 @@ public enum ErrorCode {
     LOC_006("LOC_006", "Cannot change status - location has active inventory"),
     LOC_007("LOC_007", "Location is not active for stock transfer"),
     LOC_008("LOC_008", "Location type is not valid for stock transfer"),
+    LOC_009("LOC_009", "Location capacity exceeded"),
+    LOC_010("LOC_010", "Location used capacity is insufficient for operation"),
 
     // Product errors
     PROD_001("PROD_001", "Product not found"),

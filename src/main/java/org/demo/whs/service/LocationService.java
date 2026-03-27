@@ -9,6 +9,8 @@ import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.LocationType;
 
+import java.math.BigDecimal;
+
 /**
  * Service interface for location-related operations.
  */
@@ -92,4 +94,20 @@ public interface LocationService {
      * @return the resolved location
      */
     Locations resolveLocationByType(String warehouseId, LocationType type);
+
+    /**
+     * Increases the used capacity of a location when physical stock arrives.
+     *
+     * @param locationId the location ID
+     * @param quantity  the quantity to add to used capacity
+     */
+    int increaseUsedCapacity(String locationId, BigDecimal quantity);
+
+    /**
+     * Decreases the used capacity of a location when physical stock leaves.
+     *
+     * @param locationId the location ID
+     * @param quantity  the quantity to subtract from used capacity
+     */
+    int decreaseUsedCapacity(String locationId, BigDecimal quantity);
 }

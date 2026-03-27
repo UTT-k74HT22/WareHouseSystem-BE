@@ -27,6 +27,7 @@ public class LocationResponse {
     private String zone;
     private LocationType type;
     private BigDecimal capacity;
+    private BigDecimal usedCapacity;
     private LocationStatus status;
     private String notes;
     private String createdBy;
