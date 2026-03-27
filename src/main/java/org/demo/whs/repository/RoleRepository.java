@@ -3,6 +3,8 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Permission;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.enums.RoleType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -139,4 +141,13 @@ public interface RoleRepository extends JpaRepository<Role, String>,
                 GROUP BY ar.id.roleId
             """)
     List<Object[]> countUsersByRoleIds(List<String> roleIds);
+
+    Optional<Role> findByIsDefaultTrue();
+
+    @Query("""
+        SELECT r FROM Role r
+        JOIN AccountHasRole ur ON ur.id.roleId = r.id
+        WHERE ur.id.accountId = :userId
+    """)
+    Page<Role> findRolesByUserId(String userId, Pageable pageable);
 }

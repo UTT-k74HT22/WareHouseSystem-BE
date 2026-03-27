@@ -19,4 +19,8 @@ public interface AccountHasRoleRepository extends JpaRepository<AccountHasRole, 
     boolean existsByIdAccountIdAndIdRoleId(String accountId, String roleId);
 
     List<AccountHasRole> findByIdAccountId(String accountId);
+
+    void deleteByIdAccountIdAndIdRoleId(String accountId, String roleId);
+
+    long countByIdAccountId(String accountId);
 }

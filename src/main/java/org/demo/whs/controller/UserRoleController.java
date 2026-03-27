@@ -64,15 +64,15 @@ public class UserRoleController {
      * API: DELETE /api/v1/users/{id}/roles/{roleId}
      */
     @DeleteMapping("/{roleId}")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<Void>> removeRoleFromUser(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String roleId
     ) {
 
@@ -90,11 +90,11 @@ public class UserRoleController {
      * API: GET /api/v1/users/{id}/roles
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+//    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getUserRoles(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)

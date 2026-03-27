@@ -1,7 +1,11 @@
 package org.demo.whs.repository;
 
 import org.demo.whs.entity.Account;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -23,4 +27,16 @@ public interface AccountRepository extends JpaRepository<Account, String> {
      * @return true nếu đã tồn tại
      */
     boolean existsByUsername(String username);
+
+    /**
+     * Lấy users theo roleId, chỉ select những field cần thiết
+     * Chúng ta vẫn trả Account entity để mapper xử lý các field null
+     */
+    @Query("""
+        SELECT a
+        FROM Account a
+        JOIN AccountHasRole ar ON a.id = ar.id.accountId
+        WHERE ar.id.roleId = :roleId
+    """)
+    Page<Account> findUsersByRoleId(String roleId, Pageable pageable);
 }
