@@ -2,6 +2,7 @@ package org.demo.whs.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 
@@ -11,7 +12,7 @@ import java.math.BigDecimal;
 @Table(name = "locations")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
 public class Locations extends BaseEntity {

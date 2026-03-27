@@ -379,6 +379,7 @@ class OutboundShipmentsServiceImplTest {
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PICKING)).thenReturn(pickingLocation);
         when(locationService.increaseUsedCapacity("loc-picking", new BigDecimal("5.00"))).thenReturn(1);
         when(inventoryReservationRepository.findByOrderLineId(line.getSalesOrderLineId())).thenReturn(Optional.of(reservation));
+        when(inventoryService.moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), anyString(), anyString(), anyBoolean())).thenReturn(null);
         when(outboundShipmentLinesRepository.save(any(OutboundShipmentLines.class))).thenReturn(line);
         when(outboundShipmentsRepository.save(any(OutboundShipments.class))).thenReturn(shipment);
         when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), any())).thenReturn(response);
@@ -462,6 +463,7 @@ class OutboundShipmentsServiceImplTest {
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.PACKING)).thenReturn(packingLoc);
         when(locationService.decreaseUsedCapacity("loc-picking", new BigDecimal("5.00"))).thenReturn(1);
         when(locationService.increaseUsedCapacity("loc-packing", new BigDecimal("5.00"))).thenReturn(1);
+        when(inventoryService.moveInventory(anyString(), anyString(), anyString(), any(), any(), any(), anyString(), anyString(), anyBoolean())).thenReturn(null);
         when(outboundShipmentLinesRepository.save(any(OutboundShipmentLines.class))).thenReturn(line);
         when(outboundShipmentsRepository.save(any(OutboundShipments.class))).thenReturn(shipment);
         when(outboundShipmentsMapper.toResponse(any(OutboundShipments.class), anyList())).thenReturn(response);
