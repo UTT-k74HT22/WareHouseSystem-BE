@@ -10,7 +10,10 @@ import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.service.RoleService;
+import org.demo.whs.service.UserRoleService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -33,6 +36,7 @@ public class RoleController {
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final RoleService roleService;
+    private final UserRoleService userRoleService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -105,5 +109,23 @@ public class RoleController {
         return ResponseEntity.ok(
                 BaseResponse.success(null, "Role deleted successfully")
         );
+    }
+
+    @GetMapping("/{id}/users")
+//    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getRoleUsers(
+
+            @PathVariable("id")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+            String roleId,
+
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        log.info("Get users of role {}", roleId);
+
+        PageResponse<AccountResponse> response = userRoleService.getRoleUsers(roleId, pageable);
+
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

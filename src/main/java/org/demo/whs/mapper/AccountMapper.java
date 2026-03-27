@@ -1,6 +1,7 @@
 package org.demo.whs.mapper;
 
 import org.demo.whs.entity.Account;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.enums.AccountStatus;
 import org.springframework.stereotype.Component;
 
@@ -28,5 +29,21 @@ public class AccountMapper {
                 .status(AccountStatus.ACTIVE)
                 .build();
         return account;
+    }
+
+    /**
+     * Map Account entity → AccountResponse
+     */
+    public AccountResponse toAccountResponse(Account account) {
+        if (account == null) return null;
+
+        return new AccountResponse(
+                account.getId(),
+                account.getUsername(),
+                account.getStatus() != null ? account.getStatus().name() : null,
+                null,
+                null,
+                null
+        );
     }
 }
