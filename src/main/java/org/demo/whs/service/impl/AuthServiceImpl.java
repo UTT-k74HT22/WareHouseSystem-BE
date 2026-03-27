@@ -29,7 +29,6 @@ import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.AuthService;
 import org.demo.whs.service.OtpService;
 import org.demo.whs.service.PermissionCacheService;
-import org.demo.whs.service.RedisService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +54,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
-    private final RedisService redisService;
     private final PermissionCacheService permissionCacheService;
 
     /**
@@ -75,6 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtProvider.buildAccessToken(account, roles);
         String refreshToken = jwtProvider.buildRefreshToken(account);
+        preloadPermissionCache(account.getId());
 
         log.info("User authenticated successfully: {} from IP: {}",
                 account.getUsername(), clientIp);
@@ -336,6 +335,16 @@ public class AuthServiceImpl implements AuthService {
                     log.warn("Authentication failed - username not found: {}", username);
                     return new AuthenticationFailedException(AUTH_001);
                 });
+    }
+
+    private void preloadPermissionCache(String accountId) {
+        try {
+            Set<String> permissions = permissionCacheService.getPermissions(accountId);
+            int permissionCount = permissions != null ? permissions.size() : 0;
+            log.info("Preloaded {} permissions into cache for accountId={}", permissionCount, accountId);
+        } catch (Exception e) {
+            log.error("Failed to preload permission cache for accountId={}", accountId, e);
+        }
     }
 
     private void validateRefreshToken(String token) {

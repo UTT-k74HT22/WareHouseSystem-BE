@@ -39,7 +39,7 @@ public class RoleController {
     private final UserRoleService userRoleService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_CREATE')")
     public ResponseEntity<BaseResponse<RoleResponse>> createRole(
             @RequestBody @Valid CreateRoleRequest request
     ) {

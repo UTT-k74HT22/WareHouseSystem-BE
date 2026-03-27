@@ -9,9 +9,11 @@ import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RolePermissionMapper;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.service.PermissionCacheService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +41,12 @@ class RolePermissionServiceImplTest {
 
     @Mock
     private RolePermissionMapper rolePermissionMapper;
+
+    @Mock
+    private AccountHasRoleRepository accountHasRoleRepository;
+
+    @Mock
+    private PermissionCacheService permissionCacheService;
 
     @InjectMocks
     private RolePermissionServiceImpl service;
@@ -76,6 +84,8 @@ class RolePermissionServiceImplTest {
                 .thenReturn(List.of(p1, p2));
         when(rolePermissionRepository.findPermissionIdsByRoleId(roleId))
                 .thenReturn(List.of());
+        when(accountHasRoleRepository.findAccountIdsByRoleId(roleId))
+                .thenReturn(List.of("u1", "u2"));
 
         RoleHasPermission e1 = new RoleHasPermission();
         RoleHasPermission e2 = new RoleHasPermission();
@@ -94,6 +104,8 @@ class RolePermissionServiceImplTest {
 
         assertEquals(2, result.size());
         verify(rolePermissionRepository).saveAll(List.of(e1, e2));
+        verify(permissionCacheService).evictPermissions("u1");
+        verify(permissionCacheService).evictPermissions("u2");
     }
 
     @Test
@@ -152,6 +164,8 @@ class RolePermissionServiceImplTest {
 
         when(rolePermissionRepository.findPermissionIdsByRoleId(roleId))
                 .thenReturn(List.of("p1"));
+        when(accountHasRoleRepository.findAccountIdsByRoleId(roleId))
+                .thenReturn(List.of("u1"));
 
         RoleHasPermission entity = new RoleHasPermission();
         when(rolePermissionMapper.createEntity(eq(roleId), eq("p2")))
@@ -165,6 +179,7 @@ class RolePermissionServiceImplTest {
 
         verify(rolePermissionRepository)
                 .saveAll(argThat(iterable -> ((List<?>) iterable).size() == 1));
+        verify(permissionCacheService).evictPermissions("u1");
 
         assertEquals(2, result.size());
     }
@@ -187,6 +202,8 @@ class RolePermissionServiceImplTest {
         when(rolePermissionRepository
                 .deleteByIdRoleIdAndIdPermissionId(roleId, permissionId))
                 .thenReturn(1);
+        when(accountHasRoleRepository.findAccountIdsByRoleId(roleId))
+                .thenReturn(List.of("u1"));
 
         assertDoesNotThrow(() ->
                 service.removePermission(roleId, permissionId)
@@ -194,6 +211,7 @@ class RolePermissionServiceImplTest {
 
         verify(rolePermissionRepository)
                 .deleteByIdRoleIdAndIdPermissionId(roleId, permissionId);
+        verify(permissionCacheService).evictPermissions("u1");
     }
 
     @Test

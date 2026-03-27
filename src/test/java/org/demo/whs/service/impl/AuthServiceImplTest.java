@@ -12,6 +12,7 @@ import org.demo.whs.mapper.AuthMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.security.JwtProvider;
+import org.demo.whs.service.PermissionCacheService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,6 +56,9 @@ class AuthServiceImplTest {
     @Mock
     private AuthMapper authMapper;
 
+    @Mock
+    private PermissionCacheService permissionCacheService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -73,6 +78,7 @@ class AuthServiceImplTest {
             LoginRequest request = new LoginRequest(username, password);
 
             Account account = new Account();
+            account.setId("account-1");
             account.setUsername(username);
             account.setPassword(encodedPassword);
             account.setStatus(AccountStatus.ACTIVE);
@@ -100,6 +106,7 @@ class AuthServiceImplTest {
             when(jwtProvider.buildRefreshToken(account)).thenReturn(refreshToken);
             when(jwtProvider.getExpirationAccessToken(accessToken)).thenReturn(accessExpiration);
             when(jwtProvider.getExpirationRefreshToken(refreshToken)).thenReturn(refreshExpiration);
+            when(permissionCacheService.getPermissions("account-1")).thenReturn(Set.of("PERM_USER_READ"));
 
             // 🔥 FIX: stub đúng thứ tự tham số + đúng IP
             when(authMapper.toResponse(
@@ -122,6 +129,7 @@ class AuthServiceImplTest {
             verify(roleRepository).findRoleNamesByUsername(username);
             verify(jwtProvider).buildAccessToken(account, roles);
             verify(jwtProvider).buildRefreshToken(account);
+            verify(permissionCacheService).getPermissions("account-1");
 
             verify(authMapper).toResponse(
                     accessToken,

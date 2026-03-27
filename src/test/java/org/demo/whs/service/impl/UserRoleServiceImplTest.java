@@ -4,30 +4,34 @@ import org.demo.whs.entity.AccountHasRole;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
-import org.demo.whs.mapper.AccountMapper;
-import org.springframework.data.domain.*;
 import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
-import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.mapper.AccountMapper;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.mapper.UserRoleMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
-
+import org.demo.whs.service.PermissionCacheService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
-import org.springframework.data.domain.*;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -46,6 +50,8 @@ class UserRoleServiceImplTest {
     private RoleMapper roleMapper;
     @Mock
     private AccountMapper accountMapper;
+    @Mock
+    private PermissionCacheService permissionCacheService;
 
     @InjectMocks
     private UserRoleServiceImpl service;
@@ -96,6 +102,7 @@ class UserRoleServiceImplTest {
 
         assertEquals(2, result.size());
         verify(accountHasRoleRepository).saveAll(any());
+        verify(permissionCacheService).evictPermissions(userId);
     }
 
     @Test
@@ -159,6 +166,7 @@ class UserRoleServiceImplTest {
         service.assignRolesToUser(userId, request);
 
         verify(accountHasRoleRepository, never()).saveAll(any());
+        verify(permissionCacheService, never()).evictPermissions(any());
     }
 
     // ================= REMOVE ROLE =================
@@ -180,6 +188,7 @@ class UserRoleServiceImplTest {
 
         verify(accountHasRoleRepository)
                 .deleteByIdAccountIdAndIdRoleId(userId, roleId1);
+        verify(permissionCacheService).evictPermissions(userId);
     }
 
     @Test
