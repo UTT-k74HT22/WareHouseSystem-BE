@@ -27,6 +27,7 @@ import org.demo.whs.repository.*;
 import org.demo.whs.repository.specification.InboundReceiptsSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.InboundReceiptsService;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -59,6 +60,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
     private final StockMovementsRepository stockMovementsRepository;
     private final BatchRepository batchRepository;
     private final AccountRepository accountRepository;
+    private final LocationService locationService;
     private final InboundReceiptsMapper inboundReceiptsMapper;
     private final InboundReceiptLinesMapper inboundReceiptLinesMapper;
     private final StockMovementsMapper stockMovementsMapper;
@@ -517,6 +519,10 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         inventory.setUpdatedBy(actorId);
         inventory.setLastMovementAt(now);
         Inventory savedInventory = inventoryRepository.save(inventory);
+
+        if (!isQuarantine) {
+            locationService.increaseUsedCapacity(receiptLine.getLocationId(), receiptLine.getQuantityReceived());
+        }
 
         return new InventorySnapshot(savedInventory, onHandBefore, onHandAfter);
     }

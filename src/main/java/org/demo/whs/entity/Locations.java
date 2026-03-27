@@ -35,6 +35,9 @@ public class Locations extends BaseEntity {
     @Column(name = "capacity")
     private BigDecimal capacity;
 
+    @Column(name = "used_capacity", nullable = false)
+    private BigDecimal usedCapacity;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private LocationStatus status;

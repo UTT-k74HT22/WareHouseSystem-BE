@@ -22,7 +22,7 @@ Tài liệu này tổng hợp kết quả review nghiệp vụ của các flow c
 | Master Data | WareHouse, Location, Product | ✅ Đã review |
 | Inbound Flow | PurchaseOrders, InboundReceipts | ✅ Đã review |
 | Inventory & Movements | Inventory, StockMovements | ✅ Đã review |
-| Outbound Flow | SalesOrders, OutboundShipments | ⏭️ Chưa implement |
+| Outbound Flow | SalesOrders, OutboundShipments, OutboundShipmentLines | ✅ Đã implement (25/03/2026) |
 
 ### 1.3 Vấn đề chung nhất
 **Thiếu Warehouse Ownership Validation** - Tất cả các service đều không kiểm tra user có quyền với warehouse trước khi thao tác.

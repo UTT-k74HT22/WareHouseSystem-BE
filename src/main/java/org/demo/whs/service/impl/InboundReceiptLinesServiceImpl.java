@@ -48,7 +48,6 @@ public class InboundReceiptLinesServiceImpl implements InboundReceiptLinesServic
     private final BatchRepository batchRepository;
     private final InboundReceiptLinesMapper inboundReceiptLinesMapper;
 
-
     /**
      * @param request the request body containing line details
      * @return the created line details
@@ -72,8 +71,10 @@ public class InboundReceiptLinesServiceImpl implements InboundReceiptLinesServic
 
         // Step 4: Validate all line details (quantity, location, batch, quality rules, duplicate dimensions, remaining quantity for receipt)
         validateQuantityReceived(request.getQuantityReceived());
-        // Step 5: Validate location belongs to the same warehouse as the receipt and is active
+
+        // Step 5: Validate location chosen for the receipt line
         validateLocationForReceiptLine(request.getLocationId(), inboundReceipt.getWarehouseId());
+
         // Step 6: Validate batch details if batch tracking is required for the product
         validateBatchForReceiptLine(request.getBatchId(), product, request.getQualityStatus());
         // Step 7: Validate quality status and notes according to business rules

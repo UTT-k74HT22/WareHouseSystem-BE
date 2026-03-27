@@ -4,6 +4,7 @@ public enum OutboundShipmentsStatus {
     DRAFT,
     PICKING,
     PACKED,
+    STAGING,
     SHIPPED,
     CANCELLED
 }

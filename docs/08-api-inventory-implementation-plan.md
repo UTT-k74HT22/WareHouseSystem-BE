@@ -57,11 +57,6 @@ Updated: 2026-03-12
 
 ### 2.3. Still shell / not implemented
 
-- Inbound Receipt Lines
-- Sales Orders
-- Sales Order Lines
-- Outbound Shipments
-- Outbound Shipment Lines
 - Reporting
 
 ## 3. Jira map by current status
@@ -73,15 +68,16 @@ Updated: 2026-03-12
 - `WHS-55` Purchase Order Lines
 - `WHS-56` Inbound Receipts CRUD
 - `WHS-57` Confirm Receipt
+- `WHS-58` Inbound Receipt Lines
+- `WHS-59`, `WHS-60` Sales Orders
+- `WHS-61` Sales Order Lines
+- `WHS-62`, `WHS-63` Outbound Shipments (8/9 APIs)
+- `WHS-65` Outbound Shipment Lines (5/5 APIs)
 - Existing inventory/stock tasks under `WHS-19`, `WHS-20`, `WHS-25` that already landed in code
 
 ### Remaining / next execution pool
 
-- `WHS-58` Inbound Receipt Lines
-- `WHS-59`, `WHS-60` Sales Orders
-- `WHS-61` Sales Order Lines
-- `WHS-62`, `WHS-63` Outbound Shipments
-- `WHS-65` Outbound Shipment Lines
+- Reporting
 - `WHS-41`, `WHS-42` Batch enhancements
 - `WHS-64`, `WHS-66` Stock Movements enhancements
 - `WHS-67`, `WHS-68`, `WHS-69` Reporting

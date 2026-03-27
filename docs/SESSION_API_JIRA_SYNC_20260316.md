@@ -49,9 +49,11 @@
 
 ### 3.4 Outbound
 
-- `WHS-47..50`, `WHS-59..65` vẫn mở
-- `SalesOrdersController`, `SalesOrderLinesController`, `OutboundShipmentsController`, `OutboundShipmentLinesController` mới là shell
-- Không có public route methods nên inventory để `0%` là đúng
+- `WHS-47..50`, `WHS-59..65` ✅ Đã hoàn thành (25/03/2026)
+- `SalesOrdersController`, `SalesOrderLinesController`, `OutboundShipmentsController`, `OutboundShipmentLinesController` đã implement đầy đủ
+- Sales Orders: 6/7 APIs (thiếu delete)
+- Outbound Shipments: 8/9 APIs (thiếu pick-list PDF)
+- Outbound Shipment Lines: 5/5 APIs
 
 ### 3.5 RBAC
 
