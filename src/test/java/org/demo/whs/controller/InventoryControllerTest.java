@@ -44,7 +44,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_INVENTORY_READ",
+        "PERM_INVENTORY_RESERVATION_UPDATE",
+        "PERM_INVENTORY_MUTATION_UPDATE"
+})
 class InventoryControllerTest {
 
     @Autowired
@@ -158,7 +162,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 and inventory summary when productId is valid")
     void shouldReturn200AndSummaryWhenProductIdIsValid() throws Exception {
         String productId = "550e8400-e29b-41d4-a716-446655440000";
@@ -184,7 +187,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when productId format is invalid")
     void shouldReturn400WhenProductIdIsInvalid() throws Exception {
         String invalidProductId = "invalid-uuid";
@@ -200,7 +202,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 and inventory by location when requested")
     void shouldReturn200AndInventoryByLocation() throws Exception {
         InventoryByLocationResponse mockResponse = InventoryByLocationResponse.builder()
@@ -236,7 +237,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when checking availability is successful")
     void shouldReturn200WhenCheckAvailabilityIsSuccessful() throws Exception {
         CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
@@ -268,7 +268,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when check availability request is invalid")
     void shouldReturn400WhenCheckAvailabilityRequestIsInvalid() throws Exception {
         CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
@@ -286,7 +285,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when reservation is successful")
     void shouldReturn200WhenReservationIsSuccessful() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
@@ -318,7 +316,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when reservation request is invalid")
     void shouldReturn400WhenReservationRequestIsInvalid() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
@@ -336,7 +333,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when unreservation is successful")
     void shouldReturn200WhenUnreservationIsSuccessful() throws Exception {
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
@@ -371,7 +367,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when unreservation request is invalid")
     void shouldReturn400WhenUnreservationRequestIsInvalid() throws Exception {
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
@@ -389,7 +384,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when increase is successful")
     void shouldReturn200WhenIncreaseIsSuccessful() throws Exception {
         InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
@@ -423,7 +417,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when decrease is successful")
     void shouldReturn200WhenDecreaseIsSuccessful() throws Exception {
         org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
@@ -458,7 +451,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when decrease request is invalid")
     void shouldReturn400WhenDecreaseRequestIsInvalid() throws Exception {
         org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()

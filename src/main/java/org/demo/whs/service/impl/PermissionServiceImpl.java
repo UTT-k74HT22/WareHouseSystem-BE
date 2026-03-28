@@ -41,12 +41,14 @@ public class PermissionServiceImpl implements PermissionService {
     public PermissionResponse createPermission(CreatePermissionRequest request) {
         validateCreatePermission(request);
 
+        String normalizedResource = normalizeResource(request.getResource());
         String code = generatePermissionCode(
-                request.getResource(),
+                normalizedResource,
                 request.getAction()
         );
 
         Permission permission = permissionMapper.createEntity(request);
+        permission.setResource(normalizedResource);
         permission.setCode(code);
 
         Permission savePermission = permissionRepository.save(permission);
@@ -170,11 +172,12 @@ public class PermissionServiceImpl implements PermissionService {
      * @param request create permission request
      */
     private void validateCreatePermission(CreatePermissionRequest request) {
+        String normalizedResource = normalizeResource(request.getResource());
 
         validateName(request.getName());
-        validateResource(request.getResource());
+        validateResource(normalizedResource);
         validateAction(request.getAction());
-        validateResourceActionUnique(request.getResource(), request.getAction());
+        validateResourceActionUnique(normalizedResource, request.getAction());
     }
 
     /**
@@ -221,19 +224,23 @@ public class PermissionServiceImpl implements PermissionService {
      * Generate permission code based on resource and action.
      */
     private String generatePermissionCode(String resource, ActionType action) {
-
-        if (resource == null || resource.isBlank()) {
-            throw new IllegalArgumentException("Resource cannot be null or blank");
-        }
-
+        String normalizedResource = normalizeResource(resource);
         if (action == null) {
             throw new IllegalArgumentException("Action cannot be null");
         }
 
         return "PERM_" +
-                resource.trim().toUpperCase() +
+                normalizedResource +
                 "_" +
                 action.name();
+    }
+
+    private String normalizeResource(String resource) {
+        if (resource == null || resource.isBlank()) {
+            throw new BadRequestException(ErrorCode.PERM_009);
+        }
+
+        return resource.trim().toUpperCase();
     }
 
     private void validateDuplicateName(String name, String id) {

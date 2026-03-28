@@ -11,6 +11,7 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
+import org.demo.whs.service.PermissionCacheService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,9 @@ class PermissionServiceImplTest {
 
     @Mock
     private PermissionMapper permissionMapper;
+
+    @Mock
+    private PermissionCacheService permissionCacheService;
 
     @InjectMocks
     private PermissionServiceImpl permissionService;
@@ -134,6 +138,39 @@ class PermissionServiceImplTest {
         PermissionResponse result = permissionService.createPermission(request);
 
         assertThat(result.getCode()).isEqualTo("PERM_ORDER_WRITE");
+    }
+
+    @Test
+    @DisplayName("createPermission_shouldNormalizeResourceBeforePersisting")
+    void createPermission_shouldNormalizeResourceBeforePersisting() {
+
+        CreatePermissionRequest request = new CreatePermissionRequest();
+        request.setName("Order Create");
+        request.setResource(" order ");
+        request.setAction(ActionType.CREATE);
+
+        Permission entity = new Permission();
+
+        when(permissionRepository.existsByResourceAndAction("ORDER", ActionType.CREATE))
+                .thenReturn(false);
+        when(permissionMapper.createEntity(request)).thenReturn(entity);
+        when(permissionRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(permissionMapper.toResponse(any()))
+                .thenAnswer(invocation -> {
+                    Permission permission = invocation.getArgument(0);
+                    return PermissionResponse.builder()
+                            .code(permission.getCode())
+                            .resource(permission.getResource())
+                            .action(permission.getAction())
+                            .build();
+                });
+
+        PermissionResponse result = permissionService.createPermission(request);
+
+        assertThat(result.getCode()).isEqualTo("PERM_ORDER_CREATE");
+        assertThat(result.getResource()).isEqualTo("ORDER");
+        verify(permissionRepository).existsByResourceAndAction("ORDER", ActionType.CREATE);
     }
 
     // ================= GET =================

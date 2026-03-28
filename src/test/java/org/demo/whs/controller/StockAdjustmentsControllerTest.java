@@ -49,7 +49,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(StockAdjustmentsController.class)
 @ActiveProfiles("test")
 @Import({StockAdjustmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_STOCK_ADJUSTMENT_CREATE",
+        "PERM_STOCK_ADJUSTMENT_READ",
+        "PERM_STOCK_ADJUSTMENT_APPROVAL_UPDATE"
+})
 class StockAdjustmentsControllerTest {
 
     @Autowired

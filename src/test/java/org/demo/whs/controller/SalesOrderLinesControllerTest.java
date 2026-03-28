@@ -42,7 +42,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SalesOrderLinesController.class)
 @ActiveProfiles("test")
 @Import({SalesOrderLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_SALES_ORDER_LINE_CREATE",
+        "PERM_SALES_ORDER_LINE_READ",
+        "PERM_SALES_ORDER_LINE_UPDATE"
+})
 class SalesOrderLinesControllerTest {
 
     @Autowired

@@ -37,6 +37,8 @@ import static java.math.BigDecimal.*;
 @RequiredArgsConstructor
 public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
 
+    private static final String STOCK_ADJUSTMENT_APPROVAL_PERMISSION = "PERM_STOCK_ADJUSTMENT_APPROVAL_UPDATE";
+
     private final StockAdjustmentsRepository stockAdjustmentsRepository;
     private final InventoryRepository inventoryRepository;
     private final StockMovementsRepository stockMovementsRepository;
@@ -354,6 +356,11 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     }
 
     private String getCurrentActorId() {
+        String accountId = SecurityUtils.getCurrentAccountId();
+        if (accountId != null && !accountId.isBlank()) {
+            return accountId;
+        }
+
         String username = SecurityUtils.getCurrentUsername();
         if (username == null || username.isBlank()) {
             throw new BadRequestException("Unauthenticated request", ErrorCode.AUTH_002);
@@ -401,9 +408,14 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
     }
 
     private void assertCanApproveReject(List<String> roles) {
+        if (SecurityUtils.hasAuthority(STOCK_ADJUSTMENT_APPROVAL_PERMISSION)) {
+            return;
+        }
+
         if (roles == null || roles.isEmpty()) {
             throw new BadRequestException("User role not found", ErrorCode.AUTH_002);
         }
+
         if (!hasRole(roles, RoleType.ADMIN)) {
             throw new BadRequestException("You do not have permission to approve/reject adjustments", ErrorCode.AUTH_002);
         }

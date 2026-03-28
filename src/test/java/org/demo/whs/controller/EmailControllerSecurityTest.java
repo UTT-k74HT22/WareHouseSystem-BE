@@ -91,7 +91,11 @@ class EmailControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {
+            "PERM_EMAIL_CREATE",
+            "PERM_EMAIL_READ",
+            "PERM_EMAIL_UPDATE"
+    })
     @DisplayName("Should allow admin role on all email endpoints")
     void should_AllowAdminRole_OnAllEmailEndpoints() throws Exception {
         for (MockHttpServletRequestBuilder request : buildAllEndpointRequests()) {
