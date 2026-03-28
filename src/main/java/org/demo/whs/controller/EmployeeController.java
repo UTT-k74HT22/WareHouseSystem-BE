@@ -33,7 +33,7 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_CREATE')")
     @PostMapping
     public ResponseEntity<BaseResponse<EmployeeResponse>> createEmployee(@Valid @RequestBody CreateEmployeeRequest createEmployeeRequest) {
         log.info("Received request to create employee with employeeCode={}", createEmployeeRequest.getEmployeeCode());
@@ -42,7 +42,7 @@ public class EmployeeController {
                 .body(BaseResponse.success(response));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_READ')")
     @GetMapping
     @Operation(summary = "List employees", description = "List employees with pagination and filters")
     public ResponseEntity<BaseResponse<PageResponse<EmployeeResponse>>> getEmployees(
@@ -59,7 +59,7 @@ public class EmployeeController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_READ')")
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<EmployeeResponse>> getEmployeeById(@PathVariable String id) {
         log.info("Received request to fetch employee by id={}", id);
@@ -67,7 +67,7 @@ public class EmployeeController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_UPDATE')")
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<EmployeeResponse>> updateEmployee(
             @PathVariable String id,
@@ -78,7 +78,7 @@ public class EmployeeController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> deleteEmployee(@PathVariable String id) {
         log.info("Received request to soft delete employee by id={}", id);

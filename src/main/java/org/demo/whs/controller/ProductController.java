@@ -13,6 +13,7 @@ import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +39,7 @@ public class ProductController {
      * @return ResponseEntity containing the created product
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_CREATE')")
     public ResponseEntity<BaseResponse<ProductResponse>> createProduct(
             @RequestBody @Valid CreateProductRequest request) {
         log.info("Received request to create product with SKU={}", request.getSku());
@@ -57,6 +59,7 @@ public class ProductController {
      * @return ResponseEntity containing the updated product
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_UPDATE')")
     public ResponseEntity<BaseResponse<ProductResponse>> updateProduct(
             @PathVariable String id,
             @RequestBody @Valid UpdateProductRequest request) {
@@ -74,6 +77,7 @@ public class ProductController {
      * @return ResponseEntity containing the product
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<ProductResponse>> getProductById(@PathVariable String id) {
         log.info("Received request to get product with ID={}", id);
         ProductResponse response = productService.getProductById(id);
@@ -89,6 +93,7 @@ public class ProductController {
      * @return ResponseEntity containing the product
      */
     @GetMapping("/sku/{sku}")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<ProductResponse>> getProductBySku(@PathVariable String sku) {
         log.info("Received request to get product with SKU={}", sku);
         ProductResponse response = productService.getProductBySku(sku);
@@ -105,6 +110,7 @@ public class ProductController {
      * @return ResponseEntity containing paginated products
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getAllProducts(
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) Integer size) {
@@ -124,6 +130,7 @@ public class ProductController {
      * @return ResponseEntity containing paginated search results
      */
     @PostMapping("/search")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> searchProducts(
             @RequestBody SearchProductRequest request,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
@@ -142,6 +149,7 @@ public class ProductController {
      * @return ResponseEntity with success message
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteProduct(@PathVariable String id) {
         log.info("Received request to delete product with ID={}", id);
         productService.deleteProduct(id);
@@ -159,6 +167,7 @@ public class ProductController {
      * @return ResponseEntity containing paginated products
      */
     @GetMapping("/category/{categoryId}")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getProductsByCategory(
             @PathVariable String categoryId,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
@@ -178,6 +187,7 @@ public class ProductController {
      * @return ResponseEntity containing paginated products
      */
     @GetMapping("/batch-tracking")
+    @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getBatchTrackingProducts(
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) Integer size) {

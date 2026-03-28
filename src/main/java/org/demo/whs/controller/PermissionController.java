@@ -33,7 +33,7 @@ public class PermissionController {
     private final PermissionService permissionService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_CREATE')")
     public ResponseEntity<BaseResponse<PermissionResponse>> createPermission(
             @RequestBody @Valid CreatePermissionRequest request
     ) {
@@ -44,7 +44,7 @@ public class PermissionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getPermissions(
             @RequestParam(required = false) String resource,
             @RequestParam(required = false) ActionType action,
@@ -58,7 +58,7 @@ public class PermissionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PermissionResponse>> getPermissionById(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id
@@ -68,7 +68,7 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_UPDATE')")
     public ResponseEntity<BaseResponse<PermissionResponse>> updatePermission(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id,
@@ -79,7 +79,7 @@ public class PermissionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deletePermission(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id

@@ -45,7 +45,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @Validated
-@PreAuthorize("isAuthenticated()")
 @Tag(name = "Batch Management", description = "Endpoints for managing product batches")
 public class BatchController {
 
@@ -59,6 +58,7 @@ public class BatchController {
      */
     @PostMapping
     @Operation(summary = "Create batch", description = "Create a new batch for a product that requires batch tracking")
+    @PreAuthorize("hasAuthority('PERM_BATCH_CREATE')")
     public ResponseEntity<BaseResponse<BatchResponse>> createBatch(
             @RequestBody @Valid CreateBatchRequest request) {
         log.info("Create batch request: {}", request);
@@ -76,6 +76,7 @@ public class BatchController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get batch by id", description = "Fetch a batch by its identifier")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<BatchResponse>> getBatchesById(
             @PathVariable String id) {
         log.info("Get batches with id: {}", id);
@@ -102,6 +103,7 @@ public class BatchController {
      */
     @GetMapping
     @Operation(summary = "List batches", description = "List batches with business filters and pagination")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<PageResponse<BatchResponse>>> getAllBatches(
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "product_id", required = false) String productId,
@@ -143,6 +145,7 @@ public class BatchController {
      */
     @GetMapping("/{id}/traceability")
     @Operation(summary = "Get batch traceability", description = "Display complete batch traceability from receipt to shipment")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<BatchTraceabilityResponse>> getBatchTraceability(@PathVariable String id) {
         BatchTraceabilityResponse response = batchService.getBatchTraceability(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Batch traceability retrieved successfully"));
@@ -157,6 +160,7 @@ public class BatchController {
      */
     @GetMapping("/expiring")
     @Operation(summary = "Get expiring batches", description = "List batches approaching expiry that still have stock")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<List<BatchExpiringResponse>>> getExpiringBatches(
             @RequestParam(name = "threshold_days", defaultValue = "30") @Min(0) Integer thresholdDays,
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
@@ -174,6 +178,7 @@ public class BatchController {
      */
     @GetMapping("/fifo-recommendations")
     @Operation(summary = "Get FIFO recommendations", description = "Recommend oldest eligible batches for outbound picking")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<List<BatchFifoRecommendationResponse>>> getFifoRecommendations(
             @RequestParam(name = "product_id") @NotBlank String productId,
             @RequestParam(name = "warehouse_id") @NotBlank String warehouseId,
@@ -191,6 +196,7 @@ public class BatchController {
      */
     @GetMapping("/by-product/{productId}")
     @Operation(summary = "Get batches by product", description = "List all batches for a product with inventory summary")
+    @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<List<BatchByProductResponse>>> getBatchesByProduct(
             @PathVariable String productId,
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
@@ -207,6 +213,7 @@ public class BatchController {
      */
     @PatchMapping("/{id}/status")
     @Operation(summary = "Change batch status", description = "Generic status changes are blocked. Use dedicated workflow endpoints instead")
+    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
     public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
             @PathVariable String id,
             @RequestBody @Valid ChangeBatchStatusRequest request) {
@@ -225,6 +232,7 @@ public class BatchController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Update batch", description = "Update mutable batch master data")
+    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
     public ResponseEntity<BaseResponse<BatchResponse>> updateBatch(
             @PathVariable String id,
             @Valid @RequestBody UpdateBatchRequest request) {
@@ -245,6 +253,7 @@ public class BatchController {
      */
     @PutMapping("/{id}/quarantine")
     @Operation(summary = "Quarantine batch", description = "Move an AVAILABLE batch to QUARANTINE with required reason")
+    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
     public ResponseEntity<BaseResponse<BatchResponse>> quarantineBatch(
             @PathVariable String id,
             @Valid @RequestBody QuarantineBatchRequest request) {
@@ -261,6 +270,7 @@ public class BatchController {
      */
     @PutMapping("/{id}/release")
     @Operation(summary = "Release batch", description = "Release a QUARANTINE batch back to AVAILABLE with required release notes")
+    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
     public ResponseEntity<BaseResponse<BatchResponse>> releaseBatch(
             @PathVariable String id,
             @Valid @RequestBody ReleaseBatchRequest request) {

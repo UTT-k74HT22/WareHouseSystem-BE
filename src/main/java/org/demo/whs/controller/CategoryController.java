@@ -42,7 +42,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_CATEGORY_CREATE')")
     public ResponseEntity<BaseResponse<CategoryResponse>> createCategory(
             @RequestBody @Valid CreateCategoryRequest request
     ) {
@@ -53,7 +53,7 @@ public class CategoryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_CATEGORY_READ')")
     public ResponseEntity<BaseResponse<PageResponse<CategoryResponse>>> getCategories(
             @RequestParam(required = false) CategoryStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -63,7 +63,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_CATEGORY_READ')")
     public ResponseEntity<BaseResponse<CategoryResponse>> getCategoryById(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id
@@ -73,7 +73,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_CATEGORY_UPDATE')")
     public ResponseEntity<BaseResponse<CategoryResponse>> updateCategory(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id,
@@ -84,7 +84,7 @@ public class CategoryController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_CATEGORY_UPDATE')")
     public ResponseEntity<BaseResponse<CategoryResponse>> updateCategoryStatus(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id,

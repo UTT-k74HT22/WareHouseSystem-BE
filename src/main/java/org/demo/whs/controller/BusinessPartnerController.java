@@ -36,7 +36,7 @@ public class BusinessPartnerController {
     /* ================= CREATE ================= */
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_CREATE')")
     public ResponseEntity<BaseResponse<BusinessPartnerResponse>> create(
             @RequestBody @Valid BusinessPartnerRequest request
     ) {
@@ -56,7 +56,7 @@ public class BusinessPartnerController {
     /* ================= GET ALL ================= */
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_READ')")
     public ResponseEntity<BaseResponse<List<BusinessPartnerResponse>>> getAll() {
         log.debug("Get all business partners request");
 
@@ -71,7 +71,7 @@ public class BusinessPartnerController {
     /* ================= GET BY ID ================= */
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_READ')")
     public ResponseEntity<BaseResponse<BusinessPartnerResponse>> getById(
             @PathVariable String id
     ) {
@@ -89,7 +89,7 @@ public class BusinessPartnerController {
     /* ================= UPDATE ================= */
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_UPDATE')")
     public ResponseEntity<BaseResponse<BusinessPartnerResponse>> update(
             @PathVariable String id,
             @RequestBody @Valid UpdateBusinessPartnerRequest request
@@ -108,7 +108,7 @@ public class BusinessPartnerController {
     /* ================= DELETE ================= */
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(
             @PathVariable String id
     ) {
@@ -124,7 +124,7 @@ public class BusinessPartnerController {
     /* ================= CHANGE STATUS ================= */
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_UPDATE')")
     public ResponseEntity<BaseResponse<BusinessPartnerResponse>> changeStatus(
             @PathVariable String id,
             @RequestParam String status
@@ -141,7 +141,8 @@ public class BusinessPartnerController {
     }
 
     @GetMapping("/search")
-            public PageResponse<BusinessPartnerResponse> search(
+    @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_READ')")
+    public PageResponse<BusinessPartnerResponse> search(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) BusinessPartnerType type,

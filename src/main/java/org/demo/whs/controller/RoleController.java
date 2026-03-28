@@ -52,7 +52,7 @@ public class RoleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
             @RequestParam(required = false) Boolean isDefault,
             @RequestParam(required = false) @Size(max = 100, message = "Search keyword max 50 chars") String search,
@@ -66,7 +66,7 @@ public class RoleController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<RoleResponse>> getRoleById(
 
             @PathVariable
@@ -80,7 +80,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_UPDATE')")
     public ResponseEntity<BaseResponse<RoleResponse>> updateRole(
 
             @PathVariable
@@ -96,7 +96,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteRole(
 
             @PathVariable
@@ -112,7 +112,7 @@ public class RoleController {
     }
 
     @GetMapping("/{id}/users")
-//    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getRoleUsers(
 
             @PathVariable("id")

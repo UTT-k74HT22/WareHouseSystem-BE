@@ -36,7 +36,7 @@ public class RolePermissionController {
      * Assign permissions to role
      */
     @PostMapping("/{id}/permissions")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_CREATE')")
     public ResponseEntity<BaseResponse<List<PermissionResponse>>> assignPermissions(
 
             @PathVariable
@@ -57,7 +57,7 @@ public class RolePermissionController {
      * Remove permission from role
      */
     @DeleteMapping("/{id}/permissions/{permId}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_DELETE')")
     public ResponseEntity<BaseResponse<Void>> removePermission(
 
             @PathVariable
@@ -80,7 +80,7 @@ public class RolePermissionController {
      * Get role permissions
      */
     @GetMapping("/{id}/permissions")
-//    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getRolePermissions(
 
             @PathVariable

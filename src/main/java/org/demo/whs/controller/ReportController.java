@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 @Tag(name = "Reports", description = "Endpoints for report exporting")
 public class ReportController {
 
@@ -27,6 +26,7 @@ public class ReportController {
 
     @GetMapping(value = "/current-stock/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @Operation(summary = "Export current stock report as PDF")
+    @PreAuthorize("hasAuthority('PERM_REPORT_CURRENT_STOCK_READ')")
     public ResponseEntity<byte[]> exportCurrentStockPdf(InventoryFilterRequest filter) {
         GeneratedExportFile generatedFile = reportService.exportCurrentStockPdf(
                 filter,

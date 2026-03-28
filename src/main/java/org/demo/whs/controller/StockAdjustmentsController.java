@@ -38,7 +38,7 @@ public class StockAdjustmentsController {
      * @return a response entity containing the created stock adjustment response
      */
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_ADJUSTMENT_CREATE')")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> createStockAdjustment(
             @RequestBody @Valid StockAdjustmentsRequest request) {
         log.info("Attempting to create stock adjustment. inventoryId={}, reason={}",
@@ -54,7 +54,7 @@ public class StockAdjustmentsController {
      * @return a response entity containing the retrieved stock adjustment response
      */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_ADJUSTMENT_READ')")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> getStockAdjustment(
             @PathVariable String id) {
         log.info("Attempting to retrieve stock adjustment with ID: {}", id);
@@ -70,7 +70,7 @@ public class StockAdjustmentsController {
      * @return a response entity containing a paginated response of stock adjustments
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_ADJUSTMENT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<StockAdjustmentsResponse>>> getStockAdjustments(
             @RequestParam(required = false) StockAdjustmentsStatus status,
             @RequestParam(required = false) String productId,
@@ -114,7 +114,7 @@ public class StockAdjustmentsController {
      * @return a response entity containing the updated stock adjustment response after approval
      */
     @PutMapping("/{id}/approve")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_ADJUSTMENT_APPROVAL_UPDATE')")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> approveStockAdjustment(
             @PathVariable String id,
             @RequestBody(required = false) @Valid ApproveStockAdjustmentRequest request) {
@@ -132,7 +132,7 @@ public class StockAdjustmentsController {
      * @return a response entity containing the updated stock adjustment response after rejection
      */
     @PutMapping("/{id}/reject")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_ADJUSTMENT_APPROVAL_UPDATE')")
     public ResponseEntity<BaseResponse<StockAdjustmentsResponse>> rejectStockAdjustment(
             @PathVariable String id,
             @RequestBody @Valid RejectStockAdjustmentRequest request) {

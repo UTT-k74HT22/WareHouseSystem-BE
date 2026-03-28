@@ -40,7 +40,7 @@ public class UserRoleController {
      * API: POST /api/v1/users/{id}/roles
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_USER_ROLE_CREATE')")
     public ResponseEntity<BaseResponse<List<RoleResponse>>> assignRolesToUser(
 
             @PathVariable
@@ -64,7 +64,7 @@ public class UserRoleController {
      * API: DELETE /api/v1/users/{id}/roles/{roleId}
      */
     @DeleteMapping("/{roleId}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_USER_ROLE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> removeRoleFromUser(
 
             @PathVariable
@@ -90,7 +90,7 @@ public class UserRoleController {
      * API: GET /api/v1/users/{id}/roles
      */
     @GetMapping
-//    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_USER_ROLE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getUserRoles(
 
             @PathVariable

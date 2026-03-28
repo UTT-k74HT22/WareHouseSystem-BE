@@ -27,7 +27,6 @@ import java.util.List;
 @Slf4j
 @Validated
 @Tag(name = "Sales Order Lines", description = "APIs for managing sales order lines")
-@PreAuthorize("isAuthenticated()")
 public class SalesOrderLinesController {
 
     private final SalesOrderLinesService salesOrderLinesService;
@@ -41,6 +40,7 @@ public class SalesOrderLinesController {
      */
     @Operation(summary = "Add line to sales order")
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_LINE_CREATE')")
     public ResponseEntity<BaseResponse<SalesOrderLinesResponse>> create(@RequestBody @Valid CreateSalesOrderLinesRequest request) {
         log.info("Add line to sales order");
         SalesOrderLinesResponse response = salesOrderLinesService.create(request);
@@ -56,6 +56,7 @@ public class SalesOrderLinesController {
      */
     @Operation(summary = "Update sales order line")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_LINE_UPDATE')")
     public ResponseEntity<BaseResponse<SalesOrderLinesResponse>> update(
             @PathVariable String id,
             @RequestBody @Valid UpdateSalesOrderLinesRequest request) {
@@ -73,6 +74,7 @@ public class SalesOrderLinesController {
      */
     @Operation(summary = "Get lines by sales order id")
     @GetMapping("/by-so/{soId}")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_LINE_READ')")
     public ResponseEntity<BaseResponse<List<SalesOrderLinesResponse>>> getBySalesOrder(@PathVariable String soId) {
         log.info("Get lines for sales order: {}", soId);
         List<SalesOrderLinesResponse> response = salesOrderLinesService.getBySalesOrder(soId);
