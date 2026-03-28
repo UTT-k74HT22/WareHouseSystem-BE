@@ -78,5 +78,10 @@ public interface AuthService {
      */
     boolean checkPermission(String resource, ActionType action);
 
+    /**
+     * Lấy danh sách permission của user hiện tại.
+     *
+     * @return MyPermissionsResponse chứa danh sách permission
+     */
     MyPermissionsResponse getMyPermissions();
 }

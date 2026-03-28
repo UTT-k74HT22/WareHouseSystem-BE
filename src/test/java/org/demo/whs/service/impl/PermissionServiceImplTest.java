@@ -137,7 +137,7 @@ class PermissionServiceImplTest {
 
         PermissionResponse result = permissionService.createPermission(request);
 
-        assertThat(result.getCode()).isEqualTo("PERM_ORDER_WRITE");
+        assertThat(result.getCode()).isEqualTo("PERM_ORDER_CREATE");
     }
 
     @Test
