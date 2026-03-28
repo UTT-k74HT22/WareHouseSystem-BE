@@ -3,14 +3,12 @@ package org.demo.whs.service;
 import org.demo.whs.entity.dto.request.Auth.ChangePassWordRequest;
 import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
-import org.demo.whs.entity.dto.request.Otp.VerifyOtpRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
+import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 import org.demo.whs.entity.dto.response.AuthResponse;
+import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.ActionType;
-import org.springframework.transaction.annotation.Transactional;
-
-import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 
 /**
  * Service Interface for managing authentication and authorization.
@@ -79,4 +77,6 @@ public interface AuthService {
      * @return true nếu có quyền
      */
     boolean checkPermission(String resource, ActionType action);
+
+    MyPermissionsResponse getMyPermissions();
 }

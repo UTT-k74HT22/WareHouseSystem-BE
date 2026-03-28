@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
 import org.demo.whs.entity.dto.response.AuthResponse;
+import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
 import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.entity.enums.ActionType;
@@ -35,6 +36,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -282,6 +284,29 @@ public class AuthServiceImpl implements AuthService {
                 accountId, permissionCode, allowed);
 
         return allowed;
+    }
+
+    @Override
+    public MyPermissionsResponse getMyPermissions() {
+        String accountId = SecurityUtils.getCurrentAccountId();
+
+        if (accountId == null) {
+            log.warn("Unauthenticated access attempt when loading my permissions");
+            throw new UnauthorizedException(ErrorCode.AUTH_005);
+        }
+
+        Set<String> permissions = permissionCacheService.getPermissions(accountId);
+        List<String> permissionCodes = permissions == null
+                ? List.of()
+                : permissions.stream()
+                        .sorted(Comparator.naturalOrder())
+                        .toList();
+
+        log.info("Loaded {} permissions for accountId={}", permissionCodes.size(), accountId);
+
+        return MyPermissionsResponse.builder()
+                .permissions(permissionCodes)
+                .build();
     }
 
     // ================= PRIVATE METHODS =================
