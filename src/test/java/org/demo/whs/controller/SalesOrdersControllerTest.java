@@ -39,6 +39,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,12 +69,13 @@ class SalesOrdersControllerTest {
         when(salesOrdersService.create(any(SalesOrdersRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/sales-orders")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "customer_id", "bp-1",
                                 "warehouse_id", "wh-1",
                                 "order_date", "2026-03-20",
-                                "requested_delivery_date", "2026-03-25",
+                                "requested_delivery_date", "2027-03-25",
                                 "currency", "VND",
                                 "notes", "Test SO",
                                 "lines", List.of(Map.of(

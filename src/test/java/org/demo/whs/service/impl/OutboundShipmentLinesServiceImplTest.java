@@ -461,6 +461,7 @@ class OutboundShipmentLinesServiceImplTest {
 
         OutboundShipmentLinesResponse response = buildResponse(LINE_ID, SHIPMENT_ID);
 
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
         lenient().when(locationRepository.findAllById(any())).thenReturn(List.of(location));
         lenient().when(batchRepository.findAllById(any())).thenReturn(null);
         when(outboundShipmentLinesMapper.toResponse(any(OutboundShipmentLines.class))).thenReturn(response);

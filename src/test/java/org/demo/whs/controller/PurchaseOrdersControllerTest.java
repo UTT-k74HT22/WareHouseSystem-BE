@@ -44,6 +44,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,12 +74,13 @@ class PurchaseOrdersControllerTest {
         when(purchaseOrdersService.create(any(PurchaseOrdersRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/purchase-orders")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "supplier_id", "sup-1",
                                 "warehouse_id", "wh-1",
                                 "order_date", "2026-03-15",
-                                "expected_delivery_date", "2026-03-25",
+                                "expected_delivery_date", "2027-03-25",
                                 "currency", "VND",
                                 "payment_terms", "Net 30",
                                 "notes", "Test order"
@@ -281,11 +283,12 @@ class PurchaseOrdersControllerTest {
                 .thenReturn(response);
 
         mockMvc.perform(put("/api/v1/purchase-orders/{id}", "po-1")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "supplier_id", "sup-2",
                                 "warehouse_id", "wh-2",
-                                "expected_delivery_date", "2026-03-25",
+                                "expected_delivery_date", "2027-03-25",
                                 "currency", "USD",
                                 "payment_terms", "Net 60",
                                 "notes", "Updated notes"

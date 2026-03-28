@@ -39,6 +39,7 @@ import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,6 +107,8 @@ class InboundReceiptsServiceImplTest {
     private InboundReceiptLinesMapper inboundReceiptLinesMapper;
     @Mock
     private StockMovementsMapper stockMovementsMapper;
+    @Mock
+    private LocationService locationService;
 
     @Spy
     private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
