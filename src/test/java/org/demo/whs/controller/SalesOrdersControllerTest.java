@@ -45,7 +45,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SalesOrdersController.class)
 @ActiveProfiles("test")
 @Import({SalesOrdersControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_SALES_ORDER_CREATE",
+        "PERM_SALES_ORDER_READ",
+        "PERM_SALES_ORDER_UPDATE"
+})
 class SalesOrdersControllerTest {
 
     @Autowired
@@ -73,7 +77,7 @@ class SalesOrdersControllerTest {
                                 "customer_id", "bp-1",
                                 "warehouse_id", "wh-1",
                                 "order_date", "2026-03-20",
-                                "requested_delivery_date", "2026-03-25",
+                                "requested_delivery_date", "2099-03-25",
                                 "currency", "VND",
                                 "notes", "Test SO",
                                 "lines", List.of(Map.of(

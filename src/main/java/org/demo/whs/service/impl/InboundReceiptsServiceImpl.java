@@ -258,6 +258,7 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         List<PurchaseOrderLines> poLines = loadPurchaseOrderLinesForConfirm(purchaseOrder.getId());
         Map<String, PurchaseOrderLines> poLineMap = poLines.stream()
                 .collect(Collectors.toMap(PurchaseOrderLines::getId, poLine -> poLine));
+        validateAggregatedReceiptQuantities(receiptLines, poLineMap);
 
         // Step 5: Process each receipt line
         for (InboundReceiptLines receiptLine : receiptLines) {
@@ -393,6 +394,39 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         }
 
         return purchaseOrderLine;
+    }
+
+    private void validateAggregatedReceiptQuantities(List<InboundReceiptLines> receiptLines,
+                                                     Map<String, PurchaseOrderLines> poLineMap) {
+        Map<String, BigDecimal> aggregatedByPurchaseOrderLine = new HashMap<>();
+
+        for (InboundReceiptLines receiptLine : receiptLines) {
+            PurchaseOrderLines purchaseOrderLine = poLineMap.get(receiptLine.getPurchaseOrderLineId());
+            if (purchaseOrderLine == null) {
+                continue;
+            }
+
+            BigDecimal receiptQuantity = receiptLine.getQuantityReceived();
+            if (receiptQuantity == null || receiptQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException("Receipt quantity must be greater than zero", ErrorCode.COM_001);
+            }
+
+            BigDecimal aggregatedQuantity = aggregatedByPurchaseOrderLine
+                    .getOrDefault(receiptLine.getPurchaseOrderLineId(), BigDecimal.ZERO)
+                    .add(receiptQuantity);
+            BigDecimal remaining = zeroIfNull(purchaseOrderLine.getQuantityOrdered())
+                    .subtract(zeroIfNull(purchaseOrderLine.getQuantityReceived()));
+
+            if (aggregatedQuantity.compareTo(remaining) > 0) {
+                throw new BadRequestException(
+                        "Receipt lines for purchase order line " + purchaseOrderLine.getId()
+                                + " exceed remaining quantity",
+                        ErrorCode.POL_006
+                );
+            }
+
+            aggregatedByPurchaseOrderLine.put(receiptLine.getPurchaseOrderLineId(), aggregatedQuantity);
+        }
     }
 
     private Products validateProductForReceiptLine(InboundReceiptLines receiptLine) {

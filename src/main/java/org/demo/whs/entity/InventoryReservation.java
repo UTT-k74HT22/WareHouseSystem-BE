@@ -13,7 +13,6 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "inventory_reservations", indexes = {
-        @Index(name = "idx_reservation_request_key", columnList = "request_key"),
         @Index(name = "idx_reservation_order_line", columnList = "order_line_id"),
         @Index(name = "idx_reservation_status", columnList = "status")
 })

@@ -11,7 +11,7 @@ public class SecurityUtils {
     }
 
     public static String getCurrentUsername() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = getCurrentAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;
@@ -35,7 +35,7 @@ public class SecurityUtils {
      * @return the user ID or null if unauthenticated or not using CustomUserDetails
      */
     public static String getCurrentAccountId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = getCurrentAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;
@@ -47,5 +47,20 @@ public class SecurityUtils {
         }
 
         return null;
+    }
+
+    public static boolean hasAuthority(String authority) {
+        Authentication authentication = getCurrentAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || authority == null || authority.isBlank()) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> authority.equals(grantedAuthority.getAuthority()));
+    }
+
+    private static Authentication getCurrentAuthentication() {
+        return SecurityContextHolder.getContext().getAuthentication();
     }
 }

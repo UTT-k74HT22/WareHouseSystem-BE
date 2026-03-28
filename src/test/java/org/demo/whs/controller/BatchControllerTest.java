@@ -50,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(BatchController.class)
 @ActiveProfiles("test")
-@WithMockUser
+@WithMockUser(authorities = {"PERM_BATCH_READ", "PERM_BATCH_UPDATE"})
 @Import({BatchControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 class BatchControllerTest {

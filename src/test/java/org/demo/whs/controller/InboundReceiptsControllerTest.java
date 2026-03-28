@@ -49,7 +49,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(InboundReceiptsController.class)
 @ActiveProfiles("test")
 @Import({InboundReceiptsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_INBOUND_RECEIPT_CREATE",
+        "PERM_INBOUND_RECEIPT_READ",
+        "PERM_INBOUND_RECEIPT_UPDATE",
+        "PERM_INBOUND_RECEIPT_DELETE"
+})
 class InboundReceiptsControllerTest {
 
     @Autowired

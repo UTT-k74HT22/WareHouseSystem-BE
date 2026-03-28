@@ -25,6 +25,11 @@ public class PermissionCacheServiceImpl implements PermissionCacheService {
     private static final long PERMISSION_CACHE_TTL_MINUTES = 15; // 🔥 TTL fix
     @Override
     public Set<String> getPermissions(String userId) {
+        if (userId == null || userId.isBlank()) {
+            log.warn("[CACHE BYPASS] Missing userId when loading permissions");
+            return Collections.emptySet();
+        }
+
         String key = KEY_PREFIX + userId;
 
         var cached = redisService.getOptional(key, new TypeReference<Set<String>>() {});
@@ -44,7 +49,7 @@ public class PermissionCacheServiceImpl implements PermissionCacheService {
             log.debug("[DB QUERY] Loaded {} permissions for userId={}", permissions.size(), userId);
         } catch (Exception e) {
             log.error("[DB QUERY ERROR] userId={}: {}", userId, e.getMessage(), e);
-            permissions = Collections.emptySet();
+            return Collections.emptySet();
         }
 
         try {

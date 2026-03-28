@@ -7,8 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Auth.*;
 import org.demo.whs.entity.dto.request.Permission.CheckPermissionRequest;
 import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
+import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.entity.dto.response.Permission.CheckPermissionResponse;
-import org.demo.whs.service.PermissionService;
 import org.demo.whs.utils.annotation.RateLimit;
 import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
@@ -208,5 +208,11 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(BaseResponse.success(allowed));
+    }
+
+    @GetMapping("/my-permissions")
+    public ResponseEntity<BaseResponse<MyPermissionsResponse>> getMyPermissions() {
+        MyPermissionsResponse response = authService.getMyPermissions();
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

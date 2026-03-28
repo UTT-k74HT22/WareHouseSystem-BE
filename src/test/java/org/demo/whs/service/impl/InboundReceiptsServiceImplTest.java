@@ -39,6 +39,7 @@ import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,6 +101,8 @@ class InboundReceiptsServiceImplTest {
     private BatchRepository batchRepository;
     @Mock
     private AccountRepository accountRepository;
+    @Mock
+    private LocationService locationService;
     @Mock
     private InboundReceiptsMapper inboundReceiptsMapper;
     @Mock
@@ -246,6 +249,7 @@ class InboundReceiptsServiceImplTest {
         when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
                 .thenReturn(Optional.of(inventory));
         when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(locationService.increaseUsedCapacity("loc-1", new BigDecimal("10.00"))).thenReturn(1);
         when(stockMovementsMapper.toEntity(
                 eq(StockMovementsType.INBOUND),
                 eq("prod-1"),
@@ -278,6 +282,7 @@ class InboundReceiptsServiceImplTest {
         assertEquals(new BigDecimal("30.00"), poLine.getQuantityReceived());
         assertEquals(new BigDecimal("15.00"), inventory.getOnHandQuantity());
         assertEquals(BigDecimal.ZERO, inventory.getQuarantineQuantity());
+        verify(locationService).increaseUsedCapacity("loc-1", new BigDecimal("10.00"));
         verify(batchRepository, never()).save(any(Batch.class));
         verify(stockMovementsRepository).save(any(StockMovements.class));
     }
@@ -453,9 +458,6 @@ class InboundReceiptsServiceImplTest {
 
         PurchaseOrders purchaseOrder = purchaseOrder(PurchaseOrdersStatus.CONFIRMED, "wh-1");
         PurchaseOrderLines poLine = purchaseOrderLine(new BigDecimal("100.00"), new BigDecimal("40.00"));
-        Products product = product(false, ProductStatus.ACTIVE);
-        Locations location = location("wh-1", LocationStatus.ACTIVE);
-        Inventory inventory = inventory(null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
 
         mockActor();
         when(inboundReceiptsRepository.findByIdForUpdate("receipt-1")).thenReturn(Optional.of(receipt));
@@ -463,13 +465,6 @@ class InboundReceiptsServiceImplTest {
                 .thenReturn(List.of(firstLine, secondLine));
         when(purchaseOrdersRepository.findByIdForUpdate("po-1")).thenReturn(Optional.of(purchaseOrder));
         when(purchaseOrderLinesRepository.findByPurchaseOrderIdForUpdate("po-1")).thenReturn(List.of(poLine));
-        when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
-        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location));
-        when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", null))
-                .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new StockMovements());
 
         assertThrows(BadRequestException.class, () -> inboundReceiptsService.confirm("receipt-1"));
         verify(purchaseOrderLinesRepository, never()).saveAll(anyList());
