@@ -112,13 +112,13 @@ class PermissionServiceImplTest {
     void createPermission_shouldGenerateCorrectCode() {
 
         CreatePermissionRequest request = new CreatePermissionRequest();
-        request.setName("Order Write");
+        request.setName("Order Create");
         request.setResource("ORDER");
-        request.setAction(ActionType.WRITE);
+        request.setAction(ActionType.CREATE);
 
         Permission entity = new Permission();
 
-        when(permissionRepository.existsByResourceAndAction("ORDER", ActionType.WRITE))
+        when(permissionRepository.existsByResourceAndAction("ORDER", ActionType.CREATE))
                 .thenReturn(false);
         when(permissionMapper.createEntity(request)).thenReturn(entity);
         when(permissionRepository.save(any()))
