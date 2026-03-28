@@ -317,6 +317,7 @@ public class BatchServiceImpl implements BatchService {
     @Override
     @Transactional
     public List<BatchFifoRecommendationResponse> getFifoRecommendations(String productId, String warehouseId, Integer limit) {
+        log.info("Fetching FIFO recommendations for productId={} warehouseId={} limit={}", productId, warehouseId, limit);
         Products product = getBatchTrackedProductOrThrow(productId);
         Warehouses warehouse = validateWarehouseExists(warehouseId);
         int effectiveLimit = limit == null ? 5 : limit;
@@ -325,8 +326,7 @@ public class BatchServiceImpl implements BatchService {
         if (batches.isEmpty()) {
             return List.of();
         }
-        List<Inventory> inventories = inventoryRepository.findByProductIdAndWarehouseIdAndBatchIdIn(
-                productId, warehouseId, collectIds(batches, Batch::getId));
+        List<Inventory> inventories = inventoryRepository.findByProductIdAndWarehouseIdAndBatchIdIn(productId, warehouseId, collectIds(batches, Batch::getId));
         Map<String, List<Inventory>> inventoryByBatch = groupInventoriesByBatch(inventories);
         Map<String, Warehouses> warehouseMap = Map.of(warehouse.getId(), warehouse);
         Map<String, Locations> locationMap = toEntityMap(locationRepository.findAllById(collectIds(inventories, Inventory::getLocationId)));
@@ -369,6 +369,7 @@ public class BatchServiceImpl implements BatchService {
     @Override
     @Transactional
     public List<BatchByProductResponse> getBatchesByProduct(String productId, String warehouseId) {
+        log.info("Fetching batches for productId={} and warehouseId={}", productId, warehouseId);
         Products product = getBatchTrackedProductOrThrow(productId);
         String normalizedWarehouseId = normalizeOptional(warehouseId);
         if (normalizedWarehouseId != null) {
