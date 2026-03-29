@@ -5,9 +5,11 @@ import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.exception.AuthenticationFailedException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -181,6 +184,41 @@ class AuthControllerTest {
             mockMvc.perform(post("/api/v1/auth/refresh-token")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("My Permissions Tests")
+    class MyPermissionsTests {
+
+        @Test
+        @DisplayName("Get my permissions success")
+        void getMyPermissions_Success() throws Exception {
+            MyPermissionsResponse response = MyPermissionsResponse.builder()
+                    .permissions(java.util.List.of(
+                            "PERM_BATCH_CREATE",
+                            "PERM_PRODUCT_READ",
+                            "PERM_USER_READ"
+                    ))
+                    .build();
+
+            when(authService.getMyPermissions()).thenReturn(response);
+
+            mockMvc.perform(get("/api/v1/auth/my-permissions"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.permissions[0]").value("PERM_BATCH_CREATE"))
+                    .andExpect(jsonPath("$.data.permissions[1]").value("PERM_PRODUCT_READ"))
+                    .andExpect(jsonPath("$.data.permissions[2]").value("PERM_USER_READ"));
+        }
+
+        @Test
+        @DisplayName("Get my permissions unauthorized")
+        void getMyPermissions_Unauthorized() throws Exception {
+            when(authService.getMyPermissions()).thenThrow(new UnauthorizedException(ErrorCode.AUTH_005));
+
+            mockMvc.perform(get("/api/v1/auth/my-permissions"))
                     .andExpect(status().isUnauthorized());
         }
     }

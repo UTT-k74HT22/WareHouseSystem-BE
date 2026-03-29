@@ -35,7 +35,7 @@ public class StockMovementsController {
      * @return a response entity containing the retrieved stock movement response
      */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_MOVEMENT_READ')")
     public ResponseEntity<BaseResponse<StockMovementsResponse>> getMovement(@PathVariable String id) {
         StockMovementsResponse response = stockMovementsService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -49,7 +49,7 @@ public class StockMovementsController {
      * @return a response entity containing a paginated list of stock movement responses
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_MOVEMENT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<StockMovementsResponse>>> getMovements(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
@@ -67,7 +67,7 @@ public class StockMovementsController {
      * @return a response entity containing a paginated list of stock movement responses
      */
     @GetMapping("/reference/{referenceType}/{referenceId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_MOVEMENT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<StockMovementsResponse>>> getMovementsByReference(
             @PathVariable ReferenceType referenceType,
             @PathVariable String referenceId,

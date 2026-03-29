@@ -43,7 +43,6 @@ import java.util.List;
 @Slf4j
 @Validated
 @Tag(name = "Purchase Orders", description = "APIs for managing purchase orders")
-@PreAuthorize("isAuthenticated()")
 public class PurchaseOrdersController {
 
     private final PurchaseOrdersService purchaseOrdersService;
@@ -56,6 +55,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Create purchase order draft")
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_CREATE')")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> create(@RequestBody @Valid PurchaseOrdersRequest request) {
         log.info("Create purchase order draft");
         PurchaseOrdersResponse response = purchaseOrdersService.create(request);
@@ -81,6 +81,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Get paginated purchase orders")
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_READ')")
     public ResponseEntity<BaseResponse<PageResponse<PurchaseOrdersResponse>>> getAll(
             @RequestParam(required = false) String purchaseOrderNumber,
             @RequestParam(required = false) String supplierId,
@@ -144,6 +145,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Get purchase order by id")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_READ')")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> getById(@PathVariable String id) {
         log.info("Get purchase order by id: {}", id);
         PurchaseOrdersResponse response = purchaseOrdersService.getById(id);
@@ -159,6 +161,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Update purchase order draft")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_UPDATE')")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> update(
             @PathVariable String id,
             @RequestBody @Valid UpdatePurchaseOrdersRequest request) {
@@ -175,6 +178,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Delete purchase order draft")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Deleting purchase order with id: {}", id);
         purchaseOrdersService.delete(id);
@@ -189,6 +193,7 @@ public class PurchaseOrdersController {
      */
     @Operation(summary = "Confirm purchase order")
     @PutMapping("/{id}/confirm")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_UPDATE')")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> confirm(@PathVariable String id) {
         log.info("Confirming purchase order with id: {}", id);
         PurchaseOrdersResponse response = purchaseOrdersService.confirm(id);

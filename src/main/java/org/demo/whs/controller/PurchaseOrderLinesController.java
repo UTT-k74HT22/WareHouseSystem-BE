@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @Tag(name = "Purchase Order Lines", description = "APIs for managing purchase order lines")
-@PreAuthorize("isAuthenticated()")
 public class PurchaseOrderLinesController {
     private final PurchaseOrderLinesService purchaseOrderLinesService;
 
@@ -37,6 +36,7 @@ public class PurchaseOrderLinesController {
      */
     @Operation(summary = "Get purchase order lines by purchase order ID")
     @GetMapping("/purchase-order/{purchaseOrderId}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_LINE_READ')")
     public ResponseEntity<BaseResponse<Iterable<PurchaseOrderLinesResponse>>> getByPurchaseOrderId(@PathVariable String purchaseOrderId) {
         log.info("Get purchase order lines by purchaseOrderId={}", purchaseOrderId);
         Iterable<PurchaseOrderLinesResponse> response = purchaseOrderLinesService.getByPurchaseOrderId(purchaseOrderId);
@@ -51,6 +51,7 @@ public class PurchaseOrderLinesController {
      */
     @Operation(summary = "Create purchase order line")
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_LINE_CREATE')")
     public ResponseEntity<BaseResponse<PurchaseOrderLinesResponse>> create(@RequestBody @Valid PurchaseOrderLinesRequest request) {
         log.info("Create purchase order line");
         PurchaseOrderLinesResponse response = purchaseOrderLinesService.create(request);
@@ -66,6 +67,7 @@ public class PurchaseOrderLinesController {
      */
     @Operation(summary = "Update purchase order line")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_LINE_UPDATE')")
     public ResponseEntity<BaseResponse<PurchaseOrderLinesResponse>> update(@PathVariable String id,
                                                                            @RequestBody @Valid UpdatePurchaseOrderLinesRequest request) {
         log.info("Update purchase order line with id: {}", id);
@@ -81,6 +83,7 @@ public class PurchaseOrderLinesController {
      */
     @Operation(summary = "Delete purchase order line")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_LINE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Delete purchase order line with id: {}", id);
         purchaseOrderLinesService.delete(id);

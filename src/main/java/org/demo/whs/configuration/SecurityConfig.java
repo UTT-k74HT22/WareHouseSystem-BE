@@ -91,7 +91,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/refresh-token",
                                 "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/verify-forgot-password-otp"
+                                "/api/v1/auth/verify-forgot-password-otp",
+                                "/api/v1/auth/reset-password"
                         ).permitAll()
                         // OTP
                         .requestMatchers("/api/v1/otp/**").permitAll()

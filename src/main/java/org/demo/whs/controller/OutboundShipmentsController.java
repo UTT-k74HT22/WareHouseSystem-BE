@@ -28,13 +28,12 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @Tag(name = "Outbound Shipments", description = "APIs for managing outbound shipments")
-@PreAuthorize("isAuthenticated()")
 public class OutboundShipmentsController {
 
     private final OutboundShipmentsService outboundShipmentsService;
     @PostMapping
     @Operation(summary = "Create a new outbound shipment draft")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_CREATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> create(@Valid @RequestBody OutboundShipmentsRequest request) {
         OutboundShipmentsResponse response = outboundShipmentsService.create(request);
         return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment created successfully"), HttpStatus.CREATED);
@@ -49,7 +48,7 @@ public class OutboundShipmentsController {
      */
     @GetMapping
     @Operation(summary = "Get all outbound shipments with filtering and pagination")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<OutboundShipmentsResponse>>> getAll(OutboundShipmentsFilterRequest filter, Pageable pageable) {
         PageResponse<OutboundShipmentsResponse> response = outboundShipmentsService.getAll(filter, pageable);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipments retrieved successfully"));
@@ -64,7 +63,7 @@ public class OutboundShipmentsController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get an outbound shipment by its ID")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> getById(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment retrieved successfully"));
@@ -80,7 +79,7 @@ public class OutboundShipmentsController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Update an outbound shipment (DRAFT status only)")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> update(@PathVariable String id, @Valid @RequestBody UpdateOutboundShipmentsRequest request) {
         OutboundShipmentsResponse response = outboundShipmentsService.update(id, request);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment updated successfully"));
@@ -99,7 +98,7 @@ public class OutboundShipmentsController {
      */
     @PutMapping("/{id}/start-picking")
     @Operation(summary = "Transition: DRAFT -> PICKING")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> startPicking(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.startPicking(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Shipment status changed to PICKING"));
@@ -116,7 +115,7 @@ public class OutboundShipmentsController {
      */
     @PutMapping("/{id}/mark-as-packed")
     @Operation(summary = "Transition: PICKING -> PACKED")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> markAsPacked(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.markAsPacked(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Shipment status changed to PACKED"));
@@ -139,7 +138,7 @@ public class OutboundShipmentsController {
      */
     @PutMapping("/{id}/ship")
     @Operation(summary = "Transition: PACKED -> STAGING")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> ship(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.ship(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Shipment moved to STAGING successfully"));
@@ -147,7 +146,7 @@ public class OutboundShipmentsController {
 
     @PutMapping("/{id}/confirm-dispatch")
     @Operation(summary = "Transition: STAGING -> SHIPPED")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> confirmDispatch(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.confirmDispatch(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Shipment dispatched and inventory decreased successfully"));
@@ -167,7 +166,7 @@ public class OutboundShipmentsController {
      */
     @PutMapping("/{id}/cancel")
     @Operation(summary = "Transition: Any status except SHIPPED -> CANCELLED")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> cancel(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.cancel(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Shipment cancelled successfully"));

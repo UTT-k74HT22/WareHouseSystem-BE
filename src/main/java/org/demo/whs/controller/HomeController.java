@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RateLimit(key = "home", limit = 100, duration = 60, type = RateLimitType.IP)
 public class HomeController {
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_SYSTEM_DIAGNOSTIC_READ')")
     @GetMapping("/test")
     public String testEndpoint() {
         return "Home Controller is working!";

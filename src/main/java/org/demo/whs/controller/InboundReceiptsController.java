@@ -43,7 +43,6 @@ import java.util.List;
 @Slf4j
 @Validated
 @Tag(name = "Inbound Receipts", description = "APIs for managing inbound receipts")
-@PreAuthorize("isAuthenticated()")
 public class InboundReceiptsController {
     private final InboundReceiptsService inboundReceiptsService;
 
@@ -55,6 +54,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Create inbound receipt draft")
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_CREATE')")
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> create(@RequestBody @Valid InboundReceiptsRequest request) {
         log.info("Create inbound receipt draft");
         InboundReceiptsResponse response = inboundReceiptsService.create(request);
@@ -78,6 +78,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Get paginated inbound receipts")
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<InboundReceiptsResponse>>> getAll(
             @RequestParam(required = false) String receiptNumber,
             @RequestParam(required = false) String purchaseOrderId,
@@ -133,6 +134,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Get inbound receipts by purchase order id")
     @GetMapping("/by-po/{purchaseOrderId}")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
     public ResponseEntity<BaseResponse<List<InboundReceiptsResponse>>> getByPurchaseOrderId(@PathVariable String purchaseOrderId) {
         log.info("Get inbound receipts by purchase order id={}", purchaseOrderId);
         List<InboundReceiptsResponse> response = inboundReceiptsService.getByPurchaseOrderId(purchaseOrderId);
@@ -147,6 +149,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Get inbound receipt by id")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> getById(@PathVariable String id) {
         log.info("Get inbound receipt by id={}", id);
         InboundReceiptsResponse response = inboundReceiptsService.getById(id);
@@ -162,6 +165,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Update inbound receipt draft")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_UPDATE')")
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> update(@PathVariable String id, @RequestBody @Valid UpdateInboundReceiptsRequest request) {
         log.info("Update inbound receipt draft, id={}", id);
         InboundReceiptsResponse response = inboundReceiptsService.update(id, request);
@@ -176,6 +180,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Delete inbound receipt draft")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Delete inbound receipt draft, id={}", id);
         inboundReceiptsService.delete(id);
@@ -190,6 +195,7 @@ public class InboundReceiptsController {
      */
     @Operation(summary = "Confirm inbound receipt")
     @PutMapping("/{id}/confirm")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_UPDATE')")
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> confirm(@PathVariable String id) {
         log.info("Confirm inbound receipt, id={}", id);
         InboundReceiptsResponse response = inboundReceiptsService.confirm(id);

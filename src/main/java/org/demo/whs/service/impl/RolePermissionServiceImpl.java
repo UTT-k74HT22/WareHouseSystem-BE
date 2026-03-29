@@ -12,9 +12,11 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.RolePermissionMapper;
+import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.service.RolePermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +37,8 @@ public class RolePermissionServiceImpl implements RolePermissionService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final RolePermissionMapper rolePermissionMapper;
+    private final AccountHasRoleRepository accountHasRoleRepository;
+    private final PermissionCacheService permissionCacheService;
 
     @Override
     @Transactional
@@ -81,6 +85,7 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
         if (!newEntities.isEmpty()) {
             rolePermissionRepository.saveAll(newEntities);
+            evictRoleUsersPermissionCache(roleId);
         }
 
         log.info("Assigned {} new permissions to role {}", newEntities.size(), roleId);
@@ -115,6 +120,8 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         }
 
         log.info("Removed permission {} from role {}", permissionId, roleId);
+
+        evictRoleUsersPermissionCache(roleId);
     }
 
     @Override
@@ -137,5 +144,24 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         Page<PermissionResponse> responsePage = page.map(rolePermissionMapper::toResponse);
 
         return PageResponse.from(responsePage);
+    }
+
+    private void evictRoleUsersPermissionCache(String roleId) {
+        List<String> accountIds = accountHasRoleRepository.findAccountIdsByRoleId(roleId);
+        if (accountIds == null || accountIds.isEmpty()) {
+            log.debug("No user cache to evict for role {}", roleId);
+            return;
+        }
+
+        accountIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(permissionCacheService::evictPermissions);
+
+        log.info(
+                "Evicted permission cache for {} users after role {} permission change",
+                accountIds.size(),
+                roleId
+        );
     }
 }

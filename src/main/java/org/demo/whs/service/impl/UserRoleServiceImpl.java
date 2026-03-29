@@ -19,6 +19,7 @@ import org.demo.whs.mapper.UserRoleMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.RoleRepository;
+import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.service.UserRoleService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
     private final AccountMapper accountMapper;
+    private final PermissionCacheService permissionCacheService;
 
     @Override
     @Transactional
@@ -85,6 +87,8 @@ public class UserRoleServiceImpl implements UserRoleService {
 
         if (!toSave.isEmpty()) {
             accountHasRoleRepository.saveAll(toSave);
+            permissionCacheService.evictPermissions(userId);
+            log.info("Evicted permission cache after assigning roles to user {}", userId);
         }
 
         existing.addAll(toSave);
@@ -125,6 +129,8 @@ public class UserRoleServiceImpl implements UserRoleService {
 
         accountHasRoleRepository
                 .deleteByIdAccountIdAndIdRoleId(userId, roleId);
+
+        permissionCacheService.evictPermissions(userId);
 
         log.info("Deleted role {} from user {}", roleId, userId);
 

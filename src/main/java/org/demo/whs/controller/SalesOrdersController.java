@@ -36,7 +36,6 @@ import java.util.List;
 @Slf4j
 @Validated
 @Tag(name = "Sales Orders", description = "APIs for managing sales orders")
-@PreAuthorize("isAuthenticated()")
 public class SalesOrdersController {
 
     private final SalesOrdersService salesOrdersService;
@@ -50,6 +49,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Create sales order draft")
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_CREATE')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> create(@RequestBody @Valid SalesOrdersRequest request) {
         log.info("Create sales order draft");
         SalesOrdersResponse response = salesOrdersService.create(request);
@@ -65,6 +65,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Get paginated sales orders")
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_READ')")
     public ResponseEntity<BaseResponse<PageResponse<SalesOrdersResponse>>> getAll(
             @RequestParam(required = false) String soNumber,
             @RequestParam(required = false) String customerId,
@@ -116,6 +117,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Get sales order by id")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_READ')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> getById(@PathVariable String id) {
         log.info("Get sales order by id: {}", id);
         SalesOrdersResponse response = salesOrdersService.getById(id);
@@ -133,6 +135,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Update sales order draft")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_UPDATE')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> update(
             @PathVariable String id,
             @RequestBody @Valid UpdateSalesOrdersRequest request) {
@@ -153,6 +156,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Confirm sales order")
     @PutMapping("/{id}/confirm")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_UPDATE')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> confirm(@PathVariable String id) {
         log.info("Confirming sales order with id: {}", id);
         SalesOrdersResponse response = salesOrdersService.confirm(id);
@@ -171,6 +175,7 @@ public class SalesOrdersController {
      */
     @Operation(summary = "Cancel sales order")
     @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('PERM_SALES_ORDER_UPDATE')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> cancel(@PathVariable String id) {
         log.info("Cancelling sales order with id: {}", id);
         SalesOrdersResponse response = salesOrdersService.cancel(id);

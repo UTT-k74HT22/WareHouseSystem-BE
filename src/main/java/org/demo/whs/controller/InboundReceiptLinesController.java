@@ -31,7 +31,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Inbound Receipt Lines", description = "APIs for managing inbound receipt lines")
-@PreAuthorize("isAuthenticated()")
 public class InboundReceiptLinesController {
 
     private final InboundReceiptLinesService inboundReceiptLinesService;
@@ -44,6 +43,7 @@ public class InboundReceiptLinesController {
      */
     @PostMapping
     @Operation(summary = "Create inbound receipt line", description = "Create a new line for an inbound receipt in DRAFT status")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_LINE_CREATE')")
     public ResponseEntity<BaseResponse<InboundReceiptLinesResponse>> create(@Valid @RequestBody InboundReceiptLinesRequest request) {
         log.info("Creating inbound receipt line for receipt: {}", request.getInboundReceiptId());
         InboundReceiptLinesResponse response = inboundReceiptLinesService.create(request);
@@ -60,6 +60,7 @@ public class InboundReceiptLinesController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Update inbound receipt line", description = "Update an existing line of an inbound receipt in DRAFT status")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_LINE_UPDATE')")
     public ResponseEntity<BaseResponse<InboundReceiptLinesResponse>> update(@PathVariable String id, @Valid @RequestBody InboundReceiptLineUpdateRequest request) {
         log.info("Updating inbound receipt line: {}", id);
         InboundReceiptLinesResponse response = inboundReceiptLinesService.update(id, request);
@@ -74,6 +75,7 @@ public class InboundReceiptLinesController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete inbound receipt line", description = "Delete a line from an inbound receipt in DRAFT status")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_LINE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Deleting inbound receipt line: {}", id);
         inboundReceiptLinesService.delete(id);
@@ -88,6 +90,7 @@ public class InboundReceiptLinesController {
      */
     @GetMapping
     @Operation(summary = "Get lines by inbound receipt", description = "Get all lines for a specific inbound receipt")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_LINE_READ')")
     public ResponseEntity<BaseResponse<List<InboundReceiptLinesResponse>>> findByInboundReceiptId(@RequestParam String inboundReceiptId) {
         log.info("Getting lines for inbound receipt: {}", inboundReceiptId);
         List<InboundReceiptLinesResponse> responses = inboundReceiptLinesService.findByInboundReceiptId(inboundReceiptId);

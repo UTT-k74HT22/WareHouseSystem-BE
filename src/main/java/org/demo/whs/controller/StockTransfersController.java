@@ -39,7 +39,7 @@ public class StockTransfersController {
      * @return a response entity containing the created stock transfer response
      */
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_CREATE')")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> createTransfer(
             @RequestBody @Valid StockTransfersRequest request) {
         StockTransfersResponse response = stockTransfersService.createTransfer(request);
@@ -53,7 +53,7 @@ public class StockTransfersController {
      * @return a response entity containing the retrieved stock transfer response
      */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_READ')")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> getTransfer(@PathVariable String id) {
         StockTransfersResponse response = stockTransfersService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -66,7 +66,7 @@ public class StockTransfersController {
      * @return a response entity containing the updated stock transfer response after submission
      */
     @PutMapping("/{id}/submit")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_UPDATE')")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> submitTransfer(@PathVariable String id) {
         StockTransfersResponse response = stockTransfersService.submit(id);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -80,7 +80,7 @@ public class StockTransfersController {
      * @return a response entity containing a paginated response with the list of stock transfers
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_READ')")
     public ResponseEntity<BaseResponse<PageResponse<StockTransfersResponse>>> getTransfers(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
@@ -95,7 +95,7 @@ public class StockTransfersController {
      * @return a response entity containing the updated stock transfer response after completion
      */
     @PutMapping("/{id}/complete")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_UPDATE')")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> completeTransfer(@PathVariable String id) {
         StockTransfersResponse response = stockTransfersService.complete(id);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -108,7 +108,7 @@ public class StockTransfersController {
      * @return a response entity containing the updated stock transfer response after cancellation
      */
     @PutMapping("/{id}/cancel")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STOCK_TRANSFER_UPDATE')")
     public ResponseEntity<BaseResponse<StockTransfersResponse>> cancelTransfer(@PathVariable String id) {
         StockTransfersResponse response = stockTransfersService.cancel(id);
         return ResponseEntity.ok(BaseResponse.success(response));

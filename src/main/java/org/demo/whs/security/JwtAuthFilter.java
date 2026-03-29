@@ -18,6 +18,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String ACCESS_TOKEN_TYPE = "accessToken";
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService customUserDetailsService;
 
@@ -46,9 +47,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
+            String tokenType = jwtProvider.getTypeFromToken(token);
+            if (!ACCESS_TOKEN_TYPE.equals(tokenType)) {
+                log.warn("Rejected non-access token type {} for request: {}", tokenType, request.getRequestURI());
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             // Extract username and load user details
             String username = jwtProvider.getUsernameFromToken(token);
-            var userDetails = customUserDetailsService.loadUserByUsername(username);
+            CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(username);
+
+            if (!userDetails.isEnabled()
+                    || !userDetails.isAccountNonLocked()
+                    || !userDetails.isAccountNonExpired()
+                    || !userDetails.isCredentialsNonExpired()) {
+                log.warn("Rejected authentication for inactive/locked account: {}", username);
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             // Create authentication token
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

@@ -27,7 +27,6 @@ import java.util.List;
 @Slf4j
 @Validated
 @Tag(name = "Outbound Shipment Lines", description = "APIs for managing outbound shipment lines")
-@PreAuthorize("isAuthenticated()")
 public class OutboundShipmentLinesController {
 
     private final OutboundShipmentLinesService outboundShipmentLinesService;
@@ -43,7 +42,7 @@ public class OutboundShipmentLinesController {
      */
     @PostMapping
     @Operation(summary = "Create a new outbound shipment line")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_CREATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> create(@Valid @RequestBody OutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.create(request);
         return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment line created successfully"), HttpStatus.CREATED);
@@ -59,7 +58,7 @@ public class OutboundShipmentLinesController {
      */
     @GetMapping("/shipment/{shipmentId}")
     @Operation(summary = "Get all lines for a specific outbound shipment")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_READ')")
     public ResponseEntity<BaseResponse<List<OutboundShipmentLinesResponse>>> getByShipmentId(@PathVariable String shipmentId) {
         List<OutboundShipmentLinesResponse> response = outboundShipmentLinesService.getByShipmentId(shipmentId);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment lines retrieved successfully"));
@@ -75,7 +74,7 @@ public class OutboundShipmentLinesController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get an outbound shipment line by its ID")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_READ')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> getById(@PathVariable String id) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.getById(id);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line retrieved successfully"));
@@ -89,7 +88,7 @@ public class OutboundShipmentLinesController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Update an outbound shipment line (DRAFT status only)")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> update(@PathVariable String id, @Valid @RequestBody UpdateOutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.update(id, request);
         return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line updated successfully"));
@@ -103,7 +102,7 @@ public class OutboundShipmentLinesController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove an outbound shipment line (DRAFT status only)")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> remove(@PathVariable String id) {
         outboundShipmentLinesService.remove(id);
         return ResponseEntity.ok(BaseResponse.success(null, "Outbound shipment line removed successfully"));

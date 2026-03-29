@@ -46,7 +46,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(OutboundShipmentsController.class)
 @ActiveProfiles("test")
 @Import({OutboundShipmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser(roles = {"ADMIN", "MANAGER"})
+@WithMockUser(authorities = {
+        "PERM_OUTBOUND_SHIPMENT_CREATE",
+        "PERM_OUTBOUND_SHIPMENT_READ",
+        "PERM_OUTBOUND_SHIPMENT_UPDATE"
+})
 class OutboundShipmentsControllerTest {
 
     @Autowired

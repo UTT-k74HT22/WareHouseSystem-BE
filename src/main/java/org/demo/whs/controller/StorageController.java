@@ -53,7 +53,7 @@ public class StorageController {
      */
     @Operation(summary = "Upload a single file to MinIO storage")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_CREATE')")
     public ResponseEntity<BaseResponse<FileUploadResponse>> uploadFile(
             @Parameter(description = "File to upload (image, video, PDF, …)")
             @RequestParam("file") MultipartFile file,
@@ -77,7 +77,7 @@ public class StorageController {
      */
     @Operation(summary = "Upload multiple files in a single request (max 10)")
     @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_CREATE')")
     public ResponseEntity<BaseResponse<List<FileUploadResponse>>> uploadFiles(
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "folder", defaultValue = "uploads") String folder) {
@@ -107,7 +107,7 @@ public class StorageController {
      */
     @Operation(summary = "Generate a presigned URL to access a stored file")
     @GetMapping("/presigned-url")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_READ')")
     public ResponseEntity<BaseResponse<Map<String, String>>> getPresignedUrl(
             @NotBlank(message = "objectName must not be blank")
             @RequestParam("objectName") String objectName) {
@@ -134,7 +134,7 @@ public class StorageController {
      */
     @Operation(summary = "Delete a file from MinIO storage")
     @DeleteMapping(params = "objectName")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteFile(
             @NotBlank(message = "objectName must not be blank")
             @RequestParam("objectName") String objectName) {
@@ -154,7 +154,7 @@ public class StorageController {
      * @param objectName full object path captured from wildcard path variable
      */
     @DeleteMapping("/{*objectName}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteFileLegacyPath(
             @PathVariable String objectName) {
 
@@ -177,7 +177,7 @@ public class StorageController {
      */
     @Operation(summary = "Check if a file exists in MinIO storage")
     @GetMapping("/exists")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_STORAGE_READ')")
     public ResponseEntity<BaseResponse<Map<String, Boolean>>> fileExists(
             @NotBlank(message = "objectName must not be blank")
             @RequestParam("objectName") String objectName) {
