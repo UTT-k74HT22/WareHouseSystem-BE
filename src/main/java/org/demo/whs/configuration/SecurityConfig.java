@@ -94,6 +94,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/verify-forgot-password-otp",
                                 "/api/v1/auth/reset-password"
                         ).permitAll()
+                        // ChatBot
+                        .requestMatchers("/api/v1/chatbot/**").permitAll()
                         // OTP
                         .requestMatchers("/api/v1/otp/**").permitAll()
 
