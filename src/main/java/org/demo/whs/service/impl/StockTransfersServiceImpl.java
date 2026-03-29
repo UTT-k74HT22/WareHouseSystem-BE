@@ -16,6 +16,7 @@ import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.ReferenceType;
+import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.entity.enums.StockTransfersStatus;
 import org.demo.whs.exception.BadRequestException;
@@ -29,6 +30,7 @@ import org.demo.whs.repository.EmployeeRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.ProductRepository;
+import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.StockTransfersRepository;
 import org.demo.whs.security.SecurityUtils;
@@ -60,6 +62,7 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     private final BatchRepository batchRepository;
     private final AccountRepository accountRepository;
     private final EmployeeRepository employeeRepository;
+    private final RoleRepository roleRepository;
     private final LocationService locationService;
     private final StockTransfersMapper stockTransfersMapper;
     private final StockMovementsMapper stockMovementsMapper;
@@ -70,9 +73,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     public StockTransfersResponse createTransfer(StockTransfersRequest request) {
         log.info("StockTransfersServiceImpl createTransfer request={}", request);
 
-        validateTransferRequest(request);
-
         String actorId = getCurrentActorId();
+        validateTransferRequest(request, actorId);
         String transferNumber = identifierGenerator.generate("TRF", 50, stockTransfersRepository::existsByTransferNumber);
         StockTransfers transfer = stockTransfersMapper.toEntity(request, transferNumber, actorId);
         StockTransfers savedTransfer = stockTransfersRepository.save(transfer);
@@ -109,6 +111,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
+        validateWarehouseAccess(actorId, transfer.getWarehouseId());
+
         if (transfer.getStatus() != StockTransfersStatus.DRAFT) {
             throw new BadRequestException("Only draft transfer can be submitted", ErrorCode.STF_002);
         }
@@ -130,6 +134,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
 
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
+
+        validateWarehouseAccess(actorId, transfer.getWarehouseId());
 
         if (transfer.getStatus() != StockTransfersStatus.PENDING) {
             throw new BadRequestException("Only pending transfer can be completed", ErrorCode.STF_002);
@@ -182,13 +188,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         BigDecimal destinationBefore = defaultZero(destinationInventory.getOnHandQuantity());
         BigDecimal destinationAfter = destinationBefore.add(quantity);
 
-        sourceInventory.setOnHandQuantity(sourceAfter);
-        sourceInventory.setLastMovementAt(now);
-        sourceInventory.setUpdatedBy(actorId);
-
-        destinationInventory.setOnHandQuantity(destinationAfter);
-        destinationInventory.setLastMovementAt(now);
-        destinationInventory.setUpdatedBy(actorId);
+        applyTransferInventoryQuantity(sourceInventory, sourceAfter, actorId, now);
+        applyTransferInventoryQuantity(destinationInventory, destinationAfter, actorId, now);
 
         inventoryRepository.save(sourceInventory);
         inventoryRepository.save(destinationInventory);
@@ -245,6 +246,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         StockTransfers transfer = stockTransfersRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Stock transfer not found", ErrorCode.STF_001));
 
+        validateWarehouseAccess(actorId, transfer.getWarehouseId());
+
         if (transfer.getStatus() != StockTransfersStatus.DRAFT && transfer.getStatus() != StockTransfersStatus.PENDING) {
             throw new BadRequestException("Only draft or pending transfer can be cancelled", ErrorCode.STF_002);
         }
@@ -256,8 +259,8 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         return stockTransfersMapper.toResponse(savedTransfer);
     }
 
-    private void validateTransferRequest(StockTransfersRequest request) {
-        validateWarehouseOwnership(request.getWarehouseId());
+    private void validateTransferRequest(StockTransfersRequest request, String actorId) {
+        validateWarehouseAccess(actorId, request.getWarehouseId());
 
         if (request.getFromLocationId().equals(request.getToLocationId())) {
             throw new BadRequestException("Source and destination locations must be different", ErrorCode.STF_002);
@@ -432,6 +435,12 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         return v == null ? BigDecimal.ZERO : v;
     }
 
+    private void applyTransferInventoryQuantity(Inventory inventory, BigDecimal quantityAfter, String actorId, LocalDateTime movementTime) {
+        inventory.setOnHandQuantity(quantityAfter);
+        inventory.setLastMovementAt(movementTime);
+        inventory.setUpdatedBy(actorId);
+    }
+
     private String buildInventoryLockKey(StockTransfers transfer, String locationId) {
         return String.join("|",
                 normalizeKeyPart(transfer.getProductId()),
@@ -445,12 +454,23 @@ public class StockTransfersServiceImpl implements StockTransfersService {
         return value == null ? "" : value;
     }
 
-    private void validateWarehouseOwnership(String warehouseId) {
-        String accountId = getCurrentActorId();
-        Employee employee = employeeRepository.findByAccountId(accountId)
+    private void validateWarehouseAccess(String actorId, String warehouseId) {
+        if (hasRole(roleRepository.findRoleNamesByAccountId(actorId), RoleType.ADMIN)) {
+            return;
+        }
+        Employee employee = employeeRepository.findByAccountId(actorId)
                 .orElseThrow(() -> new BadRequestException("Employee not found for current user", ErrorCode.AUTH_003));
         if (!employee.getWarehouseId().equals(warehouseId)) {
             throw new BadRequestException("You do not have permission to access this warehouse", ErrorCode.AUTH_003);
         }
+    }
+
+    private boolean hasRole(List<String> roleNames, RoleType targetRole) {
+        if (roleNames == null || roleNames.isEmpty()) {
+            return false;
+        }
+        return roleNames.stream()
+                .filter(roleName -> roleName != null && !roleName.isBlank())
+                .anyMatch(roleName -> targetRole.name().equalsIgnoreCase(roleName.trim()));
     }
 }
