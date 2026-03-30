@@ -1,4 +1,4 @@
-package org.demo.whs.entity.dto.chatbot;
+package org.demo.whs.entity.dto.response.chatbot;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
