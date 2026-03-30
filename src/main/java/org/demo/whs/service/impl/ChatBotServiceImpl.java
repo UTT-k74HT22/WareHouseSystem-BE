@@ -1,5 +1,6 @@
 package org.demo.whs.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
@@ -21,6 +22,8 @@ import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.ProductService;
 import org.demo.whs.service.RedisService;
 import org.demo.whs.service.chatbot.ChatBotCommand;
+import org.demo.whs.service.chatbot.ChatBotConversationContext;
+import org.demo.whs.service.chatbot.ChatBotIntent;
 import org.demo.whs.service.chatbot.ChatBotIntentResolver;
 import org.demo.whs.service.chatbot.ChatBotResponseFormatter;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,9 +33,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -42,7 +47,9 @@ import java.util.concurrent.TimeUnit;
 public class ChatBotServiceImpl implements ChatBotService {
 
     private static final String AI_CACHE_PREFIX = "chatbot:ai:";
+    private static final String CONVERSATION_CONTEXT_PREFIX = "chatbot:conversation:";
     private static final int PRODUCT_LOOKUP_LIMIT = 5;
+    private static final long CONVERSATION_CONTEXT_TTL_MINUTES = 30;
 
     private final ProductService productService;
     private final InventoryService inventoryService;
@@ -64,40 +71,69 @@ public class ChatBotServiceImpl implements ChatBotService {
     @Override
     public ChatBotResponse chat(ChatBotRequest request) {
         String originalMessage = request.getMessage().trim();
-        ChatBotCommand command = intentResolver.resolve(originalMessage);
+        String conversationId = resolveConversationId(request.getConversationId());
+        ChatBotConversationContext conversationContext = loadConversationContext(conversationId);
 
-        log.info("Chatbot intent={} subject='{}'", command.intent(), command.subjectKeyword());
+        ChatBotCommand rawCommand = intentResolver.resolve(originalMessage);
+        ChatBotCommand command = enrichCommandWithContext(rawCommand, conversationContext);
+
+        log.info(
+                "Chatbot conversation={} intent={} subject='{}' lastProduct='{}'",
+                conversationId,
+                command.intent(),
+                command.subjectKeyword(),
+                conversationContext.getLastProductSku()
+        );
 
         try {
-            return switch (command.intent()) {
-                case GREETING -> new ChatBotResponse(responseFormatter.greeting());
-                case HELP -> new ChatBotResponse(responseFormatter.help());
-                case PRODUCT_LOOKUP -> handleProductLookup(command);
-                case INVENTORY_SUMMARY -> handleInventorySummary(command);
-                case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command);
-                case BATCH_EXPIRING -> handleBatchExpiring(command);
-                case UNKNOWN -> handleUnknown(command);
+            ChatBotResponse response = switch (command.intent()) {
+                case GREETING -> buildResponse(conversationId, responseFormatter.greeting());
+                case HELP -> buildResponse(conversationId, responseFormatter.help());
+                case PRODUCT_LOOKUP -> handleProductLookup(command, conversationId, conversationContext);
+                case INVENTORY_SUMMARY -> handleInventorySummary(command, conversationId, conversationContext);
+                case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command, conversationId, conversationContext);
+                case BATCH_EXPIRING -> handleBatchExpiring(command, conversationId, conversationContext);
+                case UNKNOWN -> handleUnknown(command, conversationId, conversationContext);
             };
+
+            saveConversationContext(conversationId, conversationContext);
+            return response;
         } catch (IllegalStateException ex) {
-            return new ChatBotResponse(ex.getMessage());
+            saveConversationContext(conversationId, conversationContext);
+            return buildResponse(conversationId, ex.getMessage());
         }
     }
 
-    private ChatBotResponse handleProductLookup(ChatBotCommand command) {
+    private ChatBotResponse handleProductLookup(
+            ChatBotCommand command,
+            String conversationId,
+            ChatBotConversationContext conversationContext
+    ) {
         String keyword = resolveLookupKeyword(command);
         List<ProductResponse> products = findProducts(keyword, PRODUCT_LOOKUP_LIMIT);
 
         if (products.isEmpty()) {
-            return new ChatBotResponse(responseFormatter.noProductMatch(keyword));
+            rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
         }
 
-        return new ChatBotResponse(responseFormatter.productLookup(products));
+        if (products.size() == 1) {
+            rememberConversation(conversationContext, command.intent(), products.get(0), command.thresholdDays(), keyword);
+        }
+
+        return buildResponse(conversationId, responseFormatter.productLookup(products));
     }
 
-    private ChatBotResponse handleInventorySummary(ChatBotCommand command) {
+    private ChatBotResponse handleInventorySummary(
+            ChatBotCommand command,
+            String conversationId,
+            ChatBotConversationContext conversationContext
+    ) {
         ProductResponse product = resolveSingleProduct(command);
         if (product == null) {
-            return new ChatBotResponse(responseFormatter.noProductMatch(resolveLookupKeyword(command)));
+            String keyword = resolveLookupKeyword(command);
+            rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
         }
 
         InventorySummaryResponse summary;
@@ -106,13 +142,21 @@ public class ChatBotServiceImpl implements ChatBotService {
         } catch (NotFoundException ex) {
             summary = emptyInventorySummary(product);
         }
-        return new ChatBotResponse(responseFormatter.inventorySummary(product, summary));
+
+        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command));
+        return buildResponse(conversationId, responseFormatter.inventorySummary(product, summary));
     }
 
-    private ChatBotResponse handleInventoryByLocation(ChatBotCommand command) {
+    private ChatBotResponse handleInventoryByLocation(
+            ChatBotCommand command,
+            String conversationId,
+            ChatBotConversationContext conversationContext
+    ) {
         ProductResponse product = resolveSingleProduct(command);
         if (product == null) {
-            return new ChatBotResponse(responseFormatter.noProductMatch(resolveLookupKeyword(command)));
+            String keyword = resolveLookupKeyword(command);
+            rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
         }
 
         InventoryFilterRequest filterRequest = InventoryFilterRequest.builder()
@@ -120,28 +164,39 @@ public class ChatBotServiceImpl implements ChatBotService {
                 .build();
 
         List<InventoryByLocationResponse> locations = inventoryService.getInventoryByLocation(filterRequest);
+        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command));
+
         if (locations == null || locations.isEmpty()) {
-            return new ChatBotResponse(responseFormatter.noInventoryByLocation(product));
+            return buildResponse(conversationId, responseFormatter.noInventoryByLocation(product));
         }
 
-        return new ChatBotResponse(responseFormatter.inventoryByLocation(product, locations));
+        return buildResponse(conversationId, responseFormatter.inventoryByLocation(product, locations));
     }
 
-    private ChatBotResponse handleBatchExpiring(ChatBotCommand command) {
+    private ChatBotResponse handleBatchExpiring(
+            ChatBotCommand command,
+            String conversationId,
+            ChatBotConversationContext conversationContext
+    ) {
         int thresholdDays = command.thresholdDays() != null ? command.thresholdDays() : 30;
         String keyword = command.subjectKeyword();
 
         if (!StringUtils.hasText(keyword)) {
             List<BatchExpiringResponse> batches = batchService.getExpiringBatches(thresholdDays, null);
+            rememberConversation(conversationContext, command.intent(), null, thresholdDays, null);
+
             if (batches == null || batches.isEmpty()) {
-                return new ChatBotResponse(responseFormatter.noBatchExpiring(thresholdDays, null));
+                return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, null));
             }
-            return new ChatBotResponse(responseFormatter.batchExpiringGlobal(thresholdDays, batches));
+
+            return buildResponse(conversationId, responseFormatter.batchExpiringGlobal(thresholdDays, batches));
         }
 
         ProductResponse product = resolveSingleProduct(command);
         if (product == null) {
-            return new ChatBotResponse(responseFormatter.noProductMatch(resolveLookupKeyword(command)));
+            String resolvedKeyword = resolveLookupKeyword(command);
+            rememberConversation(conversationContext, command.intent(), null, thresholdDays, resolvedKeyword);
+            return buildResponse(conversationId, responseFormatter.noProductMatch(resolvedKeyword));
         }
 
         LocalDate deadline = LocalDate.now().plusDays(thresholdDays);
@@ -153,16 +208,23 @@ public class ChatBotServiceImpl implements ChatBotService {
                         && batch.getInventorySnapshot().getTotalAvailableQuantity().signum() > 0)
                 .toList();
 
+        rememberConversation(conversationContext, command.intent(), product, thresholdDays, resolveLookupKeyword(command));
+
         if (batches.isEmpty()) {
-            return new ChatBotResponse(responseFormatter.noBatchExpiring(thresholdDays, product));
+            return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, product));
         }
 
-        return new ChatBotResponse(responseFormatter.batchExpiringByProduct(product, thresholdDays, batches));
+        return buildResponse(conversationId, responseFormatter.batchExpiringByProduct(product, thresholdDays, batches));
     }
 
-    private ChatBotResponse handleUnknown(ChatBotCommand command) {
-        String reply = callGeminiWithRetry(buildFallbackPrompt(command.originalMessage()));
-        return new ChatBotResponse(reply);
+    private ChatBotResponse handleUnknown(
+            ChatBotCommand command,
+            String conversationId,
+            ChatBotConversationContext conversationContext
+    ) {
+        rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), command.subjectKeyword());
+        String reply = callGeminiWithRetry(buildFallbackPrompt(command.originalMessage(), conversationContext));
+        return buildResponse(conversationId, reply);
     }
 
     private ProductResponse resolveSingleProduct(ChatBotCommand command) {
@@ -277,15 +339,16 @@ public class ChatBotServiceImpl implements ChatBotService {
         return responseFormatter.aiFallbackUnavailable();
     }
 
-    private String buildFallbackPrompt(String originalMessage) {
+    private String buildFallbackPrompt(String originalMessage, ChatBotConversationContext conversationContext) {
         return """
                 Bạn là trợ lý của hệ thống kho WHS.
                 Chỉ được trả lời các câu hỏi mở, hướng dẫn sử dụng, hoặc giải thích tổng quan.
                 Không được tự ý đưa ra tồn kho, SKU, batch, giá, hoặc số liệu vận hành nếu prompt không cung cấp dữ liệu.
                 Nếu câu hỏi cần dữ liệu thời gian thực, hãy nói rằng bạn không đủ dữ liệu và yêu cầu người dùng hỏi theo SKU hoặc tên sản phẩm.
 
+                Ngữ cảnh gần nhất: %s
                 Câu hỏi người dùng: %s
-                """.formatted(originalMessage);
+                """.formatted(buildContextSummary(conversationContext), originalMessage);
     }
 
     private InventorySummaryResponse emptyInventorySummary(ProductResponse product) {
@@ -297,6 +360,121 @@ public class ChatBotServiceImpl implements ChatBotService {
                 .totalReservedQuantity(java.math.BigDecimal.ZERO)
                 .warehouseCount(0L)
                 .locationCount(0L)
+                .build();
+    }
+
+    private ChatBotConversationContext loadConversationContext(String conversationId) {
+        return redisService.getOptional(conversationContextKey(conversationId), new TypeReference<ChatBotConversationContext>() {
+        }).orElseGet(() -> ChatBotConversationContext.builder()
+                .conversationId(conversationId)
+                .build());
+    }
+
+    private void saveConversationContext(String conversationId, ChatBotConversationContext conversationContext) {
+        conversationContext.setConversationId(conversationId);
+        conversationContext.setUpdatedAt(LocalDateTime.now());
+        redisService.saveWithTTL(
+                conversationContextKey(conversationId),
+                conversationContext,
+                CONVERSATION_CONTEXT_TTL_MINUTES,
+                TimeUnit.MINUTES
+        );
+    }
+
+    private ChatBotCommand enrichCommandWithContext(
+            ChatBotCommand command,
+            ChatBotConversationContext conversationContext
+    ) {
+        if (!StringUtils.hasText(conversationContext.getLastProductSku()) || StringUtils.hasText(command.subjectKeyword())) {
+            return command;
+        }
+
+        if (command.intent() == ChatBotIntent.INVENTORY_SUMMARY
+                || command.intent() == ChatBotIntent.INVENTORY_BY_LOCATION) {
+            return new ChatBotCommand(
+                    command.intent(),
+                    command.originalMessage(),
+                    command.normalizedMessage(),
+                    conversationContext.getLastProductSku(),
+                    command.thresholdDays()
+            );
+        }
+
+        if ((command.intent() == ChatBotIntent.PRODUCT_LOOKUP || command.intent() == ChatBotIntent.BATCH_EXPIRING)
+                && referencesCurrentSubject(command.normalizedMessage())) {
+            return new ChatBotCommand(
+                    command.intent(),
+                    command.originalMessage(),
+                    command.normalizedMessage(),
+                    conversationContext.getLastProductSku(),
+                    command.thresholdDays()
+            );
+        }
+
+        return command;
+    }
+
+    private boolean referencesCurrentSubject(String normalizedMessage) {
+        if (!StringUtils.hasText(normalizedMessage)) {
+            return false;
+        }
+
+        return normalizedMessage.contains(" san pham nay")
+                || normalizedMessage.contains(" mat hang nay")
+                || normalizedMessage.contains(" sku nay")
+                || normalizedMessage.contains(" sp nay")
+                || normalizedMessage.endsWith(" nay")
+                || normalizedMessage.contains(" san pham do")
+                || normalizedMessage.contains(" mat hang do")
+                || normalizedMessage.endsWith(" do")
+                || normalizedMessage.contains(" cua no")
+                || normalizedMessage.contains(" cua san pham nay");
+    }
+
+    private void rememberConversation(
+            ChatBotConversationContext conversationContext,
+            ChatBotIntent intent,
+            ProductResponse product,
+            Integer thresholdDays,
+            String resolvedKeyword
+    ) {
+        conversationContext.setLastIntent(intent);
+        conversationContext.setLastResolvedKeyword(resolvedKeyword);
+        conversationContext.setLastThresholdDays(thresholdDays);
+
+        if (product != null) {
+            conversationContext.setLastProductId(product.getId());
+            conversationContext.setLastProductSku(product.getSku());
+            conversationContext.setLastProductName(product.getName());
+        }
+    }
+
+    private String buildContextSummary(ChatBotConversationContext conversationContext) {
+        if (!StringUtils.hasText(conversationContext.getLastProductSku())) {
+            return "Không có.";
+        }
+
+        return "lastIntent=%s, product=%s - %s".formatted(
+                conversationContext.getLastIntent(),
+                conversationContext.getLastProductSku(),
+                StringUtils.hasText(conversationContext.getLastProductName())
+                        ? conversationContext.getLastProductName()
+                        : "N/A"
+        );
+    }
+
+    private String resolveConversationId(String conversationId) {
+        return StringUtils.hasText(conversationId) ? conversationId.trim() : UUID.randomUUID().toString();
+    }
+
+    private String conversationContextKey(String conversationId) {
+        return CONVERSATION_CONTEXT_PREFIX + conversationId;
+    }
+
+    private ChatBotResponse buildResponse(String conversationId, String reply) {
+        return ChatBotResponse.builder()
+                .reply(reply)
+                .conversationId(conversationId)
                 .build();
     }
 }

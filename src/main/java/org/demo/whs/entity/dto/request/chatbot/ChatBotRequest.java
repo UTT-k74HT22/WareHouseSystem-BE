@@ -9,4 +9,7 @@ public class ChatBotRequest {
     @NotBlank(message = "Message is required")
     @Size(max = 1000, message = "Message must not exceed 1000 characters")
     private String message;
+
+    @Size(max = 100, message = "Conversation ID must not exceed 100 characters")
+    private String conversationId;
 }

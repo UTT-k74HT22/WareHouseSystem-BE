@@ -11,4 +11,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatBotResponse {
     private String reply;
+    private String conversationId;
 }
