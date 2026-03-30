@@ -17,23 +17,23 @@ import java.util.stream.Collectors;
 public class ChatBotResponseFormatter {
 
     public String greeting() {
-        return "Chao ban. Toi la WHS Assistant. Toi co the tra cuu san pham, ton kho, vi tri ton va batch sap het han bang du lieu that tu he thong.";
+        return "Chào bạn. Tôi là WHS Assistant. Tôi có thể tra cứu sản phẩm, tồn kho, vị trí tồn và batch sắp hết hạn bằng dữ liệu thật từ hệ thống.";
     }
 
     public String help() {
         return """
-                Toi uu tien tra loi bang du lieu that tu WMS va chi goi AI khi that su can.
+                Tôi ưu tiên trả lời bằng dữ liệu thật từ WMS và chỉ gọi AI khi thật sự cần.
 
-                Ban co the hoi:
-                - Ton kho SKU-001 con bao nhieu?
-                - San pham TV Samsung dang o kho nao con hang?
-                - Batch nao sap het han trong 30 ngay?
-                - Thong tin san pham SKU-001
+                Bạn có thể hỏi:
+                - Tồn kho SKU-001 còn bao nhiêu?
+                - Sản phẩm TV Samsung đang ở kho nào còn hàng?
+                - Batch nào sắp hết hạn trong 30 ngày?
+                - Thông tin sản phẩm SKU-001
                 """;
     }
 
     public String noProductMatch(String keyword) {
-        return "Khong tim thay san pham nao khop voi tu khoa '" + keyword + "'. Hay thu lai bang SKU hoac ten san pham ro hon.";
+        return "Không tìm thấy sản phẩm nào khớp với từ khóa '" + keyword + "'. Hãy thử lại bằng SKU hoặc tên sản phẩm rõ hơn.";
     }
 
     public String ambiguousProducts(String keyword, List<ProductResponse> products) {
@@ -41,48 +41,48 @@ public class ChatBotResponseFormatter {
                 .map(product -> "- `" + safe(product.getSku()) + "` | " + safe(product.getName()))
                 .collect(Collectors.joining("\n"));
 
-        return "Tim thay nhieu san pham khop voi '" + keyword + "'. Hay chon ro hon bang SKU:\n" + matches;
+        return "Tìm thấy nhiều sản phẩm khớp với '" + keyword + "'. Hãy chọn rõ hơn bằng SKU:\n" + matches;
     }
 
     public String productLookup(List<ProductResponse> products) {
         if (products.size() == 1) {
             ProductResponse product = products.get(0);
             return """
-                    Thong tin san pham:
+                    Thông tin sản phẩm:
                     - SKU: `%s`
-                    - Ten: %s
-                    - Danh muc: %s
-                    - Don vi: %s
-                    - Gia ban: %s
-                    - Trang thai: %s
+                    - Tên: %s
+                    - Danh mục: %s
+                    - Đơn vị: %s
+                    - Giá bán: %s
+                    - Trạng thái: %s
                     """.formatted(
                     safe(product.getSku()),
                     safe(product.getName()),
                     safe(product.getCategoryName()),
                     safe(product.getUomName()),
-                    decimal(product.getSellingPrice(), "Chua co"),
+                    decimal(product.getSellingPrice(), "Chưa có"),
                     product.getStatus() != null ? product.getStatus().name() : "UNKNOWN"
             );
         }
 
         String rows = products.stream()
                 .map(product -> "- `" + safe(product.getSku()) + "` | " + safe(product.getName())
-                        + " | Gia: " + decimal(product.getSellingPrice(), "Chua co"))
+                        + " | Giá: " + decimal(product.getSellingPrice(), "Chưa có"))
                 .collect(Collectors.joining("\n"));
 
-        return "Tim thay " + products.size() + " san pham:\n" + rows;
+        return "Tìm thấy " + products.size() + " sản phẩm:\n" + rows;
     }
 
     public String inventorySummary(ProductResponse product, InventorySummaryResponse summary) {
         return """
-                Ton kho hien tai:
+                Tồn kho hiện tại:
                 - SKU: `%s`
-                - Ten: %s
+                - Tên: %s
                 - On hand: %s
                 - Reserved: %s
                 - Available: %s
-                - So kho co hang: %s
-                - So vi tri co hang: %s
+                - Số kho có hàng: %s
+                - Số vị trí có hàng: %s
                 """.formatted(
                 safe(product.getSku()),
                 safe(product.getName()),
@@ -99,11 +99,11 @@ public class ChatBotResponseFormatter {
                 .flatMap(location -> location.getItems().stream().map(item -> formatLocationLine(location, item)))
                 .collect(Collectors.joining("\n"));
 
-        return "Ton kho theo vi tri cho `" + safe(product.getSku()) + "` - " + safe(product.getName()) + ":\n" + body;
+        return "Tồn kho theo vị trí cho `" + safe(product.getSku()) + "` - " + safe(product.getName()) + ":\n" + body;
     }
 
     public String noInventoryByLocation(ProductResponse product) {
-        return "Khong tim thay ton kho theo vi tri cho `" + safe(product.getSku()) + "` - " + safe(product.getName()) + ".";
+        return "Không tìm thấy tồn kho theo vị trí cho `" + safe(product.getSku()) + "` - " + safe(product.getName()) + ".";
     }
 
     public String batchExpiringGlobal(Integer thresholdDays, List<BatchExpiringResponse> batches) {
@@ -111,52 +111,52 @@ public class ChatBotResponseFormatter {
                 .limit(10)
                 .map(batch -> "- `" + safe(batch.getBatchNumber()) + "` | " + safe(batch.getProductSku())
                         + " | " + safe(batch.getProductName())
-                        + " | Het han: " + safe(batch.getExpiryDate())
-                        + " | Con kha dung: " + decimal(available(batch.getInventorySnapshot()), "0"))
+                        + " | Hết hạn: " + safe(batch.getExpiryDate())
+                        + " | Còn khả dụng: " + decimal(available(batch.getInventorySnapshot()), "0"))
                 .collect(Collectors.joining("\n"));
 
-        return "Top batch sap het han trong " + thresholdDays + " ngay:\n" + body;
+        return "Top batch sắp hết hạn trong " + thresholdDays + " ngày:\n" + body;
     }
 
     public String batchExpiringByProduct(ProductResponse product, Integer thresholdDays, List<BatchByProductResponse> batches) {
         String body = batches.stream()
                 .limit(10)
-                .map(batch -> "- `" + safe(batch.getBatchNumber()) + "` | Het han: " + safe(batch.getExpiryDate())
-                        + " | Trang thai: " + (batch.getStatus() != null ? batch.getStatus().name() : "UNKNOWN")
-                        + " | Con kha dung: " + decimal(available(batch.getInventorySnapshot()), "0"))
+                .map(batch -> "- `" + safe(batch.getBatchNumber()) + "` | Hết hạn: " + safe(batch.getExpiryDate())
+                        + " | Trạng thái: " + (batch.getStatus() != null ? batch.getStatus().name() : "UNKNOWN")
+                        + " | Còn khả dụng: " + decimal(available(batch.getInventorySnapshot()), "0"))
                 .collect(Collectors.joining("\n"));
 
-        return "Batch sap het han cho `" + safe(product.getSku()) + "` - " + safe(product.getName())
-                + " trong " + thresholdDays + " ngay:\n" + body;
+        return "Batch sắp hết hạn cho `" + safe(product.getSku()) + "` - " + safe(product.getName())
+                + " trong " + thresholdDays + " ngày:\n" + body;
     }
 
     public String noBatchExpiring(Integer thresholdDays, ProductResponse product) {
         if (product == null) {
-            return "Khong co batch nao sap het han trong " + thresholdDays + " ngay.";
+            return "Không có batch nào sắp hết hạn trong " + thresholdDays + " ngày.";
         }
 
-        return "Khong co batch nao sap het han trong " + thresholdDays + " ngay cho `"
+        return "Không có batch nào sắp hết hạn trong " + thresholdDays + " ngày cho `"
                 + safe(product.getSku()) + "` - " + safe(product.getName()) + ".";
     }
 
     public String unsupportedRealTimeQuestion() {
         return """
-                Toi chua du du lieu de tra loi chac chan cau hoi nay.
-                De tranh tra loi sai, hay hoi theo mot trong cac mau:
-                - Ton kho [SKU/ten san pham]
-                - San pham [SKU/ten]
-                - Batch sap het han [so ngay]
+                Tôi chưa đủ dữ liệu để trả lời chắc chắn câu hỏi này.
+                Để tránh trả lời sai, hãy hỏi theo một trong các mẫu:
+                - Tồn kho [SKU/tên sản phẩm]
+                - Sản phẩm [SKU/tên]
+                - Batch sắp hết hạn [số ngày]
                 """;
     }
 
     public String aiFallbackUnavailable() {
-        return "Toi khong the su dung AI fallback luc nay. Ban hay hoi theo SKU, ten san pham hoac batch cu the de toi tra du lieu that tu he thong.";
+        return "Tôi không thể sử dụng AI fallback lúc này. Bạn hãy hỏi theo SKU, tên sản phẩm hoặc batch cụ thể để tôi trả dữ liệu thật từ hệ thống.";
     }
 
     private String formatLocationLine(InventoryByLocationResponse location, LocationInventoryItemResponse item) {
         String batchPart = item.getBatchNumber() != null ? " | Batch: `" + item.getBatchNumber() + "`" : "";
         return "- Kho: " + safe(location.getWarehouseName())
-                + " | Vi tri: " + safe(location.getLocationCode()) + " - " + safe(location.getLocationName())
+                + " | Vị trí: " + safe(location.getLocationCode()) + " - " + safe(location.getLocationName())
                 + batchPart
                 + " | Available: " + decimal(item.getAvailableQuantity(), "0")
                 + " | On hand: " + decimal(item.getOnHandQuantity(), "0")

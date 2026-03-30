@@ -40,6 +40,12 @@ public class ChatBotIntentResolver {
             "con bao nhieu",
             "con hang khong",
             "so luong ton",
+            "so luong",
+            "con trong kho",
+            "trong kho con",
+            "so luong con",
+            "hien tai trong kho",
+            "kiem tra so luong",
             "available",
             "kiem tra ton"
     );
@@ -122,7 +128,8 @@ public class ChatBotIntentResolver {
     }
 
     private boolean containsAny(String message, List<String> keywords) {
-        return keywords.stream().anyMatch(message::contains);
+        String paddedMessage = " " + message.trim() + " ";
+        return keywords.stream().anyMatch(keyword -> paddedMessage.contains(" " + keyword + " "));
     }
 
     private boolean looksLikeSku(String originalMessage) {
@@ -153,7 +160,7 @@ public class ChatBotIntentResolver {
         }
 
         String candidate = normalizedMessage
-                .replaceAll("\\b(xin|cho toi|giup toi|vui long|hay|kiem tra|xem|tim|thong tin|ve|cua|cho|san pham|sku|ma|gia|ton kho|con bao nhieu|con hang khong|o kho nao|o dau con|ton theo kho|ton theo vi tri|vi tri nao con|kho nao con|batch|lo|sap het han|het han|trong|ngay)\\b", " ")
+                .replaceAll("\\b(xin|cho toi|giup toi|vui long|hay|kiem tra|xem|tim|thong tin|ve|cua|cho|san pham|sku|ma|gia|ton kho|con bao nhieu|con hang khong|so luong ton|so luong con|so luong|con trong kho|trong kho con|hien tai trong kho|kiem tra so luong|o kho nao|o dau con|ton theo kho|ton theo vi tri|vi tri nao con|kho nao con|batch|lo|sap het han|het han|trong|ngay)\\b", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
 

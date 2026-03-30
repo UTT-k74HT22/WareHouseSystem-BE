@@ -279,12 +279,12 @@ public class ChatBotServiceImpl implements ChatBotService {
 
     private String buildFallbackPrompt(String originalMessage) {
         return """
-                Ban la tro ly cua he thong kho WHS.
-                Chi duoc tra loi cac cau hoi mo, huong dan su dung, hoac giai thich tong quan.
-                Khong duoc tu y dua ra ton kho, SKU, batch, gia, hoac so lieu van hanh neu prompt khong cung cap du lieu.
-                Neu cau hoi can du lieu thoi gian thuc, hay noi rang ban khong du du lieu va yeu cau nguoi dung hoi theo SKU hoac ten san pham.
+                Bạn là trợ lý của hệ thống kho WHS.
+                Chỉ được trả lời các câu hỏi mở, hướng dẫn sử dụng, hoặc giải thích tổng quan.
+                Không được tự ý đưa ra tồn kho, SKU, batch, giá, hoặc số liệu vận hành nếu prompt không cung cấp dữ liệu.
+                Nếu câu hỏi cần dữ liệu thời gian thực, hãy nói rằng bạn không đủ dữ liệu và yêu cầu người dùng hỏi theo SKU hoặc tên sản phẩm.
 
-                Cau hoi nguoi dung: %s
+                Câu hỏi người dùng: %s
                 """.formatted(originalMessage);
     }
 
