@@ -164,6 +164,11 @@ public class ChatBotIntentResolver {
                 .replaceAll("\\s+", " ")
                 .trim();
 
+        if (normalizedMessage.contains("ton kho")
+                || normalizedMessage.contains("so luong")
+                || normalizedMessage.contains("con bao nhieu")) {
+            return null;
+        }
         return candidate.isBlank() ? null : candidate;
     }
 

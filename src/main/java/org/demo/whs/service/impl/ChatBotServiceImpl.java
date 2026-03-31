@@ -109,7 +109,7 @@ public class ChatBotServiceImpl implements ChatBotService {
             String conversationId,
             ChatBotConversationContext conversationContext
     ) {
-        String keyword = resolveLookupKeyword(command);
+        String keyword = resolveLookupKeyword(command, conversationContext);
         List<ProductResponse> products = findProducts(keyword, PRODUCT_LOOKUP_LIMIT);
 
         if (products.isEmpty()) {
@@ -129,9 +129,9 @@ public class ChatBotServiceImpl implements ChatBotService {
             String conversationId,
             ChatBotConversationContext conversationContext
     ) {
-        ProductResponse product = resolveSingleProduct(command);
+        ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
-            String keyword = resolveLookupKeyword(command);
+            String keyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
             return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
         }
@@ -143,7 +143,7 @@ public class ChatBotServiceImpl implements ChatBotService {
             summary = emptyInventorySummary(product);
         }
 
-        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command));
+        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command, conversationContext));
         return buildResponse(conversationId, responseFormatter.inventorySummary(product, summary));
     }
 
@@ -152,9 +152,9 @@ public class ChatBotServiceImpl implements ChatBotService {
             String conversationId,
             ChatBotConversationContext conversationContext
     ) {
-        ProductResponse product = resolveSingleProduct(command);
+        ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
-            String keyword = resolveLookupKeyword(command);
+            String keyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
             return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
         }
@@ -164,7 +164,7 @@ public class ChatBotServiceImpl implements ChatBotService {
                 .build();
 
         List<InventoryByLocationResponse> locations = inventoryService.getInventoryByLocation(filterRequest);
-        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command));
+        rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command, conversationContext));
 
         if (locations == null || locations.isEmpty()) {
             return buildResponse(conversationId, responseFormatter.noInventoryByLocation(product));
@@ -179,7 +179,7 @@ public class ChatBotServiceImpl implements ChatBotService {
             ChatBotConversationContext conversationContext
     ) {
         int thresholdDays = command.thresholdDays() != null ? command.thresholdDays() : 30;
-        String keyword = command.subjectKeyword();
+        String keyword = resolveLookupKeyword(command, conversationContext);
 
         if (!StringUtils.hasText(keyword)) {
             List<BatchExpiringResponse> batches = batchService.getExpiringBatches(thresholdDays, null);
@@ -192,9 +192,9 @@ public class ChatBotServiceImpl implements ChatBotService {
             return buildResponse(conversationId, responseFormatter.batchExpiringGlobal(thresholdDays, batches));
         }
 
-        ProductResponse product = resolveSingleProduct(command);
+        ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
-            String resolvedKeyword = resolveLookupKeyword(command);
+            String resolvedKeyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, thresholdDays, resolvedKeyword);
             return buildResponse(conversationId, responseFormatter.noProductMatch(resolvedKeyword));
         }
@@ -208,7 +208,7 @@ public class ChatBotServiceImpl implements ChatBotService {
                         && batch.getInventorySnapshot().getTotalAvailableQuantity().signum() > 0)
                 .toList();
 
-        rememberConversation(conversationContext, command.intent(), product, thresholdDays, resolveLookupKeyword(command));
+        rememberConversation(conversationContext, command.intent(), product, thresholdDays, resolveLookupKeyword(command, conversationContext));
 
         if (batches.isEmpty()) {
             return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, product));
@@ -220,15 +220,49 @@ public class ChatBotServiceImpl implements ChatBotService {
     private ChatBotResponse handleUnknown(
             ChatBotCommand command,
             String conversationId,
-            ChatBotConversationContext conversationContext
+            ChatBotConversationContext context
     ) {
-        rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), command.subjectKeyword());
-        String reply = callGeminiWithRetry(buildFallbackPrompt(command.originalMessage(), conversationContext));
+        String msg = command.normalizedMessage();
+        boolean hasContext = StringUtils.hasText(context.getLastProductSku());
+
+        // 1. HARD BLOCK: không có context → KHÔNG gọi AI
+        if (!hasContext) {
+            if (msg.split("\\s+").length <= 5) {
+                return buildResponse(conversationId,
+                        "Bạn hãy cung cấp tên hoặc SKU sản phẩm để tôi hỗ trợ chính xác hơn.");
+            }
+        }
+
+        // 2. SIMPLE QUESTION → xử lý local
+        if (hasContext && isSimpleProductQuestion(msg)) {
+            return buildResponse(conversationId,
+                    """
+                    Bạn muốn xem:
+                    1. Giá
+                    2. Tồn kho
+                    3. Vị trí
+                    """);
+        }
+
+        // 3. SHORT MESSAGE → hỏi lại (không gọi AI)
+        if (msg.split("\\s+").length <= 3) {
+            return buildResponse(conversationId,
+                    "Bạn muốn hỏi rõ hơn về sản phẩm (giá, tồn kho hay vị trí)?");
+        }
+
+        // 4. LAST RESORT → mới gọi AI
+        rememberConversation(context, command.intent(), null,
+                command.thresholdDays(), command.subjectKeyword());
+
+        String reply = callGeminiWithRetry(
+                buildFallbackPrompt(command.originalMessage(), context)
+        );
+
         return buildResponse(conversationId, reply);
     }
 
-    private ProductResponse resolveSingleProduct(ChatBotCommand command) {
-        String keyword = resolveLookupKeyword(command);
+    private ProductResponse resolveSingleProduct(ChatBotCommand command, ChatBotConversationContext context) {
+        String keyword = resolveLookupKeyword(command, context);
         List<ProductResponse> products = findProducts(keyword, PRODUCT_LOOKUP_LIMIT);
 
         if (products.isEmpty()) {
@@ -242,9 +276,16 @@ public class ChatBotServiceImpl implements ChatBotService {
         return products.get(0);
     }
 
-    private String resolveLookupKeyword(ChatBotCommand command) {
+    private String resolveLookupKeyword(ChatBotCommand command, ChatBotConversationContext context) {
         if (StringUtils.hasText(command.subjectKeyword())) {
             return command.subjectKeyword();
+        }
+        if (!StringUtils.hasText(command.originalMessage()) && context != null 
+                && StringUtils.hasText(context.getLastProductSku())) {
+            return context.getLastProductSku();
+        }
+        if (!StringUtils.hasText(command.originalMessage())) {
+            return null;
         }
         return command.originalMessage();
     }
@@ -268,11 +309,15 @@ public class ChatBotServiceImpl implements ChatBotService {
     }
 
     private String callGeminiWithRetry(String prompt) {
+
         if (!StringUtils.hasText(apiKey) || !StringUtils.hasText(model) || !StringUtils.hasText(baseUrl)) {
             return responseFormatter.aiFallbackUnavailable();
         }
 
-        String cacheKey = AI_CACHE_PREFIX + prompt.hashCode();
+        // normalize prompt (QUAN TRỌNG)
+        String normalized = prompt.toLowerCase().trim().replaceAll("\\s+", " ");
+        String cacheKey = AI_CACHE_PREFIX + normalized;
+
         Optional<String> cached = redisService.get(cacheKey, String.class);
         if (cached.isPresent()) {
             log.info("Chatbot AI cache hit");
@@ -288,27 +333,25 @@ public class ChatBotServiceImpl implements ChatBotService {
                 redisService.set(cacheKey, result, 10, TimeUnit.MINUTES);
                 return result;
             } catch (org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests ex) {
+
                 if (attempt == maxAttempts - 1) {
-                    log.error("Gemini rate limit persists after retry");
                     return responseFormatter.aiFallbackUnavailable();
                 }
 
-                log.warn("Gemini rate limit hit, retrying in {} seconds", delaySeconds);
                 try {
                     TimeUnit.SECONDS.sleep(delaySeconds);
-                } catch (InterruptedException interruptedException) {
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return responseFormatter.aiFallbackUnavailable();
                 }
+
             } catch (Exception ex) {
-                log.error("Gemini API error", ex);
                 return responseFormatter.aiFallbackUnavailable();
             }
         }
 
         return responseFormatter.aiFallbackUnavailable();
     }
-
     private String doCallGemini(String prompt) {
         String url = baseUrl + model + ":generateContent?key=" + apiKey;
         GeminiRequest geminiRequest = GeminiRequest.builder()
@@ -476,5 +519,15 @@ public class ChatBotServiceImpl implements ChatBotService {
                 .reply(reply)
                 .conversationId(conversationId)
                 .build();
+    }
+    private boolean isSimpleProductQuestion(String msg) {
+        return msg.contains("giá")
+                || msg.contains("bao nhiêu")
+                || msg.contains("còn không")
+                || msg.contains("tồn")
+                || msg.contains("số lượng")
+                || msg.contains("ở đây")
+                || msg.contains("vi trí")
+                || msg.contains("kho nào");
     }
 }
