@@ -12,11 +12,15 @@ import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.LocationMapper;
 import org.demo.whs.repository.AccountRepository;
+import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
@@ -28,6 +32,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +52,7 @@ public class LocationServiceImpl implements LocationService {
     private final LocationRepository locationRepository;
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
+    private final InventoryRepository inventoryRepository;
     private final LocationMapper locationMapper;
     private final IdentifierGenerator identifierGenerator;
 
@@ -73,6 +80,8 @@ public class LocationServiceImpl implements LocationService {
 
         Locations location = locationMapper.toEntity(request);
         location.setCode(locationCode);
+
+        location.setUsedCapacity(BigDecimal.ZERO);
 
         Account currentUser = getCurrentUser();
         setAuditFieldsForCreate(location, currentUser);
@@ -302,11 +311,9 @@ public class LocationServiceImpl implements LocationService {
         // Validate status transition
         validateStatusTransition(oldStatus, newStatus);
 
-        // TODO: In future, check if location has active inventory when changing to INACTIVE
-        // This would require integration with inventory module
+        // Check if location has active inventory when changing to INACTIVE
         if (newStatus == LocationStatus.INACTIVE) {
-            log.warn("Changing location to INACTIVE: id={}. " +
-                    "Note: Inventory check not implemented yet", id);
+            validateNoActiveInventory(id);
         }
 
         // Update status
@@ -341,8 +348,9 @@ public class LocationServiceImpl implements LocationService {
         // Find existing location
         Locations location = findLocationById(id);
 
-        // TODO: In future, check if location has inventory before deletion
-        // For now, we just set status to INACTIVE
+        // Check if location has inventory before deletion
+        validateNoActiveInventory(id);
+
         location.setStatus(LocationStatus.INACTIVE);
 
         // Update audit fields
@@ -353,6 +361,63 @@ public class LocationServiceImpl implements LocationService {
 
         log.info("Location soft deleted successfully: id={}, code={}",
                 location.getId(), location.getCode());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Locations resolveLocationByType(String warehouseId, LocationType type) {
+        log.info("Resolving location for warehouse: {} and type: {}", warehouseId, type);
+        List<Locations> locations = locationRepository.findByWarehouseIdAndTypeAndStatus(warehouseId, type, LocationStatus.ACTIVE);
+        if (locations.isEmpty()) {
+            log.error("No active location found for warehouse: {} and type: {}", warehouseId, type);
+            throw new BadRequestException(ErrorCode.LOC_001);
+        }
+        return locations.get(0);
+    }
+
+    @Override
+    @Transactional
+    public int increaseUsedCapacity(String locationId, BigDecimal quantity) {
+        Locations location = locationRepository.findByIdForUpdate(locationId)
+                .orElseThrow(() -> new NotFoundException("Location not found", ErrorCode.LOC_001));
+
+        if (isTransitLocation(location.getType())) {
+            BigDecimal currentUsed = location.getUsedCapacity() == null ? BigDecimal.ZERO : location.getUsedCapacity();
+            BigDecimal newUsed = currentUsed.add(quantity);
+            int updated = locationRepository.forceUpdateUsedCapacity(locationId, newUsed);
+
+            if (updated == 0) {
+                throw new ConflictException("Location capacity exceeded or invalid", ErrorCode.LOC_002);
+            }
+
+            return updated;
+        }
+
+        int updated = locationRepository.increaseUsedCapacity(locationId, quantity);
+
+        if (updated == 0) {
+            throw new ConflictException("Location capacity exceeded or invalid",ErrorCode.LOC_002);
+        }
+
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public int decreaseUsedCapacity(String locationId, BigDecimal quantity) {
+        int updated = locationRepository.decreaseUsedCapacity(locationId, quantity);
+
+        if (updated == 0) {
+            throw new ConflictException("Location used capacity is insufficient or invalid", ErrorCode.LOC_002);
+        }
+
+        return updated;
+    }
+
+    private boolean isTransitLocation(LocationType type) {
+        return type == LocationType.PICKING
+                || type == LocationType.PACKING
+                || type == LocationType.STAGING;
     }
 
     // ============ PRIVATE HELPER METHODS ============
@@ -385,6 +450,18 @@ public class LocationServiceImpl implements LocationService {
         if (size <= 0 || size > 100) {
             log.warn("Invalid page size: {}", size);
             throw new BadRequestException(ErrorCode.COM_003);
+        }
+    }
+
+    /**
+     * Validates that a location has no active inventory.
+     *
+     * @param locationId the location ID
+     */
+    private void validateNoActiveInventory(String locationId) {
+        if (inventoryRepository.existsActiveInventoryByLocationId(locationId)) {
+            log.warn("Location has active inventory: locationId={}", locationId);
+            throw new BadRequestException(ErrorCode.LOC_006);
         }
     }
 

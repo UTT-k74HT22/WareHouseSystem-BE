@@ -26,7 +26,11 @@ public enum ErrorCode {
     RESET_005("RESET_005", "Old password is incorrect"),
     // Role
     ROLE_001("ROLE_001", "Role not found"),
-
+    ROLE_002("ROLE_002", "Permission list cannot be empty"),
+    ROLE_003("ROLE_003", "Invalid permission IDs"),
+    ROLE_004("ROLE_004", "Role name already exists"),
+    ROLE_005("ROLE_005", "Cannot delete default role"),
+    ROLE_006("ROLE_006", "Role is being used by users"),
     // OTP errors
     OTP_001("OTP_001", "OTP type is required"),
     OTP_002("OTP_002", "Account not found"),
@@ -69,6 +73,10 @@ public enum ErrorCode {
     LOC_004("LOC_004", "Warehouse is not active - cannot create location"),
     LOC_005("LOC_005", "Invalid location status transition"),
     LOC_006("LOC_006", "Cannot change status - location has active inventory"),
+    LOC_007("LOC_007", "Location is not active for stock transfer"),
+    LOC_008("LOC_008", "Location type is not valid for stock transfer"),
+    LOC_009("LOC_009", "Location capacity exceeded"),
+    LOC_010("LOC_010", "Location used capacity is insufficient for operation"),
 
     // Product errors
     PROD_001("PROD_001", "Product not found"),
@@ -125,6 +133,18 @@ public enum ErrorCode {
     POL_007("POL_007", "Unit price must be greater than or equal to zero"),
     POL_008("POL_008", "Quantity ordered must be greater than zero"),
 
+    // OrderLine errors
+    ORDER_001("ORDER_001", "OrderLine not found"),
+    // Background job errors
+    JOB_001("JOB_001", "Background job not found"),
+    JOB_002("JOB_002", "Invalid background job status transition"),
+    JOB_003("JOB_003", "Background job is not retryable"),
+    JOB_004("JOB_004", "Background job is not cancellable"),
+    JOB_005("JOB_005", "Background job processor not found"),
+    JOB_006("JOB_006", "Background job export format is not supported"),
+    JOB_007("JOB_007", "Background job report type is not supported"),
+    JOB_008("JOB_008", "Background job payload is invalid"),
+
     // Common errors
     COM_001("COM_001", "Validation error - please check your input"),
     COM_002("COM_002", "Internal server error - please contact support"),
@@ -134,6 +154,8 @@ public enum ErrorCode {
     COM_006("COM_006", "Page index must not be less than zero"),
     COM_007("COM_007", "Page size must be greater than zero"),
     COM_008("COM_008", "Page size must not exceed 100"),
+    COM_009("COM_009", "Another process is handling this resource - please try again later"),
+    COM_010("COM_010", "Operation interrupted by another process"),
 
     // Batch errors
     BATCH_001("BATCH_001", "Batch not found"),
@@ -155,6 +177,7 @@ public enum ErrorCode {
     BATCH_017("BATCH_017", "Batch cannot be released because it is expired"),
     BATCH_018("BATCH_018", "Recalled batch cannot be released"),
     BATCH_019("BATCH_019", "Batch date filter range is invalid"),
+    BATCH_020("BATCH_020", "Batch has expired"),
 
     // Inbound Receipt Line errors
     IRL_001("IRL_001", "Inbound receipt line not found"),
@@ -202,7 +225,19 @@ public enum ErrorCode {
     PERM_009("PERM_009", "Invalid resource"),
     PERM_010("PERM_010", "Invalid action"),
     PERM_011("PERM_011", "Permission code cannot be changed"),
-    PERM_012("PERM_012", "Permission resource cannot be changed");
+    PERM_012("PERM_012", "Permission resource cannot be changed"),
+
+    //User Role errors
+    USER_ROLE_001("USER_ROLE_001", "User not found"), // 🔧 FIX: dùng riêng cho module này (tránh reuse AUTH_010)
+    USER_ROLE_002("USER_ROLE_002", "Role not found for assignment"), // 🔧 FIX: rõ nghĩa hơn ROLE_001
+    USER_ROLE_003("USER_ROLE_003", "Role already assigned to user"),
+    USER_ROLE_004("USER_ROLE_004", "User does not have this role"),
+    USER_ROLE_005("USER_ROLE_005", "Role assignment list cannot be empty"),
+    USER_ROLE_006("USER_ROLE_006", "Invalid role IDs"),
+    USER_ROLE_007("USER_ROLE_007", "User role mapping not found"),
+    USER_ROLE_008("USER_ROLE_008", "Cannot remove role from user");
+
+    // Role Permission errors
 
     private final String code;
     private final String message;

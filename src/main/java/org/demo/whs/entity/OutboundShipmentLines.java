@@ -32,8 +32,11 @@ public class OutboundShipmentLines extends BaseEntity {
     @Column(name = "batch_id", columnDefinition = "CHAR(36)")
     private String batchId;
 
-    @Column(name = "location_id", nullable = false, columnDefinition = "CHAR(36)")
+    @Column(name = "location_id", columnDefinition = "CHAR(36)")
     private String locationId;
+
+    @Column(name = "line_number", nullable = false)
+    private Integer lineNumber;
 
     @Column(name = "quantity_shipped", nullable = false, precision = 15, scale = 2)
     private BigDecimal quantityShipped;

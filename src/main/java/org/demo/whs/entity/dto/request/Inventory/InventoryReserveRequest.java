@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.demo.whs.entity.enums.ReferenceType;
 
 import java.math.BigDecimal;
 
@@ -21,12 +22,11 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class InventoryReserveRequest {
+    @NotBlank(message = "Warehouse ID is required")
+    private String warehouseId;
 
     @NotBlank(message = "Product ID is required")
     private String productId;
-
-    @NotBlank(message = "Warehouse ID is required")
-    private String warehouseId;
 
     private String locationId;
 
@@ -36,7 +36,6 @@ public class InventoryReserveRequest {
     @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
     private BigDecimal quantity;
 
+    @NotBlank(message = "OrderLineId is required")
     private String orderLineId;
-
-    private String requestKey;
 }

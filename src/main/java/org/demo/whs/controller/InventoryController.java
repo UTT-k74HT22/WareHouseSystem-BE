@@ -20,6 +20,7 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.service.InventoryService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,6 +50,7 @@ public class InventoryController {
      */
     @GetMapping
     @Operation(summary = "Get inventories", description = "Fetch inventories with filtering and pagination")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_READ')")
     public ResponseEntity<BaseResponse<PageResponse<InventoryResponse>>> getInventories(
             InventoryFilterRequest filter, Pageable pageable) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.getInventories(filter, pageable)));
@@ -62,6 +64,7 @@ public class InventoryController {
      */
     @GetMapping("/summary/{productId}")
     @Operation(summary = "Get product summary", description = "Get aggregate inventory data for a product")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_READ')")
     public ResponseEntity<BaseResponse<InventorySummaryResponse>> getSummaryByProduct(
             @PathVariable String productId) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.getSummaryByProduct(productId)));
@@ -75,6 +78,7 @@ public class InventoryController {
      */
     @GetMapping("/by-location")
     @Operation(summary = "Get inventory by location", description = "Get inventory data grouped by warehouse location")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_READ')")
     public ResponseEntity<BaseResponse<List<InventoryByLocationResponse>>> getInventoryByLocation(
             InventoryFilterRequest filter) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.getInventoryByLocation(filter)));
@@ -88,6 +92,7 @@ public class InventoryController {
      */
     @PostMapping("/check-availability")
     @Operation(summary = "Check availability", description = "Check if requested product quantity is available")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_READ')")
     public ResponseEntity<BaseResponse<CheckAvailabilityResponse>> checkAvailability(
             @Valid @RequestBody CheckAvailabilityRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.checkAvailability(request)));
@@ -101,6 +106,7 @@ public class InventoryController {
      */
     @PostMapping("/reserve")
     @Operation(summary = "Reserve inventory", description = "Reserve stock for an order line using allocation strategy")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_RESERVATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryReserveResponse>> reserve(
             @Valid @RequestBody InventoryReserveRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.reserve(request)));
@@ -114,6 +120,7 @@ public class InventoryController {
      */
     @PostMapping("/unreserve")
     @Operation(summary = "Unreserve inventory", description = "Release previously reserved stock for an order line")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_RESERVATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryUnreserveResponse>> unreserve(
             @Valid @RequestBody InventoryUnreserveRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.unreserve(request)));
@@ -127,8 +134,23 @@ public class InventoryController {
      */
     @PostMapping("/increase")
     @Operation(summary = "Increase inventory", description = "Increase on-hand stock from inbound or adjustment")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_MUTATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryResponse>> increase(
             @Valid @RequestBody InventoryIncreaseRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.increase(request)));
+    }
+
+    /**
+     * Decrease inventory on-hand quantity.
+     *
+     * @param request The decrease request
+     * @return Updated inventory data
+     */
+    @PostMapping("/decrease")
+    @Operation(summary = "Decrease inventory", description = "Decrease on-hand stock from outbound or adjustment")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_MUTATION_UPDATE')")
+    public ResponseEntity<BaseResponse<InventoryResponse>> decrease(
+            @Valid @RequestBody org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.decrease(request)));
     }
 }

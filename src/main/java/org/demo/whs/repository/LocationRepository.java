@@ -3,13 +3,18 @@ package org.demo.whs.repository;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,6 +22,10 @@ import java.util.Optional;
  */
 @Repository
 public interface LocationRepository extends JpaRepository<Locations, String> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM Locations l WHERE l.id = :id")
+    Optional<Locations> findByIdForUpdate(@Param("id") String id);
 
     /**
      * Checks if a location code exists within a specific warehouse.
@@ -111,4 +120,60 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @return count of locations
      */
     long countByWarehouseId(String warehouseId);
+
+    /**
+     * Finds active locations by warehouse and type.
+     *
+     * @param warehouseId the warehouse ID
+     * @param type        the location type
+     * @param status      the location status
+     * @return list of matching locations
+     */
+    List<Locations> findByWarehouseIdAndTypeAndStatus(String warehouseId, LocationType type, LocationStatus status);
+
+    /**
+     * Atomically increases used capacity with capacity validation.
+     * Only updates if: location exists AND used + quantity <= capacity
+     *
+     * @param locationId the location ID
+     * @param quantity   the quantity to add
+     * @return number of rows updated (0 if failed)
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE Locations l
+        SET l.usedCapacity = l.usedCapacity + :quantity
+        WHERE l.id = :locationId
+          AND l.usedCapacity + :quantity <= l.capacity
+          AND l.status = 'ACTIVE'
+        """)
+    int increaseUsedCapacity(@Param("locationId") String locationId,
+                             @Param("quantity") BigDecimal quantity);
+
+    /**
+     * Atomically decreases used capacity with validation.
+     * Only updates if: location exists AND used >= quantity
+     *
+     * @param locationId the location ID
+     * @param quantity   the quantity to subtract
+     * @return number of rows updated (0 if failed)
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE Locations l
+        SET l.usedCapacity = l.usedCapacity - :quantity
+        WHERE l.id = :locationId
+          AND l.usedCapacity >= :quantity
+          AND l.status = 'ACTIVE'
+        """)
+    int decreaseUsedCapacity(@Param("locationId") String locationId,
+                             @Param("quantity") BigDecimal quantity);
+    @Modifying(clearAutomatically = true)
+    @Query("""
+    UPDATE Locations l
+    SET l.usedCapacity = :newUsed
+    WHERE l.id = :locationId
+      AND l.status = 'ACTIVE'
+""")
+    int forceUpdateUsedCapacity(@Param("locationId") String locationId, @Param("newUsed") BigDecimal newUsed);
 }

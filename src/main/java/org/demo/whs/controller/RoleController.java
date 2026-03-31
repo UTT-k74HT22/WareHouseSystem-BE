@@ -2,6 +2,7 @@ package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Role.CreateRoleRequest;
@@ -9,7 +10,10 @@ import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
+import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.service.RoleService;
+import org.demo.whs.service.UserRoleService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -32,9 +36,10 @@ public class RoleController {
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final RoleService roleService;
+    private final UserRoleService userRoleService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_CREATE')")
     public ResponseEntity<BaseResponse<RoleResponse>> createRole(
             @RequestBody @Valid CreateRoleRequest request
     ) {
@@ -47,20 +52,21 @@ public class RoleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
-
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @RequestParam(required = false) Boolean isDefault,
+            @RequestParam(required = false) @Size(max = 100, message = "Search keyword max 50 chars") String search,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
 
-        PageResponse<RoleResponse> response = roleService.getRoles(pageable);
+        PageResponse<RoleResponse> response = roleService.getRoles(isDefault, search, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<RoleResponse>> getRoleById(
 
             @PathVariable
@@ -74,7 +80,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_UPDATE')")
     public ResponseEntity<BaseResponse<RoleResponse>> updateRole(
 
             @PathVariable
@@ -90,7 +96,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteRole(
 
             @PathVariable
@@ -103,5 +109,23 @@ public class RoleController {
         return ResponseEntity.ok(
                 BaseResponse.success(null, "Role deleted successfully")
         );
+    }
+
+    @GetMapping("/{id}/users")
+    @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
+    public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getRoleUsers(
+
+            @PathVariable("id")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+            String roleId,
+
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        log.info("Get users of role {}", roleId);
+
+        PageResponse<AccountResponse> response = userRoleService.getRoleUsers(roleId, pageable);
+
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

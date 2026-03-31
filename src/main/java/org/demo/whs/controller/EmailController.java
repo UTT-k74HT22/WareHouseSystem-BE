@@ -41,7 +41,7 @@ public class EmailController {
      * POST /api/v1/emails/send
      */
     @PostMapping("/send")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_CREATE')")
     @Operation(summary = "Send email", description = "Send email synchronously or asynchronously")
     public ResponseEntity<EmailLogResponse> sendEmail(@Valid @RequestBody SendEmailRequest request) {
         log.info("Received request to send email to: {}", request.getRecipient());
@@ -64,7 +64,7 @@ public class EmailController {
      * GET /api/v1/emails/{id}
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get email log", description = "Get email log details by ID")
     public ResponseEntity<EmailLogResponse> getEmailLog(@PathVariable String id) {
         log.info("Fetching email log with ID: {}", id);
@@ -78,7 +78,7 @@ public class EmailController {
      * GET /api/v1/emails
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get all email logs", description = "Get all email logs with pagination")
     public ResponseEntity<Page<EmailLogResponse>> getAllEmailLogs(
             @RequestParam(defaultValue = "0") int page,
@@ -102,7 +102,7 @@ public class EmailController {
      * GET /api/v1/emails/status/{status}
      */
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get emails by status", description = "Get email logs filtered by status")
     public ResponseEntity<Page<EmailLogResponse>> getEmailLogsByStatus(
             @PathVariable EmailStatus status,
@@ -121,7 +121,7 @@ public class EmailController {
      * GET /api/v1/emails/type/{type}
      */
     @GetMapping("/type/{type}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get emails by type", description = "Get email logs filtered by email type")
     public ResponseEntity<Page<EmailLogResponse>> getEmailLogsByType(
             @PathVariable EmailType type,
@@ -140,7 +140,7 @@ public class EmailController {
      * GET /api/v1/emails/recipient/{email}
      */
     @GetMapping("/recipient/{email}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get emails by recipient", description = "Get email logs for specific recipient")
     public ResponseEntity<Page<EmailLogResponse>> getEmailLogsByRecipient(
             @PathVariable String email,
@@ -159,7 +159,7 @@ public class EmailController {
      * POST /api/v1/emails/{id}/retry
      */
     @PostMapping("/{id}/retry")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_UPDATE')")
     public ResponseEntity<EmailLogResponse> retryEmail(@PathVariable String id) {
         log.info("Retrying email with ID: {}", id);
         EmailLog retried = emailService.retryEmail(id);
@@ -174,7 +174,7 @@ public class EmailController {
      * GET /api/v1/emails/statistics
      */
     @GetMapping("/statistics")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_READ')")
     @Operation(summary = "Get email statistics", description = "Get statistics about email sending")
     public ResponseEntity<Map<String, Long>> getEmailStatistics() {
         log.info("Fetching email statistics");
@@ -188,7 +188,7 @@ public class EmailController {
      * POST /api/v1/emails/process-pending
      */
     @PostMapping("/process-pending")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_UPDATE')")
     @Operation(summary = "Process pending emails", description = "Manually trigger processing of pending emails")
     public ResponseEntity<String> processPendingEmails() {
         log.info("Manually triggering pending email processing");
@@ -202,7 +202,7 @@ public class EmailController {
      * POST /api/v1/emails/retry-failed
      */
     @PostMapping("/retry-failed")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_EMAIL_UPDATE')")
     @Operation(summary = "Retry failed emails", description = "Manually trigger retry of failed emails")
     public ResponseEntity<String> retryFailedEmails() {
         log.info("Manually triggering failed email retry");

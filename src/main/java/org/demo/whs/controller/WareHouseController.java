@@ -12,7 +12,6 @@ import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.service.WareHouseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authorization.method.AuthorizeReturnObject;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -25,6 +24,7 @@ public class WareHouseController {
     public final WareHouseService wareHouseService;
 
     @GetMapping("/test")
+    @PreAuthorize("hasAuthority('PERM_SYSTEM_DIAGNOSTIC_READ')")
     public ResponseEntity<String> getWareHouse() {
         log.info("Fetching warehouses");
         // Placeholder response
@@ -38,6 +38,7 @@ public class WareHouseController {
      * @return the response containing created warehouse information
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_CREATE')")
     public ResponseEntity<BaseResponse<WareHouseResponse>> create(@RequestBody @Valid CreateWarehouseRequest request) {
         log.info("Received request to create warehouse: {}", request);
         WareHouseResponse response = wareHouseService.createWH(request);
@@ -53,6 +54,7 @@ public class WareHouseController {
      * @return a paginated response containing warehouse information
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<WareHouseResponse>>> getAll(@RequestParam(name = "page", defaultValue = "0") Integer page, @RequestParam(name = "size", defaultValue = "10") Integer size) {
         log.info("Fetching all warehouses - page: {}, size: {}", page, size);
         PageResponse<WareHouseResponse> response = wareHouseService.getAll(page, size);
@@ -66,6 +68,7 @@ public class WareHouseController {
      * @return list of warehouse responses
      */
     @GetMapping("/all")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_READ')")
     public ResponseEntity<BaseResponse<List<WareHouseResponse>>> getAll() {
         log.info("Fetching all warehouses without pagination");
         List<WareHouseResponse> response = wareHouseService.getWareHouses();
@@ -80,6 +83,7 @@ public class WareHouseController {
      * @return the response containing warehouse information
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_READ')")
     public ResponseEntity<BaseResponse<WareHouseResponse>> getById(@PathVariable("id") String id) {
         log.info("Fetching warehouse with id: {}", id);
         WareHouseResponse response = wareHouseService.getWareHouseById(id);
@@ -95,6 +99,7 @@ public class WareHouseController {
      * @return the response containing updated warehouse information
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_UPDATE')")
     public ResponseEntity<BaseResponse<WareHouseResponse>> update(
             @PathVariable("id") String id,
             @RequestBody @Valid UpdateWarehouseRequest request) {
@@ -112,6 +117,7 @@ public class WareHouseController {
      * @return the response containing updated warehouse information
      */
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_UPDATE')")
     public ResponseEntity<BaseResponse<WareHouseResponse>> changeStatus(
             @PathVariable("id") String id,
             @RequestBody @Valid ChangeStatusRequest request) {
@@ -123,7 +129,7 @@ public class WareHouseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteWarehouse(@PathVariable String id) {
         wareHouseService.deleteWarehouse(id);
 

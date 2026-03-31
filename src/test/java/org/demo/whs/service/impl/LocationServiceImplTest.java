@@ -3,16 +3,23 @@ package org.demo.whs.service.impl;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
+import org.demo.whs.entity.enums.LocationStatus;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.LocationMapper;
 import org.demo.whs.repository.AccountRepository;
+import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.utils.IdentifierGenerator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,11 +28,14 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +51,9 @@ class LocationServiceImplTest {
     private AccountRepository accountRepository;
 
     @Mock
+    private InventoryRepository inventoryRepository;
+
+    @Mock
     private LocationMapper locationMapper;
 
     @Spy
@@ -48,6 +61,15 @@ class LocationServiceImplTest {
 
     @InjectMocks
     private LocationServiceImpl locationService;
+
+    private Account currentUser;
+
+    @BeforeEach
+    void setUp() {
+        currentUser = new Account();
+        currentUser.setId("acc-1");
+        currentUser.setUsername("admin");
+    }
 
     @Test
     void createLocation_shouldGenerateCode_When_RequestCodeIsMissing() {
@@ -61,9 +83,6 @@ class LocationServiceImplTest {
         Locations location = new Locations();
         location.setWarehouseId("wh-1");
         location.setName("A1");
-
-        Account account = new Account();
-        account.setId("acc-1");
 
         when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
         when(locationMapper.toEntity(request)).thenReturn(location);
@@ -83,7 +102,7 @@ class LocationServiceImplTest {
 
         try (var mocked = mockStatic(SecurityUtils.class)) {
             mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
             LocationResponse response = locationService.createLocation(request);
 
@@ -108,5 +127,144 @@ class LocationServiceImplTest {
         assertThatThrownBy(() -> locationService.createLocation(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    void changeLocationStatus_shouldThrowException_When_LocationHasActiveInventory() {
+        // Arrange
+        String locationId = "loc-1";
+        LocationStatus newStatus = LocationStatus.INACTIVE;
+
+        ChangeLocationStatusRequest request = mock(ChangeLocationStatusRequest.class);
+        when(request.getStatus()).thenReturn(newStatus);
+
+        Locations location = new Locations();
+        location.setId(locationId);
+        location.setStatus(LocationStatus.ACTIVE);
+        location.setWarehouseId("wh-1");
+
+        when(locationRepository.findById(locationId)).thenReturn(Optional.of(location));
+        when(inventoryRepository.existsActiveInventoryByLocationId(locationId)).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> locationService.changeLocationStatus(locationId, request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOC_006.getCode());
+    }
+
+    @Test
+    void changeLocationStatus_shouldSucceed_When_NoActiveInventory() {
+        // Arrange
+        String locationId = "loc-1";
+        LocationStatus newStatus = LocationStatus.INACTIVE;
+
+        ChangeLocationStatusRequest request = mock(ChangeLocationStatusRequest.class);
+        when(request.getStatus()).thenReturn(newStatus);
+
+        Locations location = new Locations();
+        location.setId(locationId);
+        location.setStatus(LocationStatus.ACTIVE);
+        location.setWarehouseId("wh-1");
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setId("wh-1");
+
+        when(locationRepository.findById(locationId)).thenReturn(Optional.of(location));
+        when(inventoryRepository.existsActiveInventoryByLocationId(locationId)).thenReturn(false);
+        when(locationRepository.save(location)).thenReturn(location);
+        when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
+        when(locationMapper.toResponseWithWarehouse(location, warehouse)).thenReturn(
+                LocationResponse.builder()
+                        .id(locationId)
+                        .status(newStatus)
+                        .build()
+        );
+
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+
+            // Act
+            LocationResponse response = locationService.changeLocationStatus(locationId, request);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(newStatus);
+            assertThat(location.getStatus()).isEqualTo(newStatus);
+        }
+    }
+
+    @Test
+    void deleteLocation_shouldThrowException_When_LocationHasActiveInventory() {
+        // Arrange
+        String locationId = "loc-1";
+
+        Locations location = new Locations();
+        location.setId(locationId);
+        location.setStatus(LocationStatus.ACTIVE);
+        location.setWarehouseId("wh-1");
+
+        when(locationRepository.findById(locationId)).thenReturn(Optional.of(location));
+        when(inventoryRepository.existsActiveInventoryByLocationId(locationId)).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> locationService.deleteLocation(locationId))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOC_006.getCode());
+    }
+
+    @Test
+    void deleteLocation_shouldSucceed_When_NoActiveInventory() {
+        // Arrange
+        String locationId = "loc-1";
+
+        Locations location = new Locations();
+        location.setId(locationId);
+        location.setStatus(LocationStatus.ACTIVE);
+        location.setWarehouseId("wh-1");
+
+        when(locationRepository.findById(locationId)).thenReturn(Optional.of(location));
+        when(inventoryRepository.existsActiveInventoryByLocationId(locationId)).thenReturn(false);
+        when(locationRepository.save(location)).thenReturn(location);
+
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+
+            // Act
+            locationService.deleteLocation(locationId);
+
+            // Assert
+            assertThat(location.getStatus()).isEqualTo(LocationStatus.INACTIVE);
+        }
+    }
+
+    @Test
+    void decreaseUsedCapacity_shouldThrowConflict_When_UsedCapacityIsInsufficient() {
+        when(locationRepository.decreaseUsedCapacity("loc-1", new BigDecimal("10.00"))).thenReturn(0);
+
+        assertThatThrownBy(() -> locationService.decreaseUsedCapacity("loc-1", new BigDecimal("10.00")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOC_002.getCode());
+
+        verify(locationRepository).decreaseUsedCapacity("loc-1", new BigDecimal("10.00"));
+    }
+
+    @Test
+    void increaseUsedCapacity_shouldBypassCapacityGuard_When_LocationIsTransitStage() {
+        Locations stagingLocation = new Locations();
+        stagingLocation.setId("loc-stage");
+        stagingLocation.setType(LocationType.STAGING);
+        stagingLocation.setStatus(LocationStatus.ACTIVE);
+        stagingLocation.setCapacity(BigDecimal.ZERO);
+        stagingLocation.setUsedCapacity(BigDecimal.ZERO);
+
+        when(locationRepository.findByIdForUpdate("loc-stage")).thenReturn(Optional.of(stagingLocation));
+        when(locationRepository.forceUpdateUsedCapacity("loc-stage", new BigDecimal("10.00"))).thenReturn(1);
+
+        int updated = locationService.increaseUsedCapacity("loc-stage", new BigDecimal("10.00"));
+
+        assertThat(updated).isEqualTo(1);
+        verify(locationRepository).forceUpdateUsedCapacity("loc-stage", new BigDecimal("10.00"));
+        verify(locationRepository, never()).increaseUsedCapacity("loc-stage", new BigDecimal("10.00"));
     }
 }

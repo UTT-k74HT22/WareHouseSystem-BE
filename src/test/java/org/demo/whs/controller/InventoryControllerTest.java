@@ -44,7 +44,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_INVENTORY_READ",
+        "PERM_INVENTORY_RESERVATION_UPDATE",
+        "PERM_INVENTORY_MUTATION_UPDATE"
+})
 class InventoryControllerTest {
 
     @Autowired
@@ -158,7 +162,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 and inventory summary when productId is valid")
     void shouldReturn200AndSummaryWhenProductIdIsValid() throws Exception {
         String productId = "550e8400-e29b-41d4-a716-446655440000";
@@ -184,7 +187,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when productId format is invalid")
     void shouldReturn400WhenProductIdIsInvalid() throws Exception {
         String invalidProductId = "invalid-uuid";
@@ -200,7 +202,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 and inventory by location when requested")
     void shouldReturn200AndInventoryByLocation() throws Exception {
         InventoryByLocationResponse mockResponse = InventoryByLocationResponse.builder()
@@ -236,7 +237,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when checking availability is successful")
     void shouldReturn200WhenCheckAvailabilityIsSuccessful() throws Exception {
         CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
@@ -268,7 +268,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when check availability request is invalid")
     void shouldReturn400WhenCheckAvailabilityRequestIsInvalid() throws Exception {
         CheckAvailabilityRequest request = CheckAvailabilityRequest.builder()
@@ -286,12 +285,12 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when reservation is successful")
     void shouldReturn200WhenReservationIsSuccessful() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
-                .productId("prod-1")
+                .orderLineId("OL-1")
                 .warehouseId("wh-1")
+                .productId("prod-1")
                 .quantity(new BigDecimal("10.00"))
                 .build();
 
@@ -317,7 +316,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when reservation request is invalid")
     void shouldReturn400WhenReservationRequestIsInvalid() throws Exception {
         InventoryReserveRequest request = InventoryReserveRequest.builder()
@@ -335,7 +333,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when unreservation is successful")
     void shouldReturn200WhenUnreservationIsSuccessful() throws Exception {
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
@@ -370,7 +367,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 400 when unreservation request is invalid")
     void shouldReturn400WhenUnreservationRequestIsInvalid() throws Exception {
         InventoryUnreserveRequest request = InventoryUnreserveRequest.builder()
@@ -388,7 +384,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("Should return 200 when increase is successful")
     void shouldReturn200WhenIncreaseIsSuccessful() throws Exception {
         InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
@@ -422,15 +417,48 @@ class InventoryControllerTest {
     }
 
     @Test
-    @WithMockUser
-    @DisplayName("Should return 400 when increase request is invalid")
-    void shouldReturn400WhenIncreaseRequestIsInvalid() throws Exception {
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
-                // productId and warehouseId are missing
+    @DisplayName("Should return 200 when decrease is successful")
+    void shouldReturn200WhenDecreaseIsSuccessful() throws Exception {
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .quantity(new BigDecimal("10.00"))
+                .referenceType(org.demo.whs.entity.enums.ReferenceType.OUTBOUND_SHIPMENT)
+                .referenceId("ref-uuid")
+                .referenceNumber("SHIP-001")
+                .consumeReserved(false)
+                .build();
+
+        InventoryResponse mockResponse = InventoryResponse.builder()
+                .id("inv-1")
+                .productId("prod-1")
+                .warehouseId("wh-1")
+                .onHandQuantity(new BigDecimal("90.00"))
+                .reservedQuantity(new BigDecimal("10.00"))
+                .build();
+
+        when(inventoryService.decrease(any(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.class)))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/v1/inventories/decrease")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("inv-1"))
+                .andExpect(jsonPath("$.data.on_hand_quantity").value(90.00));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when decrease request is invalid")
+    void shouldReturn400WhenDecreaseRequestIsInvalid() throws Exception {
+        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+                // Missing fields
                 .quantity(new BigDecimal("-5.00"))
                 .build();
 
-        mockMvc.perform(post("/api/v1/inventories/increase")
+        mockMvc.perform(post("/api/v1/inventories/decrease")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

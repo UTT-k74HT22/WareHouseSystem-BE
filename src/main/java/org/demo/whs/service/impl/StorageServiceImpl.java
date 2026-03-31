@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.*;
@@ -63,14 +65,17 @@ public class StorageServiceImpl implements StorageService {
             throw new StorageException(ErrorCode.STORAGE_001, HttpStatus.BAD_REQUEST);
         }
 
-        String contentType = file.getContentType();
+        validateFile(file.getContentType(), file.getSize());
+    }
+
+    private void validateFile(String contentType, long size) {
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
             log.warn("Rejected file upload – unsupported content type: {}", contentType);
             throw new StorageException(ErrorCode.STORAGE_005, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
 
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            log.warn("Rejected file upload – size {} exceeds limit {}", file.getSize(), MAX_FILE_SIZE_BYTES);
+        if (size > MAX_FILE_SIZE_BYTES) {
+            log.warn("Rejected file upload – size {} exceeds limit {}", size, MAX_FILE_SIZE_BYTES);
             throw new StorageException(ErrorCode.STORAGE_006, HttpStatus.PAYLOAD_TOO_LARGE);
         }
     }
@@ -140,6 +145,44 @@ public class StorageServiceImpl implements StorageService {
 
         } catch (Exception e) {
             log.error("Failed to upload file: {} to MinIO", originalFilename, e);
+            throw new StorageException(ErrorCode.STORAGE_001);
+        }
+    }
+
+    @Override
+    public FileUploadResponse uploadFile(byte[] content, String originalFileName, String contentType, String folder) {
+        if (content == null || content.length == 0) {
+            throw new StorageException(ErrorCode.STORAGE_001, HttpStatus.BAD_REQUEST);
+        }
+
+        validateFile(contentType, content.length);
+        String objectName = buildObjectName(folder, originalFileName);
+
+        try (InputStream inputStream = new ByteArrayInputStream(content)) {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(minioProperties.getBucketName())
+                            .object(objectName)
+                            .stream(inputStream, content.length, -1)
+                            .contentType(contentType)
+                            .build()
+            );
+
+            log.info("Generated file uploaded successfully: {} (object name: {})", originalFileName, objectName);
+
+            String presignedUrl = getPresignedUrl(objectName);
+            Instant expiresAt = Instant.now().plusSeconds(minioProperties.getPresignedUrlExpiry());
+
+            return FileUploadResponse.builder()
+                    .objectName(objectName)
+                    .originalFileName(originalFileName)
+                    .contentType(contentType)
+                    .size(content.length)
+                    .presignedUrl(presignedUrl)
+                    .presignedUrlExpiresAt(expiresAt)
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to upload generated file: {} to MinIO", originalFileName, e);
             throw new StorageException(ErrorCode.STORAGE_001);
         }
     }

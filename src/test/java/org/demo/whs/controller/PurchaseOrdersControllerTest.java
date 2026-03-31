@@ -50,7 +50,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(PurchaseOrdersController.class)
 @ActiveProfiles("test")
 @Import({PurchaseOrdersControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
-@WithMockUser
+@WithMockUser(authorities = {
+        "PERM_PURCHASE_ORDER_CREATE",
+        "PERM_PURCHASE_ORDER_READ",
+        "PERM_PURCHASE_ORDER_UPDATE",
+        "PERM_PURCHASE_ORDER_DELETE"
+})
 class PurchaseOrdersControllerTest {
 
     @Autowired
@@ -78,7 +83,7 @@ class PurchaseOrdersControllerTest {
                                 "supplier_id", "sup-1",
                                 "warehouse_id", "wh-1",
                                 "order_date", "2026-03-15",
-                                "expected_delivery_date", "2026-03-20",
+                                "expected_delivery_date", "2099-03-25",
                                 "currency", "VND",
                                 "payment_terms", "Net 30",
                                 "notes", "Test order"
@@ -285,7 +290,7 @@ class PurchaseOrdersControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "supplier_id", "sup-2",
                                 "warehouse_id", "wh-2",
-                                "expected_delivery_date", "2026-03-25",
+                                "expected_delivery_date", "2099-03-25",
                                 "currency", "USD",
                                 "payment_terms", "Net 60",
                                 "notes", "Updated notes"

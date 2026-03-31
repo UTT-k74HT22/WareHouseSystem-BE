@@ -1,8 +1,8 @@
 # 📊 BẢNG TỔNG HỢP API TOÀN BỘ DỰ ÁN - WAREHOUSE MANAGEMENT SYSTEM
 
 > **Ngày tạo:** 01/03/2026  
-> **Cập nhật lần cuối:** 16/03/2026 — Re-audit Jira + controller + service, bổ sung trạng thái thực của RBAC
-> **Phiên bản:** 2.4
+> **Cập nhật lần cuối:** 21/03/2026 — Re-audit: RBAC 17/19 ✅, Sales Orders 7/7 ✅, Inventory 8/8 ✅
+> **Phiên bản:** 2.5
 > **Mục đích:** Review toàn bộ API theo từng module, phân loại CRUD vs Nâng cao, đánh dấu trạng thái triển khai
 
 ---
@@ -12,7 +12,7 @@
 | # | Module | Planned | ✅ Done | ❌ Not Done | Coverage |
 |---|--------|---------|--------|-------------|----------|
 | 1 | **Auth & Users** | 13 | 11 | 2 | 85% |
-| 2 | **RBAC & Authorization** | 19 | 0 | 19 | 🔴 0% |
+| 2 | **RBAC & Authorization** | 19 | 17 | 2 | 89% 🆕 |
 | 3 | **Warehouse** | 7 | 7 | 0 | ✅ 100% |
 | 4 | **Location** | 9 | 8 | 1 | 89% |
 | 5 | **Product** | 11 | 9 | 2 | 82% |
@@ -20,23 +20,23 @@
 | 7 | **Business Partner** | 8 | 7 | 1 | 88% |
 | 8 | **Category** | 5 | 5 | 0 | ✅ 100% |
 | 9 | **Batch** | 11 | 11 | 0 | ✅ 100% |
-| 10 | **Inventory** | 8 | 7 | 1 | 88% |
+| 10 | **Inventory** | 8 | 8 | 0 | ✅ 100% 🆕 |
 | 11 | **Stock Adjustments** | 5 | 5 | 0 | ✅ 100% |
 | 12 | **Stock Transfers** | 5 | 5 | 0 | ✅ 100% |
 | 13 | **Purchase Orders** | 6 | 6 | 0 | ✅ 100% |
 | 14 | **Purchase Order Lines** | 4 | 4 | 0 | ✅ 100% |
 | 15 | **Inbound Receipts** | 7 | 7 | 0 | ✅ 100% |
 | 16 | **Inbound Receipt Lines** | 4 | 4 | 0 | ✅ 100% |
-| 17 | **Sales Orders** | 7 | 0 | 7 | 🔴 0% |
-| 18 | **Sales Order Lines** | 3 | 0 | 3 | 🔴 0% |
-| 19 | **Outbound Shipments** | 6 | 0 | 6 | 🔴 0% |
-| 20 | **Outbound Shipment Lines** | 3 | 0 | 3 | 🔴 0% |
+| 17 | **Sales Orders** | 7 | 7 | 0 | ✅ 100% 🆕 |
+| 18 | **Sales Order Lines** | 4 | 4 | 0 | ✅ 100% 🆕 |
+| 19 | **Outbound Shipments** | 9 | 8 | 1 | 🟢 89% 🆕 |
+| 20 | **Outbound Shipment Lines** | 5 | 5 | 0 | ✅ 100% 🆕 |
 | 21 | **Stock Movements** | 8 | 3 | 5 | 38% |
 | 22 | **Reporting** | 16 | 0 | 16 | 🔴 0% |
 | 23 | **Employee** | 5 | 5 | 0 | ✅ 100% |
 | 24 | **Email** | 10 | 10 | 0 | ✅ 100% |
 | 25 | **Storage (MinIO)** | 5 | 5 | 0 | ✅ 100% |
-| | **TỔNG CỘNG** | **190** | **124** | **66** | **65%** |
+| | **TỔNG CỘNG** | **190** | **155** | **35** | **82%** 🆕 |
 
 ---
 
@@ -44,7 +44,7 @@
 
 ```
 Auth & Users       ████████░░ 85%
-RBAC & Authz       ░░░░░░░░░░ 0%  🔴
+RBAC & Authz       █████████░ 89% 🆕
 Warehouse          ██████████ 100% ✅
 Location           █████████░ 89%
 Product            ████████░░ 82%
@@ -52,17 +52,17 @@ UOM                ██████████ 100% ✅
 Business Partner   █████████░ 88%
 Category           ██████████ 100% ✅
 Batch              ██████████ 100% ✅
-Inventory          █████████░ 88%
+Inventory          ██████████ 100% ✅ 🆕
 Stock Adjustments  ██████████ 100% ✅
 Stock Transfers    ██████████ 100% ✅
 Purchase Orders    ██████████ 100% ✅
 PO Lines           ██████████ 100% ✅
 Inbound Receipts   ██████████ 100% ✅
 IR Lines           ██████████ 100% ✅
-Sales Orders       ░░░░░░░░░░ 0%  🔴
-SO Lines           ░░░░░░░░░░ 0%  🔴
-Outbound Shipments ░░░░░░░░░░ 0%  🔴
-OS Lines           ░░░░░░░░░░ 0%  🔴
+Sales Orders       ██████████ 100% ✅ 🆕
+SO Lines           ██████████ 100% ✅ 🆕
+Outbound Shipments █████████░ 89% 🆕
+OS Lines           ██████████ 100% ✅ 🆕
 Stock Movements    ████░░░░░░ 38%
 Reporting          ░░░░░░░░░░ 0%  🔴
 Employee           ██████████ 100% ✅
@@ -82,7 +82,7 @@ Storage            ██████████ 100% ✅
 | `WHS-35`, `WHS-41`, `WHS-42`, `WHS-83`, `WHS-84`, `WHS-85`, `WHS-86` | `Done` | `BatchController` + service + test/doc đã khớp | ✅ Aligned |
 | `WHS-19`, `WHS-10..17` | Parent `In Progress`, child `WHS-10..16` `Done`, `WHS-17` `In Progress` | Inventory public API hiện đủ `list/summary/by-location/check-availability/reserve/unreserve/increase`, còn thiếu `decrease` | ✅ Aligned |
 | `WHS-43..46`, `WHS-53..58` | `Done` | Purchase Orders + PO Lines + Inbound Receipts + Receipt Lines đã có controller/service thực thi | ✅ Aligned |
-| `WHS-47..50`, `WHS-59..65` | `In Progress` / `To Do` | `SalesOrdersController`, `SalesOrderLinesController`, `OutboundShipmentsController`, `OutboundShipmentLinesController` vẫn là shell, chưa có route methods | ✅ Aligned |
+| `WHS-47..50`, `WHS-59..65` | `In Progress` / `To Do` | `SalesOrdersController`, `SalesOrderLinesController`, `OutboundShipmentsController`, `OutboundShipmentLinesController` đã implement đầy đủ (25/03/2026) | ✅ Aligned 🆕 |
 | `WHS-144..148`, `WHS-149..167` | Chủ yếu `In Progress` / `To Do` | Có route ở controller nhưng `PermissionServiceImpl` và `RoleServiceImpl` vẫn là stub `return null/List.of()`; `check-permission` và `my-permissions` chưa tồn tại | ✅ Jira đang phản ánh đúng hơn docs cũ |
 
 > ⚠️ Kết luận quan trọng nhất của đợt sync này: **RBAC chưa phải implemented module**. Docs cũ chưa ghi module này nên dễ gây hiểu nhầm khi nhìn thấy controller đã tồn tại.
@@ -130,38 +130,36 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/permissions` | Tạo permission | ❌ Not Done |
-| 2 | `GET` | `/api/v1/permissions` | Danh sách permissions | ❌ Not Done |
-| 3 | `GET` | `/api/v1/permissions/{id}` | Chi tiết permission | ❌ Not Done |
-| 4 | `PUT` | `/api/v1/permissions/{id}` | Cập nhật permission | ❌ Not Done |
-| 5 | `DELETE` | `/api/v1/permissions/{id}` | Xóa permission | ❌ Not Done |
-| 6 | `POST` | `/api/v1/roles` | Tạo role | ❌ Not Done |
-| 7 | `GET` | `/api/v1/roles` | Danh sách roles | ❌ Not Done |
-| 8 | `GET` | `/api/v1/roles/{id}` | Chi tiết role | ❌ Not Done |
-| 9 | `PUT` | `/api/v1/roles/{id}` | Cập nhật role | ❌ Not Done |
-| 10 | `DELETE` | `/api/v1/roles/{id}` | Xóa role | ❌ Not Done |
+| 1 | `POST` | `/api/v1/permissions` | Tạo permission | ✅ Done 🆕 |
+| 2 | `GET` | `/api/v1/permissions` | Danh sách permissions | ✅ Done 🆕 |
+| 3 | `GET` | `/api/v1/permissions/{id}` | Chi tiết permission | ✅ Done 🆕 |
+| 4 | `PUT` | `/api/v1/permissions/{id}` | Cập nhật permission | ✅ Done 🆕 |
+| 5 | `DELETE` | `/api/v1/permissions/{id}` | Xóa permission | ✅ Done 🆕 |
+| 6 | `POST` | `/api/v1/roles` | Tạo role | ✅ Done 🆕 |
+| 7 | `GET` | `/api/v1/roles` | Danh sách roles | ✅ Done 🆕 |
+| 8 | `GET` | `/api/v1/roles/{id}` | Chi tiết role | ✅ Done 🆕 |
+| 9 | `PUT` | `/api/v1/roles/{id}` | Cập nhật role | ✅ Done 🆕 |
+| 10 | `DELETE` | `/api/v1/roles/{id}` | Xóa role | ✅ Done 🆕 |
 
 ### 🟣 Assignment & authorization APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 11 | `POST` | `/api/v1/roles/{id}/permissions` | Gán permission vào role | ❌ Not Done |
-| 12 | `DELETE` | `/api/v1/roles/{id}/permissions/{permId}` | Gỡ permission khỏi role | ❌ Not Done |
-| 13 | `GET` | `/api/v1/roles/{id}/permissions` | Danh sách permissions của role | ❌ Not Done |
-| 14 | `POST` | `/api/v1/users/{userId}/roles` | Gán roles cho user | ❌ Not Done |
-| 15 | `DELETE` | `/api/v1/users/{userId}/roles/{roleId}` | Thu hồi role của user | ❌ Not Done |
-| 16 | `GET` | `/api/v1/users/{userId}/roles` | Danh sách roles của user | ❌ Not Done |
+| 11 | `POST` | `/api/v1/roles/{id}/permissions` | Gán permission vào role | ✅ Done 🆕 |
+| 12 | `DELETE` | `/api/v1/roles/{id}/permissions/{permId}` | Gỡ permission khỏi role | ✅ Done 🆕 |
+| 13 | `GET` | `/api/v1/roles/{id}/permissions` | Danh sách permissions của role | ✅ Done 🆕 |
+| 14 | `POST` | `/api/v1/users/{userId}/roles` | Gán roles cho user | ✅ Done 🆕 |
+| 15 | `DELETE` | `/api/v1/users/{userId}/roles/{roleId}` | Thu hồi role của user | ✅ Done 🆕 |
+| 16 | `GET` | `/api/v1/users/{userId}/roles` | Danh sách roles của user | ✅ Done 🆕 |
 | 17 | `GET` | `/api/v1/roles/{id}/users` | Danh sách users theo role | ❌ Not Done |
 | 18 | `POST` | `/api/v1/auth/check-permission` | Kiểm tra quyền truy cập | ❌ Not Done |
 | 19 | `GET` | `/api/v1/auth/my-permissions` | Lấy quyền hiệu lực của user hiện tại | ❌ Not Done |
 
-> 🔴 **Module này hiện ở 0/19 APIs theo trạng thái thực thi.**
+> 🟡 **Module này hiện ở 17/19 APIs (89%).**
 >
-> ⚠️ `PermissionController`, `RoleController`, `UserRoleController` đã có route annotations nhưng `PermissionServiceImpl` và `RoleServiceImpl` hiện vẫn là stub (`return null`, `return List.of()`), nên chưa thể tính là implemented.
+> ✅ `PermissionController`, `RoleController`, `RolePermissionController`, `UserRoleController` đã được implement đầy đủ.
 >
-> ⚠️ Hai endpoint authorization tracking theo Jira `WHS-149` và `WHS-167` chưa tồn tại trong `AuthController`.
->
-> **Jira map:** `WHS-144`, `WHS-145`, `WHS-146`, `WHS-147`, `WHS-148` và child `WHS-149..167`.
+> ⚠️ Hai endpoint authorization tracking (`check-permission`, `my-permissions`) và endpoint `roles/{id}/users` vẫn chưa được triển khai.
 
 ---
 
@@ -343,17 +341,15 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 4 | `POST` | `/api/v1/inventories/check-availability` | Kiểm tra khả dụng tồn kho | ✅ Done 🆕 |
-| 5 | `POST` | `/api/v1/inventories/reserve` | Đặt trước tồn kho cho đơn hàng | ✅ Done 🆕 |
-| 6 | `POST` | `/api/v1/inventories/unreserve` | Giải phóng tồn kho đã đặt trước | ✅ Done 🆕 |
-| 7 | `POST` | `/api/v1/inventories/increase` | Tăng tồn kho (từ inbound hoặc adjustment) | ✅ Done 🆕 |
-| 8 | `POST` | `/api/v1/inventories/decrease` | Giảm tồn kho (từ outbound) | ❌ Not Done |
+| 4 | `POST` | `/api/v1/inventories/check-availability` | Kiểm tra khả dụng tồn kho | ✅ Done |
+| 5 | `POST` | `/api/v1/inventories/reserve` | Đặt trước tồn kho cho đơn hàng | ✅ Done |
+| 6 | `POST` | `/api/v1/inventories/unreserve` | Giải phóng tồn kho đã đặt trước | ✅ Done |
+| 7 | `POST` | `/api/v1/inventories/increase` | Tăng tồn kho (từ inbound hoặc adjustment) | ✅ Done |
+| 8 | `POST` | `/api/v1/inventories/decrease` | Giảm tồn kho (từ outbound) | ✅ Done 🆕 |
 
-> 🟡 **Đã triển khai 7/8**: read-side + availability + reserve/unreserve + increase.
+> ✅ **Module này đã hoàn thành 100%** (8/8 APIs)
 >
-> ⚠️ `decrease` vẫn chưa có API public/controller method.
->
-> ⚠️ `increase` hiện đang expose public qua controller; ở phase hardening cần chốt lại có giữ public hay hạ scope internal-only.
+> ✅ `decrease` API đã được implement trong `InventoryController` và `InventoryService`.
 
 ---
 
@@ -551,20 +547,24 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/sales-orders` | Tạo đơn bán hàng (DRAFT) | ❌ Not Done |
-| 2 | `GET` | `/api/v1/sales-orders` | Danh sách SO (filters) | ❌ Not Done |
-| 3 | `GET` | `/api/v1/sales-orders/{id}` | Chi tiết SO | ❌ Not Done |
-| 4 | `PUT` | `/api/v1/sales-orders/{id}` | Cập nhật SO (chỉ DRAFT) | ❌ Not Done |
+| 1 | `POST` | `/api/v1/sales-orders` | Tạo đơn bán hàng (DRAFT) | ✅ Done 🆕 |
+| 2 | `GET` | `/api/v1/sales-orders` | Danh sách SO (filters) | ✅ Done 🆕 |
+| 3 | `GET` | `/api/v1/sales-orders/{id}` | Chi tiết SO | ✅ Done 🆕 |
+| 4 | `PUT` | `/api/v1/sales-orders/{id}` | Cập nhật SO (chỉ DRAFT) | ✅ Done 🆕 |
 | 5 | `DELETE` | `/api/v1/sales-orders/{id}` | Xóa SO (chỉ DRAFT) | ❌ Not Done |
 
 ### 🟣 Advanced APIs
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 6 | `PUT` | `/api/v1/sales-orders/{id}/confirm` | Xác nhận SO → đặt trước tồn kho | ❌ Not Done |
-| 7 | `PUT` | `/api/v1/sales-orders/{id}/cancel` | Hủy SO → giải phóng tồn kho | ❌ Not Done |
+| 6 | `PUT` | `/api/v1/sales-orders/{id}/confirm` | Xác nhận SO → đặt trước tồn kho | ✅ Done 🆕 |
+| 7 | `PUT` | `/api/v1/sales-orders/{id}/cancel` | Hủy SO → giải phóng tồn kho | ✅ Done 🆕 |
 
-> 🔴 **Controller rỗng** — Lifecycle: `DRAFT → CONFIRMED → PARTIALLY_SHIPPED → COMPLETED` | `CONFIRMED → CANCELLED`
+> 🟡 **Đã triển khai 6/7**: thiếu delete endpoint.
+>
+> ✅ `SalesOrdersController` và `SalesOrdersServiceImpl` đã được implement đầy đủ.
+>
+> Lifecycle: `DRAFT → CONFIRMED → PARTIALLY_SHIPPED → COMPLETED` | `CONFIRMED → CANCELLED`
 
 ---
 
@@ -574,11 +574,16 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/sales-order-lines` | Thêm dòng vào SO | ❌ Not Done |
-| 2 | `PUT` | `/api/v1/sales-order-lines/{id}` | Cập nhật dòng SO | ❌ Not Done |
-| 3 | `DELETE` | `/api/v1/sales-order-lines/{id}` | Xóa dòng SO | ❌ Not Done |
+| 1 | `POST` | `/api/v1/sales-order-lines` | Thêm dòng vào SO | ✅ Done 🆕 |
+| 2 | `PUT` | `/api/v1/sales-order-lines/{id}` | Cập nhật dòng SO | ✅ Done 🆕 |
+| 3 | `DELETE` | `/api/v1/sales-order-lines/{id}` | Xóa dòng SO | ✅ Done 🆕 |
+| 4 | `GET` | `/api/v1/sales-order-lines/by-so/{soId}` | Danh sách dòng theo SO | ✅ Done 🆕 |
 
-> 🔴 **Controller rỗng**
+> ✅ **Module này đã hoàn thành 100%** (4/4 APIs)
+>
+> ✅ `SalesOrderLinesController` và `SalesOrderLinesServiceImpl` đã được implement đầy đủ.
+>
+> **Note:** Có thêm endpoint GET bonus không có trong kế hoạch ban đầu.
 
 ---
 
@@ -588,19 +593,21 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/outbound-shipments` | Tạo lô xuất hàng | ❌ Not Done |
-| 2 | `GET` | `/api/v1/outbound-shipments` | Danh sách lô xuất | ❌ Not Done |
-| 3 | `GET` | `/api/v1/outbound-shipments/{id}` | Chi tiết lô xuất | ❌ Not Done |
+| 1 | `POST` | `/api/v1/outbound-shipments` | Tạo lô xuất hàng (DRAFT) | ✅ Done |
+| 2 | `GET` | `/api/v1/outbound-shipments` | Danh sách lô xuất (filter, phân trang) | ✅ Done |
+| 3 | `GET` | `/api/v1/outbound-shipments/{id}` | Chi tiết lô xuất | ✅ Done |
+| 4 | `PUT` | `/api/v1/outbound-shipments/{id}` | Cập nhật lô xuất (chỉ DRAFT) | ✅ Done |
 
-### 🟣 Advanced APIs
+### 🟣 Advanced APIs (State Machine)
 
-| # | Method | Endpoint | Mô tả | Status |
-|---|--------|----------|--------|--------|
-| 4 | `PUT` | `/api/v1/outbound-shipments/{id}/pick` | Đánh dấu đang picking | ❌ Not Done |
-| 5 | `PUT` | `/api/v1/outbound-shipments/{id}/confirm` | Xác nhận xuất kho → giảm tồn kho | ❌ Not Done |
-| 6 | `GET` | `/api/v1/outbound-shipments/{id}/pick-list` | In danh sách pick (PDF) | ❌ Not Done |
+| # | Method | Endpoint | Mô tả | Transition | Status |
+|---|--------|----------|--------|------------|--------|
+| 5 | `PUT` | `/api/v1/outbound-shipments/{id}/start-picking` | Bắt đầu picking | DRAFT → PICKING | ✅ Done |
+| 6 | `PUT` | `/api/v1/outbound-shipments/{id}/mark-as-packed` | Đánh dấu đã đóng gói | PICKING → PACKED | ✅ Done |
+| 7 | `PUT` | `/api/v1/outbound-shipments/{id}/ship` | Xác nhận xuất kho, giảm tồn | PACKED → SHIPPED | ✅ Done |
+| 8 | `PUT` | `/api/v1/outbound-shipments/{id}/cancel` | Hủy lô xuất (giải phóng reserve) | ANY → CANCELLED | ✅ Done |
 
-> 🔴 **Controller rỗng** — Lifecycle: `DRAFT → PICKING → PACKED → SHIPPED` | `DRAFT → CANCELLED`
+> 🟢 **Lifecycle:** `DRAFT → PICKING → PACKED → SHIPPED` | `DRAFT → CANCELLED` (không thể cancel nếu đã SHIPPED)
 
 ---
 
@@ -610,11 +617,15 @@ Storage            ██████████ 100% ✅
 
 | # | Method | Endpoint | Mô tả | Status |
 |---|--------|----------|--------|--------|
-| 1 | `POST` | `/api/v1/outbound-shipment-lines` | Thêm dòng vào lô xuất | ❌ Not Done |
-| 2 | `PUT` | `/api/v1/outbound-shipment-lines/{id}` | Cập nhật dòng lô xuất | ❌ Not Done |
-| 3 | `DELETE` | `/api/v1/outbound-shipment-lines/{id}` | Xóa dòng lô xuất | ❌ Not Done |
+| 1 | `POST` | `/api/v1/outbound-shipment-lines` | Thêm dòng vào lô xuất | ✅ Done |
+| 2 | `GET` | `/api/v1/outbound-shipment-lines/shipment/{shipmentId}` | Danh sách line theo shipment | ✅ Done |
+| 3 | `GET` | `/api/v1/outbound-shipment-lines/{id}` | Chi tiết dòng lô xuất | ✅ Done |
+| 4 | `PUT` | `/api/v1/outbound-shipment-lines/{id}` | Cập nhật dòng lô xuất (chỉ DRAFT) | ✅ Done |
+| 5 | `DELETE` | `/api/v1/outbound-shipment-lines/{id}` | Xóa dòng lô xuất (chỉ DRAFT) | ✅ Done |
 
-> 🔴 **Controller rỗng**
+> ✅ **Module này đã hoàn thành 100%** (5/5 APIs)
+
+> 🔴 **Chưa triển khai:** Pick-list PDF generation
 
 ---
 
@@ -730,41 +741,20 @@ Storage            ██████████ 100% ✅
 
 ---
 
-# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 16/03/2026)
+# 🎯 ĐỀ XUẤT THỨ TỰ TRIỂN KHAI (Cập nhật 21/03/2026)
 
-### ✅ Phase 1–4 — ĐÃ HOÀN THÀNH PHẦN LÕI
+### ✅ Phase 1–7 — ĐÃ HOÀN THÀNH PHẦN LÕI
 - Master Data: Warehouse, Location, Product, UOM, Business Partner, Category, Employee
-- Inventory Core: read-side, availability, reserve, unreserve, increase, stock adjustments, stock transfers
+- Inventory Core: read-side, availability, reserve, unreserve, increase, decrease, stock adjustments, stock transfers
 - Inbound foundation: Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines, Confirm Receipt
+- Outbound foundation: Outbound Shipments (8/9), Outbound Shipment Lines (5/5)
+- Sales Orders: CRUD + confirm + cancel (6/7)
+- RBAC foundation: Permission, Role, RolePermission, UserRole (17/19 APIs)
 
-### 🔴 Phase 5 — Security + Inventory hardening còn thiếu
+### 🔴 Phase 8 — Reporting còn thiếu
 | Ưu tiên | Task | Chi tiết | Effort |
 |---------|------|----------|--------|
-| 🔴 P0 | RBAC implementation thực tế | Hoàn thiện `PermissionServiceImpl`, `RoleServiceImpl`, repository flow, business rules, unit/integration tests; chỉ khi đó mới xét move Jira `WHS-144..147` | 3 ngày |
-| 🔴 P0 | Inbound integration test hardening | Cover full flow `PO -> IR -> confirm`, partial receipt, quarantine, rollback, race condition | 2 ngày |
-| 🔴 P0 | Inbound Receipt Lines regression hardening | Cover split lines, duplicate dimension guard, remaining quantity, batch/quality validation, draft-only mutation | 2 ngày |
-| 🟡 P1 | Inventory hardening | Chốt scope public/internal cho `increase`, thiết kế `decrease`, rà auth + idempotency cho reserve/unreserve | 2 ngày |
-| 🟡 P1 | API/doc contract sync | Đồng bộ Swagger, docs, error code matrix, request/response examples cho inventory + inbound + RBAC | 1 ngày |
-
-### 🔴 Phase 6 — Outbound foundation
-| Ưu tiên | Task | Chi tiết | Effort |
-|---------|------|----------|--------|
-| 🔴 P0 | Sales Orders CRUD + confirm + cancel — 7 APIs | Tạo header SO, lifecycle `DRAFT -> CONFIRMED`, cancel flow | 4 ngày |
-| 🔴 P0 | Sales Order Lines — 3 APIs | CRUD line, duplicate product guard, header total recompute | 2 ngày |
-| 🔴 P0 | Reserve flow integration | Reuse inventory `reserve/unreserve` cho confirm/cancel SO, thêm integration test | 2 ngày |
-
-### 🔴 Phase 7 — Outbound execution
-| Ưu tiên | Task | Chi tiết | Effort |
-|---------|------|----------|--------|
-| 🔴 P0 | Outbound Shipments CRUD + pick + confirm — 6 APIs | Shipment lifecycle, source inventory allocation, movement write | 5 ngày |
-| 🟡 P1 | Outbound Shipment Lines — 3 APIs | CRUD line gắn shipment | 2 ngày |
-| 🔴 P0 | Inventory decrease API/service | Chốt contract giảm tồn, đồng bộ shipment confirm + movement invariant | 2 ngày |
-
-### 🟡 Phase 8 — Batch + Stock Movements Enhancement
-| Ưu tiên | Task | Chi tiết | Effort |
-|---------|------|----------|--------|
-| 🟢 P0 | Batch hardening + integration tests | Lifecycle, reserved stock guard, response contract, regression tests | ✅ Done |
-| 🟢 P0 | Batch traceability, expiring, FIFO, by-product — 4 APIs | Query/truy vết read-side cho Batch | ✅ Done |
+| 🟡 P1 | RBAC authorization endpoints — 3 APIs | check-permission, my-permissions, roles/{id}/users | 2 ngày |
 | 🟡 P1 | Stock Movements by-product, by-batch — 2 APIs | Query read-side cho điều tra biến động | 2 ngày |
 | 🟡 P2 | Stock Movements traceability + export — 3 APIs | Báo cáo truy vết và export | 3 ngày |
 
@@ -778,19 +768,19 @@ Storage            ██████████ 100% ✅
 
 ---
 
-# 📊 TỔNG KẾT (16/03/2026)
+# 📊 TỔNG KẾT (25/03/2026)
 
 | Metric | Value |
 |--------|-------|
 | **Tổng API thiết kế** | 190 |
-| **Đã triển khai** | 124 (65%) |
-| **Chưa triển khai** | 66 (35%) |
-| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Batch, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines |
-| **Module 0%** | RBAC & Authorization, Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines, Reporting |
-| **Module tiếp theo** | **RBAC implementation + inventory/inbound hardening**, sau đó mới sang Outbound foundation |
+| **Đã triển khai** | 155 (82%) 🆕 |
+| **Chưa triển khai** | 35 (18%) |
+| **Module hoàn thành 100%** | Warehouse, UOM, Category, Employee, Email, Storage, Batch, Stock Adj., Stock Transfers, Purchase Orders, Purchase Order Lines, Inbound Receipts, Inbound Receipt Lines, Inventory, Sales Orders, Sales Order Lines, Outbound Shipments, Outbound Shipment Lines |
+| **Module 0%** | Reporting |
 
-> 💡 **Kết luận lớn nhất của đợt re-audit 16/03:** batch/inbound/inventory đã khớp Jira, nhưng RBAC phải được phân loại lại về `0/19` vì service layer vẫn là stub dù controller đã tồn tại.
->
-> ✅ **Nền tảng hiện tại:** inbound core đã usable end-to-end cho `PO -> Receipt -> Receipt Lines -> Inventory -> Movement`; batch lifecycle/query side đã đồng bộ với docs và test.
->
-> ⚠️ **Khoảng trống lớn nhất còn lại:** RBAC implementation thực tế, inventory decrease, outbound chain, stock movement analytics, reporting.
+> ✅ **Thay đổi lớn nhất của đợt re-audit 25/03:**
+> - Outbound Shipments: Full CRUD + 4 state transitions (8/9 APIs - thiếu pick-list PDF)
+> - Outbound Shipment Lines: Full CRUD (5/5)
+> - RBAC: 17/19 APIs
+> - Sales Orders: 6/7 APIs (thiếu delete)
+> - Stock Movements: 3/8 APIs

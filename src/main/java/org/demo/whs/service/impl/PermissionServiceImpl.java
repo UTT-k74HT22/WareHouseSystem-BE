@@ -13,6 +13,7 @@ import org.demo.whs.mapper.PermissionMapper;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.repository.RolePermissionRepository;
+import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.service.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,7 @@ public class PermissionServiceImpl implements PermissionService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final PermissionMapper permissionMapper;
+    private final PermissionCacheService permissionCacheService;
 
     /**
      * Creates a new permission in the system.
@@ -37,20 +39,29 @@ public class PermissionServiceImpl implements PermissionService {
      */
     @Override
     public PermissionResponse createPermission(CreatePermissionRequest request) {
-
         validateCreatePermission(request);
 
+        String normalizedResource = normalizeResource(request.getResource());
         String code = generatePermissionCode(
-                request.getResource(),
+                normalizedResource,
                 request.getAction()
         );
 
         Permission permission = permissionMapper.createEntity(request);
+        permission.setResource(normalizedResource);
         permission.setCode(code);
 
         Permission savePermission = permissionRepository.save(permission);
 
         log.info("Permission created successfully with code: {}", savePermission.getCode());
+
+        // 🔥 FIX: Evict all users cache sau khi permission thay đổi
+        try {
+            permissionCacheService.evictAllUsers();
+            log.debug("Evicted permissions cache for all users after createPermission");
+        } catch (Exception e) {
+            log.error("Failed to evict permissions cache after createPermission", e);
+        }
 
         return permissionMapper.toResponse(savePermission);
     }
@@ -103,26 +114,32 @@ public class PermissionServiceImpl implements PermissionService {
      */
     @Override
     public PermissionResponse updatePermission(String id, UpdatePermissionRequest request) {
-
         Permission permission = permissionRepository.findById(id)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.PERM_001));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PERM_001));
 
         validateUpdatePermission(request, permission);
 
         if (request.getName() != null) {
             permission.setName(request.getName());
         }
-
         if (request.getDescription() != null) {
             permission.setDescription(request.getDescription());
         }
 
         Permission update = permissionRepository.save(permission);
-
         log.info("Permission updated successfully with id: {}", update.getId());
+
+        // 🔥 FIX: Evict all users cache sau khi update
+        try {
+            permissionCacheService.evictAllUsers();
+            log.debug("Evicted permissions cache for all users after updatePermission");
+        } catch (Exception e) {
+            log.error("Failed to evict permissions cache after updatePermission", e);
+        }
 
         return permissionMapper.toResponse(update);
     }
+
 
     /**
      * Delete a permission by its ID.
@@ -138,8 +155,15 @@ public class PermissionServiceImpl implements PermissionService {
         validatePermissionNotInUse(id);
 
         permissionRepository.delete(permission);
-
         log.info("Permission deleted successfully, id: {}", id);
+
+        // 🔥 FIX: Evict all users cache sau khi delete
+        try {
+            permissionCacheService.evictAllUsers();
+            log.debug("Evicted permissions cache for all users after deletePermission");
+        } catch (Exception e) {
+            log.error("Failed to evict permissions cache after deletePermission", e);
+        }
     }
 
     /**
@@ -148,11 +172,12 @@ public class PermissionServiceImpl implements PermissionService {
      * @param request create permission request
      */
     private void validateCreatePermission(CreatePermissionRequest request) {
+        String normalizedResource = normalizeResource(request.getResource());
 
         validateName(request.getName());
-        validateResource(request.getResource());
+        validateResource(normalizedResource);
         validateAction(request.getAction());
-        validateResourceActionUnique(request.getResource(), request.getAction());
+        validateResourceActionUnique(normalizedResource, request.getAction());
     }
 
     /**
@@ -199,11 +224,23 @@ public class PermissionServiceImpl implements PermissionService {
      * Generate permission code based on resource and action.
      */
     private String generatePermissionCode(String resource, ActionType action) {
+        String normalizedResource = normalizeResource(resource);
+        if (action == null) {
+            throw new IllegalArgumentException("Action cannot be null");
+        }
 
         return "PERM_" +
-                resource.toUpperCase() +
+                normalizedResource +
                 "_" +
                 action.name();
+    }
+
+    private String normalizeResource(String resource) {
+        if (resource == null || resource.isBlank()) {
+            throw new BadRequestException(ErrorCode.PERM_009);
+        }
+
+        return resource.trim().toUpperCase();
     }
 
     private void validateDuplicateName(String name, String id) {

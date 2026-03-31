@@ -1,13 +1,11 @@
 package org.demo.whs.service.impl;
 
-import org.demo.whs.entity.Employee;
-import org.demo.whs.entity.Role;
-import org.demo.whs.entity.UserProfile;
-import org.demo.whs.entity.Warehouses;
+import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
+import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -84,7 +82,7 @@ class EmployeeServiceImplTest {
         CreateEmployeeRequest request = CreateEmployeeRequest.builder()
                 .username("john.doe")
                 .password("Password1!")
-                .role(org.demo.whs.entity.enums.RoleType.ADMIN)
+                .role(String.valueOf(RoleType.ADMIN))
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@example.com")
@@ -92,7 +90,7 @@ class EmployeeServiceImplTest {
 
         Role role = new Role();
         role.setId("role-1");
-        role.setName(request.getRole().name());
+        role.setName(request.getRole());
 
         Employee employee = new Employee();
         employee.setAccountId("acc-1");
@@ -106,7 +104,7 @@ class EmployeeServiceImplTest {
                         .accountId(employee.getAccountId())
                         .build());
         when(accountRepository.save(any())).thenAnswer(invocation -> {
-            org.demo.whs.entity.Account account = invocation.getArgument(0);
+            Account account = invocation.getArgument(0);
             account.setId("acc-1");
             return account;
         });
@@ -124,7 +122,7 @@ class EmployeeServiceImplTest {
         CreateEmployeeRequest request = CreateEmployeeRequest.builder()
                 .username("john.doe")
                 .password("Password1!")
-                .role(org.demo.whs.entity.enums.RoleType.ADMIN)
+                .role(String.valueOf(RoleType.ADMIN))
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@example.com")

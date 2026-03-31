@@ -13,7 +13,6 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "inventory_reservations", indexes = {
-        @Index(name = "idx_reservation_request_key", columnList = "request_key"),
         @Index(name = "idx_reservation_order_line", columnList = "order_line_id"),
         @Index(name = "idx_reservation_status", columnList = "status")
 })
@@ -44,9 +43,6 @@ public class InventoryReservation extends BaseEntity {
 
     @Column(name = "order_line_id", length = 100)
     private String orderLineId;
-
-    @Column(name = "request_key", length = 100, unique = true)
-    private String requestKey;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

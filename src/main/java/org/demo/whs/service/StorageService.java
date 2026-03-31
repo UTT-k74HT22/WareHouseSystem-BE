@@ -20,6 +20,17 @@ public interface StorageService {
     FileUploadResponse uploadFile(MultipartFile file, String folder);
 
     /**
+     * Upload generated content without going through MultipartFile.
+     *
+     * @param content      file content bytes
+     * @param originalFileName logical original file name
+     * @param contentType  MIME type
+     * @param folder       logical folder / path prefix
+     * @return upload metadata including the presigned access URL
+     */
+    FileUploadResponse uploadFile(byte[] content, String originalFileName, String contentType, String folder);
+
+    /**
      * Upload multiple files at once.
      *
      * @param files  list of multipart files

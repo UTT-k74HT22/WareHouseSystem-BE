@@ -1,6 +1,10 @@
 package org.demo.whs.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public interface RedisService {
@@ -46,4 +50,14 @@ public interface RedisService {
      * @param key Redis key
      */
     void delete(String key);
+
+    // 🔥 Mới: Safe get với Optional + TypeReference + log deserialize error
+    <T> Optional<T> getOptional(String key, TypeReference<T> type);
+
+    // 🔥 Mới: Save với TTL linh hoạt
+    void saveWithTTL(String key, Object value, long ttl, TimeUnit unit);
+
+    Set<String> getAllKeys(String pattern);
+
+    void delete(Collection<String> keys);
 }

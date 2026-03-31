@@ -14,6 +14,7 @@ import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.service.LocationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -35,6 +36,7 @@ public class LocationController {
      * @return the response containing created location information
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_LOCATION_CREATE')")
     public ResponseEntity<BaseResponse<LocationResponse>> createLocation(
             @RequestBody @Valid CreateLocationRequest request) {
         log.info("Received request to create location: warehouse={}, code={}",
@@ -54,6 +56,7 @@ public class LocationController {
      * @return a paginated response containing location information
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<LocationResponse>>> getAllLocations(
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "10") Integer size) {
@@ -72,6 +75,7 @@ public class LocationController {
      * @return the response containing location information
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
     public ResponseEntity<BaseResponse<LocationResponse>> getLocationById(
             @PathVariable String id) {
         log.info("Fetching location by id: {}", id);
@@ -91,6 +95,7 @@ public class LocationController {
      * @return a paginated response containing location information
      */
     @GetMapping("/warehouse/{warehouseId}")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<LocationResponse>>> getLocationsByWarehouse(
             @PathVariable String warehouseId,
             @RequestParam(name = "page", defaultValue = "0") Integer page,
@@ -119,6 +124,7 @@ public class LocationController {
      * @return a paginated response containing matching locations
      */
     @GetMapping("/search")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<LocationResponse>>> searchLocations(
             @RequestParam(required = false) String warehouseId,
             @RequestParam(required = false) String code,
@@ -170,6 +176,7 @@ public class LocationController {
      * @return the response containing updated location information
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_UPDATE')")
     public ResponseEntity<BaseResponse<LocationResponse>> updateLocation(
             @PathVariable String id,
             @RequestBody @Valid UpdateLocationRequest request) {
@@ -189,6 +196,7 @@ public class LocationController {
      * @return the response containing updated location information
      */
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_UPDATE')")
     public ResponseEntity<BaseResponse<LocationResponse>> changeLocationStatus(
             @PathVariable String id,
             @RequestBody @Valid ChangeLocationStatusRequest request) {
@@ -208,6 +216,7 @@ public class LocationController {
      * @return success response
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deleteLocation(@PathVariable String id) {
         log.info("Received request to delete location: id={}", id);
 

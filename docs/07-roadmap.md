@@ -151,48 +151,65 @@
 
 ---
 
-## Sprint 4 (Weeks 7-8) — Feature Breadth on Hardened Foundation
-**Goal:** Deliver prioritized functional breadth after core risk controls are stabilized.
+## Sprint 4 (Weeks 7-8) — Report Module & Feature Breadth
+**Goal:** Implement Report Module (WHS-52, WHS-67, WHS-68, WHS-69) and deliver prioritized functional features.
 
 ### Week 7 Milestone
 - **Deliverables**
-  - Deliver next-priority inventory/inbound/outbound API enhancements from backlog.
-  - Apply validation standards to exposed request surfaces (length/enums/paging bounds).
-  - Align error response contract across auth/global handlers.
-  - Ensure each feature ships in small PR slices (endpoint + tests + docs).
+  - Implement Report Module foundation (WHS-67 - On-demand APIs):
+    - Current Stock Report API
+    - Stock Valuation Report API
+    - Movements Report API
+    - Batch Traceability Report API
+    - Low Stock Report API
+    - Expiring Batches Report API
+  - Create database tables for report_requests and report_schedules
+  - Implement JasperReports templates for all 6 report types
+  - Add Apache POI dependency for Excel export
 - **Acceptance Criteria**
-  - New/updated APIs meet agreed request/response/error contract.
-  - Validation rejects malformed/oversized inputs with deterministic error codes.
-  - Feature PRs include test evidence and API documentation updates.
-  - Sprint 4 gate (build/tests/static checks) passes.
+  - All 6 on-demand report APIs functional with PDF/Excel/CSV export
+  - Database migrations applied successfully
+  - Unit tests for each report type pass
+  - Sprint 4 gate (build/tests/static checks) passes
 - **Dependencies**
-  - Finalized backlog priority and acceptance rules from product owner.
-  - QA test scenarios for newly added workflows.
+  - JasperReports templates design approval
+  - Apache POI dependency approved
 - **Risks + Mitigation**
-  - **Risk:** Scope creep in late sprint.  
-    **Mitigation:** strict WIP limits + defer non-critical items to post-v1 backlog.
-  - **Risk:** Contract drift between FE/BE.  
-    **Mitigation:** API contract review before merge.
+  - **Risk:** Complex SQL queries impact performance.  
+    **Mitigation:** query optimization + indexing + pagination
+  - **Risk:** Report template design delays.  
+    **Mitigation:** use simple templates first, enhance later
 
 ### Week 8 Milestone
 - **Deliverables**
-  - Stabilization/hardening: bug burn-down, non-functional fixes, release notes.
-  - Final audit closure check (security, DB consistency, async reliability).
-  - Production readiness checklist (rollback, observability, on-call handover).
-  - v1 release candidate tag with measurable quality report.
+  - Implement Async Report Processing (WHS-68):
+    - Async request API
+    - Status tracking API
+    - Download API
+    - My-requests API
+  - Implement Report Schedule Management (WHS-69):
+    - CRUD for schedules
+    - Enable/disable endpoints
+    - Spring Scheduler integration
+  - Implement Export/Import APIs (WHS-37, WHS-38, WHS-39):
+    - Product Export API
+    - Product Import API
+    - Location Bulk Import API
+  - Stabilization and documentation updates
 - **Acceptance Criteria**
-  - Open critical/high defects = 0 for v1 scope.
-  - Audit findings tracked as closed or accepted with explicit rationale.
-  - Release checklist signed by Engineering + Product + Ops.
-  - Final Sprint 4 CI/CD quality gate passes end-to-end.
+  - Async report flow works end-to-end
+  - Scheduled reports execute on time
+  - Export/Import APIs functional with validation
+  - All tests pass + documentation updated
+  - Final Sprint 4 CI/CD quality gate passes
 - **Dependencies**
-  - Cross-team UAT sign-off.
-  - Deployment window and rollback environment readiness.
+  - RabbitMQ configured for async processing
+  - MinIO configured for file storage
 - **Risks + Mitigation**
-  - **Risk:** Late critical defects delay release.  
-    **Mitigation:** freeze window + daily triage + release-go/no-go criteria.
-  - **Risk:** Incomplete operational handover.  
-    **Mitigation:** mandatory runbook walkthrough and ownership confirmation.
+  - **Risk:** Async processing complexity.  
+    **Mitigation:** start with simple flow, add complexity incrementally
+  - **Risk:** Schedule reliability issues.  
+    **Mitigation:** add monitoring + retry logic + alerting
 
 ---
 

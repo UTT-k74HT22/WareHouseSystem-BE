@@ -3,13 +3,12 @@ package org.demo.whs.service;
 import org.demo.whs.entity.dto.request.Auth.ChangePassWordRequest;
 import org.demo.whs.entity.dto.request.Auth.RegisterRequest;
 import org.demo.whs.entity.dto.request.LoginRequest;
-import org.demo.whs.entity.dto.request.Otp.VerifyOtpRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
-import org.demo.whs.entity.dto.response.AuthResponse;
-import org.demo.whs.entity.dto.response.RefreshTokenResponse;
-import org.springframework.transaction.annotation.Transactional;
-
 import org.demo.whs.entity.dto.response.Auth.ForgotPasswordResponse;
+import org.demo.whs.entity.dto.response.AuthResponse;
+import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
+import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.enums.ActionType;
 
 /**
  * Service Interface for managing authentication and authorization.
@@ -69,4 +68,20 @@ public interface AuthService {
      * @param request the change password request containing old and new passwords
      */
     void changePassword(ChangePassWordRequest request);
+
+    /**
+     * Kiểm tra user hiện tại có permission hay không.
+     *
+     * @param resource resource (USER, ORDER...)
+     * @param action action (CREATE, UPDATE...)
+     * @return true nếu có quyền
+     */
+    boolean checkPermission(String resource, ActionType action);
+
+    /**
+     * Lấy danh sách permission của user hiện tại.
+     *
+     * @return MyPermissionsResponse chứa danh sách permission
+     */
+    MyPermissionsResponse getMyPermissions();
 }

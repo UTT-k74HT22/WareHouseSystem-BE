@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.service.UnitsOfMeasureService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class UnitsOfMeasureController {
      * @return ResponseEntity containing the created unit of measure response DTO
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_UNIT_OF_MEASURE_CREATE')")
     public ResponseEntity<BaseResponse<UnitsOfMeasureResponse>> create(@RequestBody @Valid UnitsOfMeasureRequest request) {
         log.info("Received request to create unit of measure with code: {}", request.getCode());
         UnitsOfMeasureResponse data = unitsOfMeasureService.create(request);
@@ -41,6 +43,7 @@ public class UnitsOfMeasureController {
      * @return ResponseEntity containing a list of all units of measure response DTOs
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_UNIT_OF_MEASURE_READ')")
     public ResponseEntity<BaseResponse<List<UnitsOfMeasureResponse>>> findAll() {
         log.info("Received request to retrieve all units of measure");
         List<UnitsOfMeasureResponse> data = unitsOfMeasureService.findAll();
@@ -55,6 +58,7 @@ public class UnitsOfMeasureController {
      * @return ResponseEntity containing the unit of measure response DTO
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_UNIT_OF_MEASURE_READ')")
     public ResponseEntity<BaseResponse<UnitsOfMeasureResponse>> findById(@PathVariable String id) {
         log.info("Received request to retrieve unit of measure with id: {}", id);
         UnitsOfMeasureResponse data = unitsOfMeasureService.findById(id);
@@ -70,6 +74,7 @@ public class UnitsOfMeasureController {
      * @return ResponseEntity containing the updated unit of measure response DTO
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_UNIT_OF_MEASURE_UPDATE')")
     public ResponseEntity<BaseResponse<UnitsOfMeasureResponse>> update(
             @PathVariable String id,
             @RequestBody @Valid UpdateUnitsOfMeasureRequest request) {
@@ -87,6 +92,7 @@ public class UnitsOfMeasureController {
      * @return ResponseEntity with success message
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_UNIT_OF_MEASURE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Received request to delete unit of measure with id: {}", id);
         unitsOfMeasureService.delete(id);

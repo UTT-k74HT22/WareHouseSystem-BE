@@ -1,5 +1,6 @@
 package org.demo.whs.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +8,10 @@ import org.demo.whs.service.RedisService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -118,6 +122,93 @@ public class RedisServiceImpl implements RedisService {
         } catch (Exception e) {
             log.error("Error deleting Redis key: {}", key, e);
             throw new RuntimeException("Failed to delete Redis key", e);
+        }
+    }
+
+    /**
+     * 🔥 Safe get với TypeReference + Optional
+     * - Fix: avoid silent failure, log deserialize error
+     * - Fix: đồng bộ return Optional<T>
+     * - Caller có thể phân biệt cache miss vs deserialize error qua log
+     */
+    @Override
+    public <T> Optional<T> getOptional(String key, TypeReference<T> type) {
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value == null) {
+                log.debug("Cache MISS for key {}", key);
+                return Optional.empty();
+            }
+
+            T result;
+            if (value instanceof String json) {
+                result = objectMapper.readValue(json, type);
+            } else {
+                result = objectMapper.convertValue(value, type);
+            }
+
+            return Optional.ofNullable(result);
+        } catch (Exception e) {
+            log.error("DESERIALIZE ERROR for key {}: {}", key, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * 🔥 Save với TTL linh hoạt
+     * - Fix: tránh hardcode TTL 1h, cho phép caller set TTL
+     */
+    @Override
+    public void saveWithTTL(String key, Object value, long ttl, TimeUnit unit) {
+        if (key == null || value == null) {
+            log.warn("[REDIS SAVE] key or value is null -> skip");
+            return;
+        }
+
+        try {
+            String json = objectMapper.writeValueAsString(value);
+            redisTemplate.opsForValue().set(key, json, ttl, unit);
+
+            log.debug("[REDIS SET] key={} ttl={} {}", key, ttl, unit);
+        } catch (Exception e) {
+            log.error("[REDIS SET ERROR] key={} message={}", key, e.getMessage(), e);
+            throw new RuntimeException("Failed to save Redis key", e);
+        }
+    }
+
+    @Override
+    public Set<String> getAllKeys(String pattern) {
+        if (pattern == null || pattern.isBlank()) {
+            log.warn("[REDIS KEYS] pattern is null/blank");
+            return Collections.emptySet();
+        }
+
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+
+            int size = (keys != null) ? keys.size() : 0;
+            log.debug("[REDIS KEYS] pattern={} -> {} keys", pattern, size);
+
+            return keys != null ? keys : Collections.emptySet();
+        } catch (Exception e) {
+            log.error("[REDIS KEYS ERROR] pattern={} message={}", pattern, e.getMessage(), e);
+            return Collections.emptySet();
+        }
+    }
+
+    @Override
+    public void delete(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            log.debug("[REDIS DELETE] empty keys -> skip");
+            return;
+        }
+
+        try {
+            Long deleted = redisTemplate.delete(keys);
+
+            log.debug("[REDIS DELETE] requested={} deleted={}", keys.size(), deleted);
+        } catch (Exception e) {
+            log.error("[REDIS DELETE ERROR] keys={} message={}", keys, e.getMessage(), e);
         }
     }
 }

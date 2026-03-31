@@ -46,7 +46,7 @@ public class AccountRegistrationServiceImpl implements AccountRegistrationServic
     @Override
     @Transactional
     public RegisterAccount register(String username, String rawPassword,
-                                     RoleType role, String firstName, String lastName, String email, String phoneNumber) {
+                                     String role, String firstName, String lastName, String email, String phoneNumber) {
         log.info("[PROVISIONING][ACCOUNT] Start provisioning for username={}", username);
 
         // 1. Validate username uniqueness

@@ -20,6 +20,21 @@ spring:
       flush-mode: on_save
       namespace: spring:session
 
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: localhost
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:guest}
+    password: ${RABBITMQ_DEFAULT_PASS:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        acknowledge-mode: auto
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
@@ -81,14 +96,40 @@ app:
     retry-delay-seconds: ${EMAIL_RETRY_DELAY_SECONDS:60}
     async-by-default: ${EMAIL_ASYNC_BY_DEFAULT:true}
     attachment-path: ${EMAIL_ATTACHMENT_PATH:temp/email-attachments}
-    max-attachment-size-mb: ${EMAIL_MAX_ATTACHMENT_SIZE_MB:10}
-    log-retention-days: ${EMAIL_LOG_RETENTION_DAYS:90}
-    queue-name: ${EMAIL_QUEUE_NAME:wms.email.queue}
-    exchange-name: ${EMAIL_EXCHANGE_NAME:wms.email.exchange}
-    routing-key: ${EMAIL_ROUTING_KEY:wms.email.send}
+    max-attachment-size-mb: 10
+    log-retention-days: 90
 
   otp:
     ttl-minutes: ${OTP_TTL_MINUTES:10}
     resend-limit-seconds: ${OTP_RESEND_LIMIT_SECONDS:60}
     count-ttl-hours: ${OTP_COUNT_TTL_HOURS:24}
     max-send-per-day: ${OTP_MAX_SEND_PER_DAY:10}
+
+  # Config for RabbitMQ queues, exchanges, and retry/dlq settings for both email and job processing.
+  rabbitmq:
+    email:
+      exchange: whs.email.exchange
+      queue: whs.email.queue
+      retry-queue: whs.email.retry.queue
+      dlq: whs.email.dlq
+      routing-key: whs.email.send
+      retry-routing-key: whs.email.retry
+      dlq-routing-key: whs.email.failed
+      retry-ttl-ms: 30000
+      concurrent-consumers: 3
+      max-consumers: 10
+      prefetch: 1
+
+    background-job:
+      exchange: whs.background-job.exchange
+      queue: whs.background-job.queue
+      retry-queue: whs.background-job.retry.queue
+      dlq: whs.background-job.dlq
+      routing-key: whs.background-job.process
+      retry-routing-key: whs.background-job.retry
+      dlq-routing-key: whs.background-job.failed
+      retry-ttl-ms: 60000
+      concurrent-consumers: 2
+      max-consumers: 4
+      prefetch: 1
+      export-folder: background-jobs/exports

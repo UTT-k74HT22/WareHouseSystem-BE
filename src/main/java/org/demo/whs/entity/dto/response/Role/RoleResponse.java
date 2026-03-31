@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
-import org.demo.whs.entity.enums.RoleType;
+import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -22,4 +23,9 @@ public class RoleResponse {
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
+
+    private List<PermissionResponse> permissions;
+
+    private Long permissionCount;
+    private Long userCount;
 }

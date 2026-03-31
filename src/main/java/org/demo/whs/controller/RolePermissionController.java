@@ -36,7 +36,7 @@ public class RolePermissionController {
      * Assign permissions to role
      */
     @PostMapping("/{id}/permissions")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_CREATE')")
     public ResponseEntity<BaseResponse<List<PermissionResponse>>> assignPermissions(
 
             @PathVariable
@@ -57,15 +57,15 @@ public class RolePermissionController {
      * Remove permission from role
      */
     @DeleteMapping("/{id}/permissions/{permId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_DELETE')")
     public ResponseEntity<BaseResponse<Void>> removePermission(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
             String permId
     ) {
 
@@ -80,19 +80,21 @@ public class RolePermissionController {
      * Get role permissions
      */
     @GetMapping("/{id}/permissions")
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAuthority('PERM_ROLE_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getRolePermissions(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
+
+            @RequestParam(required = false) String resource,
 
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
 
         PageResponse<PermissionResponse> response =
-                rolePermissionService.getRolePermissions(id, pageable);
+                rolePermissionService.getRolePermissions(id, resource, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
     }

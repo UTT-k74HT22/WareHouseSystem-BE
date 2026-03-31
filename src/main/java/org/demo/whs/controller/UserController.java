@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +32,7 @@ public class UserController {
      * @return ResponseEntity containing BaseResponse with list of AccountResponse DTOs
      */
     @GetMapping("/managers")
+    @PreAuthorize("hasAuthority('PERM_USER_READ')")
     public ResponseEntity<BaseResponse<List<AccountResponse>>> getAllManagers() {
         log.info("Received request to get all users with role Manager");
         List<AccountResponse> managers = userService.getAllUserWithRoleManager();
@@ -45,6 +47,7 @@ public class UserController {
      * @return ResponseEntity containing BaseResponse with AccountResponse DTO
      */
     @GetMapping("/{accountId}")
+    @PreAuthorize("hasAuthority('PERM_USER_READ')")
     public ResponseEntity<BaseResponse<AccountResponse>> getUserById(@PathVariable String accountId) {
         log.info("Received request to get user with account ID: {}", accountId);
         AccountResponse user = userService.getUserById(accountId);

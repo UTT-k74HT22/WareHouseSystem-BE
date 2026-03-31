@@ -28,13 +28,10 @@ public class InventoryUnreserveRequest {
     @NotBlank(message = "Warehouse ID is required")
     private String warehouseId;
 
-    private String locationId;
-
-    private String batchId;
+    @NotBlank(message = "Order line ID is required")
+    private String orderLineId;
 
     @NotNull(message = "Quantity is required")
     @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
     private BigDecimal quantity;
-
-    private String orderLineId;
 }
