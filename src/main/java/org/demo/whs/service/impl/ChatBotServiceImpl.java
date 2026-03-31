@@ -14,6 +14,7 @@ import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotResponse;
+import org.demo.whs.entity.dto.response.chatbot.ChatBotSuggestion;
 import org.demo.whs.entity.dto.response.chatbot.GeminiResponse;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.service.BatchService;
@@ -36,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -70,12 +72,26 @@ public class ChatBotServiceImpl implements ChatBotService {
 
     @Override
     public ChatBotResponse chat(ChatBotRequest request) {
-        String originalMessage = request.getMessage().trim();
         String conversationId = resolveConversationId(request.getConversationId());
         ChatBotConversationContext conversationContext = loadConversationContext(conversationId);
 
-        ChatBotCommand rawCommand = intentResolver.resolve(originalMessage);
-        ChatBotCommand command = enrichCommandWithContext(rawCommand, conversationContext);
+        ChatBotIntent intent = request.getIntent();
+        Map<String, Object> payload = request.getPayload();
+        String sku = payload != null ? (String) payload.get("sku") : null;
+        ChatBotCommand command;
+
+        if (intent != null && StringUtils.hasText(sku)) {
+            log.info("Chatbot conversation={} bypass intent={} sku={}", conversationId, intent, sku);
+            command = new ChatBotCommand(intent, "", "", sku, null);
+        } else if (intent != null) {
+            log.info("Chatbot conversation={} bypass intent={} (no sku)", conversationId, intent);
+            command = new ChatBotCommand(intent, request.getMessage() != null ? request.getMessage().trim() : "", 
+                    request.getMessage() != null ? request.getMessage().trim().toLowerCase() : "", null, null);
+        } else {
+            String originalMessage = request.getMessage() != null ? request.getMessage().trim() : "";
+            command = intentResolver.resolve(originalMessage);
+            command = enrichCommandWithContext(command, conversationContext);
+        }
 
         log.info(
                 "Chatbot conversation={} intent={} subject='{}' lastProduct='{}'",
@@ -87,8 +103,8 @@ public class ChatBotServiceImpl implements ChatBotService {
 
         try {
             ChatBotResponse response = switch (command.intent()) {
-                case GREETING -> buildResponse(conversationId, responseFormatter.greeting());
-                case HELP -> buildResponse(conversationId, responseFormatter.help());
+                case GREETING -> buildResponse(conversationId, responseFormatter.greeting(), command.intent(), null, null);
+                case HELP -> buildResponse(conversationId, responseFormatter.help(), command.intent(), null, null);
                 case PRODUCT_LOOKUP -> handleProductLookup(command, conversationId, conversationContext);
                 case INVENTORY_SUMMARY -> handleInventorySummary(command, conversationId, conversationContext);
                 case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command, conversationId, conversationContext);
@@ -100,7 +116,7 @@ public class ChatBotServiceImpl implements ChatBotService {
             return response;
         } catch (IllegalStateException ex) {
             saveConversationContext(conversationId, conversationContext);
-            return buildResponse(conversationId, ex.getMessage());
+            return buildResponse(conversationId, ex.getMessage(), ChatBotIntent.UNKNOWN, null, null);
         }
     }
 
@@ -114,14 +130,14 @@ public class ChatBotServiceImpl implements ChatBotService {
 
         if (products.isEmpty()) {
             rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
-            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword), command.intent(), null, keyword);
         }
 
         if (products.size() == 1) {
             rememberConversation(conversationContext, command.intent(), products.get(0), command.thresholdDays(), keyword);
         }
 
-        return buildResponse(conversationId, responseFormatter.productLookup(products));
+        return buildResponse(conversationId, responseFormatter.productLookup(products), command.intent(), products.size() == 1 ? products.get(0) : null, keyword);
     }
 
     private ChatBotResponse handleInventorySummary(
@@ -133,7 +149,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (product == null) {
             String keyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
-            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword), command.intent(), null, keyword);
         }
 
         InventorySummaryResponse summary;
@@ -144,7 +160,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
 
         rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command, conversationContext));
-        return buildResponse(conversationId, responseFormatter.inventorySummary(product, summary));
+        return buildResponse(conversationId, responseFormatter.inventorySummary(product, summary), command.intent(), product, resolveLookupKeyword(command, conversationContext));
     }
 
     private ChatBotResponse handleInventoryByLocation(
@@ -156,7 +172,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (product == null) {
             String keyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, command.thresholdDays(), keyword);
-            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword));
+            return buildResponse(conversationId, responseFormatter.noProductMatch(keyword), command.intent(), null, keyword);
         }
 
         InventoryFilterRequest filterRequest = InventoryFilterRequest.builder()
@@ -167,10 +183,10 @@ public class ChatBotServiceImpl implements ChatBotService {
         rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command, conversationContext));
 
         if (locations == null || locations.isEmpty()) {
-            return buildResponse(conversationId, responseFormatter.noInventoryByLocation(product));
+            return buildResponse(conversationId, responseFormatter.noInventoryByLocation(product), command.intent(), product, resolveLookupKeyword(command, conversationContext));
         }
 
-        return buildResponse(conversationId, responseFormatter.inventoryByLocation(product, locations));
+        return buildResponse(conversationId, responseFormatter.inventoryByLocation(product, locations), command.intent(), product, resolveLookupKeyword(command, conversationContext));
     }
 
     private ChatBotResponse handleBatchExpiring(
@@ -186,17 +202,17 @@ public class ChatBotServiceImpl implements ChatBotService {
             rememberConversation(conversationContext, command.intent(), null, thresholdDays, null);
 
             if (batches == null || batches.isEmpty()) {
-                return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, null));
+                return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, null), command.intent(), null, null);
             }
 
-            return buildResponse(conversationId, responseFormatter.batchExpiringGlobal(thresholdDays, batches));
+            return buildResponse(conversationId, responseFormatter.batchExpiringGlobal(thresholdDays, batches), command.intent(), null, null);
         }
 
         ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
             String resolvedKeyword = resolveLookupKeyword(command, conversationContext);
             rememberConversation(conversationContext, command.intent(), null, thresholdDays, resolvedKeyword);
-            return buildResponse(conversationId, responseFormatter.noProductMatch(resolvedKeyword));
+            return buildResponse(conversationId, responseFormatter.noProductMatch(resolvedKeyword), command.intent(), null, resolvedKeyword);
         }
 
         LocalDate deadline = LocalDate.now().plusDays(thresholdDays);
@@ -211,10 +227,10 @@ public class ChatBotServiceImpl implements ChatBotService {
         rememberConversation(conversationContext, command.intent(), product, thresholdDays, resolveLookupKeyword(command, conversationContext));
 
         if (batches.isEmpty()) {
-            return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, product));
+            return buildResponse(conversationId, responseFormatter.noBatchExpiring(thresholdDays, product), command.intent(), product, resolveLookupKeyword(command, conversationContext));
         }
 
-        return buildResponse(conversationId, responseFormatter.batchExpiringByProduct(product, thresholdDays, batches));
+        return buildResponse(conversationId, responseFormatter.batchExpiringByProduct(product, thresholdDays, batches), command.intent(), product, resolveLookupKeyword(command, conversationContext));
     }
 
     private ChatBotResponse handleUnknown(
@@ -225,15 +241,14 @@ public class ChatBotServiceImpl implements ChatBotService {
         String msg = command.normalizedMessage();
         boolean hasContext = StringUtils.hasText(context.getLastProductSku());
 
-        // 1. HARD BLOCK: không có context → KHÔNG gọi AI
         if (!hasContext) {
             if (msg.split("\\s+").length <= 5) {
                 return buildResponse(conversationId,
-                        "Bạn hãy cung cấp tên hoặc SKU sản phẩm để tôi hỗ trợ chính xác hơn.");
+                        "Bạn hãy cung cấp tên hoặc SKU sản phẩm để tôi hỗ trợ chính xác hơn.",
+                        command.intent(), null, null);
             }
         }
 
-        // 2. SIMPLE QUESTION → xử lý local
         if (hasContext && isSimpleProductQuestion(msg)) {
             return buildResponse(conversationId,
                     """
@@ -241,16 +256,16 @@ public class ChatBotServiceImpl implements ChatBotService {
                     1. Giá
                     2. Tồn kho
                     3. Vị trí
-                    """);
+                    """,
+                    command.intent(), null, context.getLastProductSku());
         }
 
-        // 3. SHORT MESSAGE → hỏi lại (không gọi AI)
         if (msg.split("\\s+").length <= 3) {
             return buildResponse(conversationId,
-                    "Bạn muốn hỏi rõ hơn về sản phẩm (giá, tồn kho hay vị trí)?");
+                    "Bạn muốn hỏi rõ hơn về sản phẩm (giá, tồn kho hay vị trí)?",
+                    command.intent(), null, context.getLastProductSku());
         }
 
-        // 4. LAST RESORT → mới gọi AI
         rememberConversation(context, command.intent(), null,
                 command.thresholdDays(), command.subjectKeyword());
 
@@ -258,7 +273,7 @@ public class ChatBotServiceImpl implements ChatBotService {
                 buildFallbackPrompt(command.originalMessage(), context)
         );
 
-        return buildResponse(conversationId, reply);
+        return buildResponse(conversationId, reply, command.intent(), null, context.getLastProductSku());
     }
 
     private ProductResponse resolveSingleProduct(ChatBotCommand command, ChatBotConversationContext context) {
@@ -514,10 +529,12 @@ public class ChatBotServiceImpl implements ChatBotService {
         return CONVERSATION_CONTEXT_PREFIX + conversationId;
     }
 
-    private ChatBotResponse buildResponse(String conversationId, String reply) {
+    private ChatBotResponse buildResponse(String conversationId, String reply, ChatBotIntent intent, ProductResponse product, String keyword) {
+        List<ChatBotSuggestion> suggestions = responseFormatter.getSuggestions(intent, product, keyword);
         return ChatBotResponse.builder()
                 .reply(reply)
                 .conversationId(conversationId)
+                .suggestions(suggestions)
                 .build();
     }
     private boolean isSimpleProductQuestion(String msg) {

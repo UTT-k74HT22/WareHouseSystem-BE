@@ -4,15 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
+import org.demo.whs.service.chatbot.ChatBotIntent;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatBotResponse {
-    private String reply;
-    private String conversationId;
-    private List<ChatBotSuggestion> suggestions;
+public class ChatBotSuggestion {
+    private String label;
+    private ChatBotIntent intent;
+    private String sku;
 }
