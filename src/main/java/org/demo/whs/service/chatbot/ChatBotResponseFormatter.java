@@ -251,54 +251,53 @@ public class ChatBotResponseFormatter {
         String sku = product.getSku();
         return List.of(
                 ChatBotSuggestion.builder()
-                        .label("Xem tồn kho")
+                        .label("Sản phẩm này còn bao nhiêu hàng?") // Changed from "Xem tồn kho"
                         .intent(ChatBotIntent.INVENTORY_SUMMARY)
                         .sku(sku)
                         .build(),
                 ChatBotSuggestion.builder()
-                        .label("Xem vị trí")
+                        .label("Sản phẩm này đang ở đâu trong kho?") // Changed from "Xem vị trí"
                         .intent(ChatBotIntent.INVENTORY_BY_LOCATION)
                         .sku(sku)
                         .build(),
                 ChatBotSuggestion.builder()
-                        .label("Xem batch hết hạn")
+                        .label("Batch của sản phẩm này có sắp hết hạn không?") // Changed from "Xem batch hết hạn"
                         .intent(ChatBotIntent.BATCH_EXPIRING)
                         .sku(sku)
                         .build()
-        );
-    }
+                );
+                }
 
-    private List<ChatBotSuggestion> staticSuggestions(ChatBotIntent intent) {
-        return switch (intent) {
-            case GREETING, HELP, UNKNOWN -> List.of(
-                    ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
-            );
-            case PRODUCT_LOOKUP -> List.of(
-                    ChatBotSuggestion.builder().label("Xem tồn kho").intent(ChatBotIntent.INVENTORY_SUMMARY).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Xem vị trí").intent(ChatBotIntent.INVENTORY_BY_LOCATION).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
-            );
-            case INVENTORY_SUMMARY, INVENTORY_BY_LOCATION -> List.of(
-                    ChatBotSuggestion.builder().label("Tìm sản phẩm khác").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build()
-            );
-            case BATCH_EXPIRING -> List.of(
-                    ChatBotSuggestion.builder().label("Xem thông tin sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Tìm kiếm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build()
-            );
-            case WAREHOUSE_LOOKUP, PARTNER_LOOKUP, INBOUND_LOOKUP, OUTBOUND_LOOKUP, SYSTEM_GUIDE -> List.of(
-                    ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Hỗ trợ vận hành").intent(ChatBotIntent.SYSTEM_GUIDE).sku(null).build()
-            );
-        };
-    }
-
+                private List<ChatBotSuggestion> staticSuggestions(ChatBotIntent intent) {
+                return switch (intent) {
+                case GREETING, HELP, UNKNOWN -> List.of(
+                ChatBotSuggestion.builder().label("Tôi muốn tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Liệt kê các kho trong hệ thống").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Tôi muốn tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Tìm các batch sắp hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
+                );
+                case PRODUCT_LOOKUP -> List.of(
+                ChatBotSuggestion.builder().label("Sản phẩm này còn bao nhiêu hàng?").intent(ChatBotIntent.INVENTORY_SUMMARY).sku(null).build(),
+                ChatBotSuggestion.builder().label("Sản phẩm này đang ở đâu trong kho?").intent(ChatBotIntent.INVENTORY_BY_LOCATION).sku(null).build(),
+                ChatBotSuggestion.builder().label("Batch của sản phẩm này có sắp hết hạn không?").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
+                );
+                case INVENTORY_SUMMARY, INVENTORY_BY_LOCATION -> List.of(
+                ChatBotSuggestion.builder().label("Tôi muốn tìm sản phẩm khác").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Batch của sản phẩm này có sắp hết hạn không?").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build(),
+                ChatBotSuggestion.builder().label("Tôi muốn tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build()
+                );
+                case BATCH_EXPIRING -> List.of(
+                ChatBotSuggestion.builder().label("Xem thông tin sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build() // Changed from "Tìm kiếm"
+                );
+                case WAREHOUSE_LOOKUP, PARTNER_LOOKUP, INBOUND_LOOKUP, OUTBOUND_LOOKUP, SYSTEM_GUIDE -> List.of(
+                ChatBotSuggestion.builder().label("Tôi muốn tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Liệt kê các kho trong hệ thống").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
+                ChatBotSuggestion.builder().label("Hướng dẫn sử dụng hệ thống").intent(ChatBotIntent.SYSTEM_GUIDE).sku(null).build()
+                );
+                };
+                }
     private String formatLocationLine(InventoryByLocationResponse location, LocationInventoryItemResponse item) {
         String batchPart = item.getBatchNumber() != null ? " | Batch: `" + item.getBatchNumber() + "`" : "";
         return "- Kho: " + safe(location.getWarehouseName())

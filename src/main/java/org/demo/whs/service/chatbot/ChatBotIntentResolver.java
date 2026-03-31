@@ -61,6 +61,7 @@ public class ChatBotIntentResolver {
     private static final List<String> WAREHOUSE_LOOKUP_KEYWORDS = List.of(
             "kho",
             "warehouse",
+            "danh sach kho",
             "dia chi kho",
             "thong tin kho"
     );
@@ -84,7 +85,6 @@ public class ChatBotIntentResolver {
 
     private static final List<String> OUTBOUND_LOOKUP_KEYWORDS = List.of(
             "xuat hang",
-            "so",
             "don xuat",
             "shipment",
             "outbound"
@@ -129,22 +129,6 @@ public class ChatBotIntentResolver {
             return new ChatBotCommand(ChatBotIntent.SYSTEM_GUIDE, safeMessage, normalizedMessage, null, null);
         }
 
-        if (containsAny(normalizedMessage, WAREHOUSE_LOOKUP_KEYWORDS)) {
-            return new ChatBotCommand(ChatBotIntent.WAREHOUSE_LOOKUP, safeMessage, normalizedMessage, extractSubjectKeyword(normalizedMessage), null);
-        }
-
-        if (containsAny(normalizedMessage, PARTNER_LOOKUP_KEYWORDS)) {
-            return new ChatBotCommand(ChatBotIntent.PARTNER_LOOKUP, safeMessage, normalizedMessage, extractSubjectKeyword(normalizedMessage), null);
-        }
-
-        if (containsAny(normalizedMessage, INBOUND_LOOKUP_KEYWORDS) || PO_PATTERN.matcher(normalizedMessage).find()) {
-            return new ChatBotCommand(ChatBotIntent.INBOUND_LOOKUP, safeMessage, normalizedMessage, extractOrderNumber(normalizedMessage, PO_PATTERN), null);
-        }
-
-        if (containsAny(normalizedMessage, OUTBOUND_LOOKUP_KEYWORDS) || SO_PATTERN.matcher(normalizedMessage).find()) {
-            return new ChatBotCommand(ChatBotIntent.OUTBOUND_LOOKUP, safeMessage, normalizedMessage, extractOrderNumber(normalizedMessage, SO_PATTERN), null);
-        }
-
         if (containsAny(normalizedMessage, INVENTORY_BY_LOCATION_KEYWORDS)) {
             return new ChatBotCommand(
                     ChatBotIntent.INVENTORY_BY_LOCATION,
@@ -173,6 +157,22 @@ public class ChatBotIntentResolver {
                     extractSubjectKeyword(normalizedMessage),
                     null
             );
+        }
+
+        if (containsAny(normalizedMessage, INBOUND_LOOKUP_KEYWORDS) || PO_PATTERN.matcher(normalizedMessage).find()) {
+            return new ChatBotCommand(ChatBotIntent.INBOUND_LOOKUP, safeMessage, normalizedMessage, extractOrderNumber(normalizedMessage, PO_PATTERN), null);
+        }
+
+        if (containsAny(normalizedMessage, OUTBOUND_LOOKUP_KEYWORDS) || SO_PATTERN.matcher(normalizedMessage).find()) {
+            return new ChatBotCommand(ChatBotIntent.OUTBOUND_LOOKUP, safeMessage, normalizedMessage, extractOrderNumber(normalizedMessage, SO_PATTERN), null);
+        }
+
+        if (containsAny(normalizedMessage, WAREHOUSE_LOOKUP_KEYWORDS)) {
+            return new ChatBotCommand(ChatBotIntent.WAREHOUSE_LOOKUP, safeMessage, normalizedMessage, extractSubjectKeyword(normalizedMessage), null);
+        }
+
+        if (containsAny(normalizedMessage, PARTNER_LOOKUP_KEYWORDS)) {
+            return new ChatBotCommand(ChatBotIntent.PARTNER_LOOKUP, safeMessage, normalizedMessage, extractSubjectKeyword(normalizedMessage), null);
         }
 
         if (containsAny(normalizedMessage, PRODUCT_LOOKUP_KEYWORDS) || looksLikeSku(safeMessage) || isShortLookup(normalizedMessage)) {
