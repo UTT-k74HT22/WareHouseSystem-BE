@@ -303,24 +303,24 @@ public class ChatBotResponseFormatter {
         String sku = product.getSku();
         return List.of(
                 ChatBotSuggestion.builder()
-                        .label("San pham nay con bao nhieu hang?")
+                        .label("Sản phẩm này còn bao nhiêu hàng?")
                         .intent(ChatBotIntent.INVENTORY_SUMMARY)
                         .sku(sku)
-                        .query("Ton kho " + sku)
+                        .query("Tồn kho " + sku)
                         .requiresInput(Boolean.FALSE)
                         .build(),
                 ChatBotSuggestion.builder()
-                        .label("San pham nay dang o dau trong kho?")
+                        .label("Sản phẩm này đang ở đâu trong kho?")
                         .intent(ChatBotIntent.INVENTORY_BY_LOCATION)
                         .sku(sku)
-                        .query("Ton kho theo vi tri " + sku)
+                        .query("Tồn kho theo vị trí " + sku)
                         .requiresInput(Boolean.FALSE)
                         .build(),
                 ChatBotSuggestion.builder()
-                        .label("Batch cua san pham nay co sap het han khong?")
+                        .label("Batch của sản phẩm này có sắp hết hạn không?")
                         .intent(ChatBotIntent.BATCH_EXPIRING)
                         .sku(sku)
-                        .query("Batch sap het han " + sku)
+                        .query("Batch sắp hết hạn " + sku)
                         .requiresInput(Boolean.FALSE)
                         .build()
         );
@@ -329,21 +329,21 @@ public class ChatBotResponseFormatter {
     private List<ChatBotSuggestion> staticSuggestions(ChatBotIntent intent) {
         return switch (intent) {
             case GREETING, HELP, UNKNOWN -> List.of(
-                    inputSuggestion("Tra cuu san pham", ChatBotIntent.PRODUCT_LOOKUP, "Tim san pham "),
-                    actionSuggestion("Danh sach kho", ChatBotIntent.WAREHOUSE_LOOKUP, "Xem danh sach cac kho"),
-                    actionSuggestion("Batch sap het han", ChatBotIntent.BATCH_EXPIRING, "Liet ke cac batch sap het han trong 30 ngay"),
-                    inputSuggestion("Nhap ma don nhap", ChatBotIntent.INBOUND_LOOKUP, "Don nhap "),
-                    inputSuggestion("Nhap ma don xuat", ChatBotIntent.OUTBOUND_LOOKUP, "Don xuat ")
+                    inputSuggestion("Tra cứu sản phẩm", ChatBotIntent.PRODUCT_LOOKUP, "Tìm sản phẩm "),
+                    actionSuggestion("Danh sách kho", ChatBotIntent.WAREHOUSE_LOOKUP, "Xem danh sách các kho"),
+                    actionSuggestion("Batch sắp hết hạn", ChatBotIntent.BATCH_EXPIRING, "Liệt kê các batch sắp hết hạn trong 30 ngày"),
+                    inputSuggestion("Nhập mã đơn nhập", ChatBotIntent.INBOUND_LOOKUP, "Đơn nhập "),
+                    inputSuggestion("Nhập mã đơn xuất", ChatBotIntent.OUTBOUND_LOOKUP, "Đơn xuất ")
             );
             case PRODUCT_LOOKUP, INVENTORY_SUMMARY, INVENTORY_BY_LOCATION, BATCH_EXPIRING -> List.of(
-                    inputSuggestion("Nhap ten hoac SKU khac", ChatBotIntent.PRODUCT_LOOKUP, "Tim san pham "),
-                    inputSuggestion("Nhap ma don nhap", ChatBotIntent.INBOUND_LOOKUP, "Don nhap "),
-                    inputSuggestion("Nhap ma don xuat", ChatBotIntent.OUTBOUND_LOOKUP, "Don xuat ")
+                    inputSuggestion("Nhập tên hoặc SKU khác", ChatBotIntent.PRODUCT_LOOKUP, "Tìm sản phẩm "),
+                    inputSuggestion("Nhập mã đơn nhập", ChatBotIntent.INBOUND_LOOKUP, "Đơn nhập "),
+                    inputSuggestion("Nhập mã đơn xuất", ChatBotIntent.OUTBOUND_LOOKUP, "Đơn xuất ")
             );
             case WAREHOUSE_LOOKUP, PARTNER_LOOKUP, INBOUND_LOOKUP, OUTBOUND_LOOKUP, SYSTEM_GUIDE -> List.of(
-                    inputSuggestion("Tra cuu san pham", ChatBotIntent.PRODUCT_LOOKUP, "Tim san pham "),
-                    actionSuggestion("Danh sach kho", ChatBotIntent.WAREHOUSE_LOOKUP, "Xem danh sach cac kho"),
-                    actionSuggestion("Huong dan su dung", ChatBotIntent.SYSTEM_GUIDE, "Huong dan su dung he thong")
+                    inputSuggestion("Tra cứu sản phẩm", ChatBotIntent.PRODUCT_LOOKUP, "Tìm sản phẩm "),
+                    actionSuggestion("Danh sách kho", ChatBotIntent.WAREHOUSE_LOOKUP, "Xem danh sách các kho"),
+                    actionSuggestion("Hướng dẫn sử dụng", ChatBotIntent.SYSTEM_GUIDE, "Hướng dẫn sử dụng hệ thống")
             );
         };
     }
