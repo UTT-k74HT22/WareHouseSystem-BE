@@ -3,31 +3,43 @@ package org.demo.whs.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Product.SearchProductRequest;
+import org.demo.whs.entity.dto.request.PurchaseOrders.PurchaseOrdersFilterRequest;
+import org.demo.whs.entity.dto.request.SalesOrders.SalesOrdersFilterRequest;
 import org.demo.whs.entity.dto.request.chatbot.ChatBotRequest;
 import org.demo.whs.entity.dto.request.chatbot.GeminiRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
+import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
+import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
+import org.demo.whs.entity.dto.response.SalesOrders.SalesOrdersResponse;
+import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotSuggestion;
 import org.demo.whs.entity.dto.response.chatbot.GeminiResponse;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.service.BatchService;
+import org.demo.whs.service.BusinessPartnerService;
 import org.demo.whs.service.ChatBotService;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.ProductService;
+import org.demo.whs.service.PurchaseOrdersService;
 import org.demo.whs.service.RedisService;
+import org.demo.whs.service.SalesOrdersService;
+import org.demo.whs.service.WareHouseService;
 import org.demo.whs.service.chatbot.ChatBotCommand;
 import org.demo.whs.service.chatbot.ChatBotConversationContext;
 import org.demo.whs.service.chatbot.ChatBotIntent;
 import org.demo.whs.service.chatbot.ChatBotIntentResolver;
 import org.demo.whs.service.chatbot.ChatBotResponseFormatter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,6 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +69,10 @@ public class ChatBotServiceImpl implements ChatBotService {
     private final ProductService productService;
     private final InventoryService inventoryService;
     private final BatchService batchService;
+    private final WareHouseService wareHouseService;
+    private final BusinessPartnerService businessPartnerService;
+    private final PurchaseOrdersService purchaseOrdersService;
+    private final SalesOrdersService salesOrdersService;
     private final WebClient.Builder webClientBuilder;
     private final RedisService redisService;
     private final ChatBotIntentResolver intentResolver;
@@ -105,10 +122,15 @@ public class ChatBotServiceImpl implements ChatBotService {
             ChatBotResponse response = switch (command.intent()) {
                 case GREETING -> buildResponse(conversationId, responseFormatter.greeting(), command.intent(), null, null);
                 case HELP -> buildResponse(conversationId, responseFormatter.help(), command.intent(), null, null);
+                case SYSTEM_GUIDE -> buildResponse(conversationId, responseFormatter.systemGuide(), command.intent(), null, null);
                 case PRODUCT_LOOKUP -> handleProductLookup(command, conversationId, conversationContext);
                 case INVENTORY_SUMMARY -> handleInventorySummary(command, conversationId, conversationContext);
                 case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command, conversationId, conversationContext);
                 case BATCH_EXPIRING -> handleBatchExpiring(command, conversationId, conversationContext);
+                case WAREHOUSE_LOOKUP -> handleWarehouseLookup(command, conversationId);
+                case PARTNER_LOOKUP -> handlePartnerLookup(command, conversationId);
+                case INBOUND_LOOKUP -> handleInboundLookup(command, conversationId);
+                case OUTBOUND_LOOKUP -> handleOutboundLookup(command, conversationId);
                 case UNKNOWN -> handleUnknown(command, conversationId, conversationContext);
             };
 
@@ -118,6 +140,71 @@ public class ChatBotServiceImpl implements ChatBotService {
             saveConversationContext(conversationId, conversationContext);
             return buildResponse(conversationId, ex.getMessage(), ChatBotIntent.UNKNOWN, null, null);
         }
+    }
+
+    private ChatBotResponse handleWarehouseLookup(ChatBotCommand command, String conversationId) {
+        String keyword = command.subjectKeyword();
+        List<WareHouseResponse> warehouses = wareHouseService.getWareHouses();
+
+        if (StringUtils.hasText(keyword)) {
+            warehouses = warehouses.stream()
+                    .filter(w -> (w.getName() != null && w.getName().toLowerCase().contains(keyword.toLowerCase()))
+                            || (w.getCode() != null && w.getCode().toLowerCase().contains(keyword.toLowerCase())))
+                    .collect(Collectors.toList());
+        }
+
+        return buildResponse(conversationId, responseFormatter.warehouseLookup(warehouses), command.intent(), null, keyword);
+    }
+
+    private ChatBotResponse handlePartnerLookup(ChatBotCommand command, String conversationId) {
+        String keyword = command.subjectKeyword();
+        if (!StringUtils.hasText(keyword)) {
+            return buildResponse(conversationId, "Bạn hãy cung cấp tên hoặc mã đối tác để tôi tìm kiếm.", command.intent(), null, null);
+        }
+
+        SearchBusinessPartnerRequest searchRequest = new SearchBusinessPartnerRequest();
+        searchRequest.setName(keyword);
+        PageResponse<BusinessPartnerResponse> pageResponse = businessPartnerService.searchBusinessPartners(searchRequest, 0, 10);
+        List<BusinessPartnerResponse> partners = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
+
+        if (partners.isEmpty()) {
+            searchRequest.setName(null);
+            searchRequest.setCode(keyword);
+            pageResponse = businessPartnerService.searchBusinessPartners(searchRequest, 0, 10);
+            partners = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
+        }
+
+        return buildResponse(conversationId, responseFormatter.partnerLookup(partners), command.intent(), null, keyword);
+    }
+
+    private ChatBotResponse handleInboundLookup(ChatBotCommand command, String conversationId) {
+        String keyword = command.subjectKeyword();
+        if (!StringUtils.hasText(keyword)) {
+            return buildResponse(conversationId, "Bạn hãy cung cấp mã đơn nhập (PO) hoặc từ khóa để tôi tìm kiếm.", command.intent(), null, null);
+        }
+
+        PurchaseOrdersFilterRequest filter = PurchaseOrdersFilterRequest.builder()
+                .purchaseOrderNumber(keyword)
+                .build();
+        PageResponse<PurchaseOrdersResponse> pageResponse = purchaseOrdersService.getAll(filter, PageRequest.of(0, 10));
+        List<PurchaseOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
+
+        return buildResponse(conversationId, responseFormatter.purchaseOrderLookup(orders), command.intent(), null, keyword);
+    }
+
+    private ChatBotResponse handleOutboundLookup(ChatBotCommand command, String conversationId) {
+        String keyword = command.subjectKeyword();
+        if (!StringUtils.hasText(keyword)) {
+            return buildResponse(conversationId, "Bạn hãy cung cấp mã đơn xuất (SO) hoặc từ khóa để tôi tìm kiếm.", command.intent(), null, null);
+        }
+
+        SalesOrdersFilterRequest filter = SalesOrdersFilterRequest.builder()
+                .soNumber(keyword)
+                .build();
+        PageResponse<SalesOrdersResponse> pageResponse = salesOrdersService.getAll(filter, PageRequest.of(0, 10));
+        List<SalesOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
+
+        return buildResponse(conversationId, responseFormatter.salesOrderLookup(orders), command.intent(), null, keyword);
     }
 
     private ChatBotResponse handleProductLookup(
@@ -242,9 +329,9 @@ public class ChatBotServiceImpl implements ChatBotService {
         boolean hasContext = StringUtils.hasText(context.getLastProductSku());
 
         if (!hasContext) {
-            if (msg.split("\\s+").length <= 5) {
+            if (msg.split("\\s+").length <= 4) {
                 return buildResponse(conversationId,
-                        "Bạn hãy cung cấp tên hoặc SKU sản phẩm để tôi hỗ trợ chính xác hơn.",
+                        "Tôi có thể hỗ trợ tra cứu Sản phẩm, Kho, Đối tác hoặc Đơn hàng. Bạn muốn tìm thông tin gì?",
                         command.intent(), null, null);
             }
         }
@@ -252,17 +339,11 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (hasContext && isSimpleProductQuestion(msg)) {
             return buildResponse(conversationId,
                     """
-                    Bạn muốn xem:
-                    1. Giá
-                    2. Tồn kho
-                    3. Vị trí
+                    Bạn muốn xem gì về sản phẩm này:
+                    1. Giá & Thông tin
+                    2. Tồn kho tổng quát
+                    3. Vị trí kho chi tiết
                     """,
-                    command.intent(), null, context.getLastProductSku());
-        }
-
-        if (msg.split("\\s+").length <= 3) {
-            return buildResponse(conversationId,
-                    "Bạn muốn hỏi rõ hơn về sản phẩm (giá, tồn kho hay vị trí)?",
                     command.intent(), null, context.getLastProductSku());
         }
 
@@ -399,10 +480,22 @@ public class ChatBotServiceImpl implements ChatBotService {
 
     private String buildFallbackPrompt(String originalMessage, ChatBotConversationContext conversationContext) {
         return """
-                Bạn là trợ lý của hệ thống kho WHS.
-                Chỉ được trả lời các câu hỏi mở, hướng dẫn sử dụng, hoặc giải thích tổng quan.
-                Không được tự ý đưa ra tồn kho, SKU, batch, giá, hoặc số liệu vận hành nếu prompt không cung cấp dữ liệu.
-                Nếu câu hỏi cần dữ liệu thời gian thực, hãy nói rằng bạn không đủ dữ liệu và yêu cầu người dùng hỏi theo SKU hoặc tên sản phẩm.
+                Bạn là trợ lý thông minh của hệ thống quản lý kho WHS (Warehouse Management System).
+                
+                Nhiệm vụ:
+                1. Trả lời các câu hỏi mở về quy trình vận hành kho (nhập kho, xuất kho, kiểm kê, v.v.).
+                2. Hướng dẫn người dùng cách sử dụng các tính năng tra cứu của hệ thống.
+                
+                Dữ liệu hệ thống có thể tra cứu trực tiếp (Local Lookups):
+                - Sản phẩm (Product/SKU)
+                - Kho bãi (Warehouse)
+                - Đối tác (Business Partner/Supplier/Customer)
+                - Đơn hàng (Purchase Order/Sales Order)
+                
+                Lưu ý quan trọng:
+                - Không tự bịa ra số liệu tồn kho, mã đơn hàng, hoặc giá cả nếu không có trong ngữ cảnh.
+                - Nếu người dùng hỏi về thông tin cụ thể (ví dụ: "Đơn hàng PO-123 ở đâu?"), hãy bảo họ sử dụng đúng từ khóa hoặc cung cấp thêm mã để hệ thống tra cứu trực tiếp.
+                - Luôn giữ thái độ chuyên nghiệp, ngắn gọn.
 
                 Ngữ cảnh gần nhất: %s
                 Câu hỏi người dùng: %s

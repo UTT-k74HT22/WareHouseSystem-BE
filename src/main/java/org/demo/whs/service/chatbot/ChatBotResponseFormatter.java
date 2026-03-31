@@ -3,10 +3,16 @@ package org.demo.whs.service.chatbot;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchInventorySnapshotResponse;
+import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
+import org.demo.whs.entity.dto.response.InboundReceipts.InboundReceiptsResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
+import org.demo.whs.entity.dto.response.OutboundShipments.OutboundShipmentsResponse;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
+import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
+import org.demo.whs.entity.dto.response.SalesOrders.SalesOrdersResponse;
+import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotSuggestion;
 import org.springframework.stereotype.Component;
 
@@ -18,19 +24,97 @@ import java.util.stream.Collectors;
 public class ChatBotResponseFormatter {
 
     public String greeting() {
-        return "Chào bạn. Tôi là WHS Assistant. Tôi có thể tra cứu sản phẩm, tồn kho, vị trí tồn và batch sắp hết hạn bằng dữ liệu thật từ hệ thống.";
+        return "Chào bạn. Tôi là WHS Assistant. Tôi có thể tra cứu sản phẩm, kho bãi, đối tác và các loại đơn hàng (nhập/xuất) bằng dữ liệu thật từ hệ thống.";
     }
 
     public String help() {
         return """
-                Tôi ưu tiên trả lời bằng dữ liệu thật từ WMS và chỉ gọi AI khi thật sự cần.
+                Tôi có thể hỗ trợ bạn tra cứu các thông tin sau:
 
-                Bạn có thể hỏi:
-                - Tồn kho SKU-001 còn bao nhiêu?
-                - Sản phẩm TV Samsung đang ở kho nào còn hàng?
-                - Batch nào sắp hết hạn trong 30 ngày?
-                - Thông tin sản phẩm SKU-001
+                1. **Sản phẩm & Tồn kho**:
+                   - "Tìm sản phẩm [tên/sku]"
+                   - "Tồn kho SKU-001"
+                   - "Sản phẩm này ở kho nào còn hàng?"
+                   - "Batch sắp hết hạn trong 30 ngày"
+
+                2. **Kho bãi & Địa điểm**:
+                   - "Danh sách kho"
+                   - "Thông tin kho [tên kho]"
+
+                3. **Đối tác (NCC/Khách hàng)**:
+                   - "Tìm nhà cung cấp [tên]"
+                   - "Thông tin khách hàng [tên]"
+
+                4. **Đơn hàng (PO/SO)**:
+                   - "Đơn nhập PO-2024-001"
+                   - "Đơn xuất SO-2024-005"
                 """;
+    }
+
+    public String systemGuide() {
+        return """
+                **Hướng dẫn vận hành cơ bản:**
+                
+                - **Nhập hàng**: Tạo Đơn mua (PO) -> Xác nhận PO -> Tạo Biên bản nhập kho (Receipt) -> Xác nhận nhập kho.
+                - **Xuất hàng**: Tạo Đơn bán (SO) -> Xác nhận SO -> Tạo Chuyến xuất hàng (Shipment) -> Xác nhận xuất hàng.
+                - **Kiểm kê**: Sử dụng chức năng Stock Adjustment để điều chỉnh số lượng thực tế.
+                - **Luân chuyển**: Sử dụng Stock Transfer để chuyển hàng giữa các kho/vị trí.
+                
+                Bạn cần hỗ trợ chi tiết bước nào không?
+                """;
+    }
+
+    public String warehouseLookup(List<WareHouseResponse> warehouses) {
+        if (warehouses.isEmpty()) {
+            return "Không tìm thấy thông tin kho nào khớp với yêu cầu.";
+        }
+
+        String rows = warehouses.stream()
+                .map(w -> "- **" + safe(w.getName()) + "** (`" + safe(w.getCode()) + "`) | Địa chỉ: " + safe(w.getAddress()))
+                .collect(Collectors.joining("\n"));
+
+        return "Danh sách kho tìm thấy:\n" + rows;
+    }
+
+    public String partnerLookup(List<BusinessPartnerResponse> partners) {
+        if (partners.isEmpty()) {
+            return "Không tìm thấy đối tác (NCC/Khách hàng) nào khớp với yêu cầu.";
+        }
+
+        String rows = partners.stream()
+                .map(p -> "- **" + safe(p.getName()) + "** (`" + safe(p.getCode()) + "`) | Loại: " + (p.getType() != null ? p.getType() : "N/A") + " | ĐT: " + safe(p.getPhone()))
+                .collect(Collectors.joining("\n"));
+
+        return "Tìm thấy " + partners.size() + " đối tác:\n" + rows;
+    }
+
+    public String purchaseOrderLookup(List<PurchaseOrdersResponse> orders) {
+        if (orders.isEmpty()) {
+            return "Không tìm thấy đơn nhập (PO) nào khớp với mã hoặc từ khóa yêu cầu.";
+        }
+
+        String rows = orders.stream()
+                .map(o -> "- **" + safe(o.getPurchaseOrderNumber()) + "** | Trạng thái: " + safe(o.getStatus()) + " | NCC ID: " + safe(o.getSupplierId()) + " | Tổng: " + decimal(o.getTotalAmount(), "0"))
+                .collect(Collectors.joining("\n"));
+
+        return "Thông tin đơn nhập (PO):\n" + rows;
+    }
+
+    public String salesOrderLookup(List<SalesOrdersResponse> orders) {
+        if (orders.isEmpty()) {
+            return "Không tìm thấy đơn xuất (SO) nào khớp với mã hoặc từ khóa yêu cầu.";
+        }
+
+        String rows = orders.stream()
+                .map(o -> "- **" + safe(o.getSoNumber()) + "** | Trạng thái: " + safe(o.getStatus()) + " | Khách ID: " + safe(o.getCustomerId()) + " | Tổng: " + decimal(o.getTotalAmount(), "0"))
+                .collect(Collectors.joining("\n"));
+
+        return "Thông tin đơn xuất (SO):\n" + rows;
+    }
+
+
+    public String noMatch(String entityType, String keyword) {
+        return "Không tìm thấy " + entityType + " nào khớp với từ khóa '" + keyword + "'.";
     }
 
     public String noProductMatch(String keyword) {
@@ -186,14 +270,10 @@ public class ChatBotResponseFormatter {
 
     private List<ChatBotSuggestion> staticSuggestions(ChatBotIntent intent) {
         return switch (intent) {
-            case GREETING -> List.of(
+            case GREETING, HELP, UNKNOWN -> List.of(
                     ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Xem tồn kho").intent(ChatBotIntent.INVENTORY_SUMMARY).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
-            );
-            case HELP -> List.of(
-                    ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Xem tồn kho").intent(ChatBotIntent.INVENTORY_SUMMARY).sku(null).build(),
+                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
+                    ChatBotSuggestion.builder().label("Tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build(),
                     ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
             );
             case PRODUCT_LOOKUP -> List.of(
@@ -204,17 +284,17 @@ public class ChatBotResponseFormatter {
             case INVENTORY_SUMMARY, INVENTORY_BY_LOCATION -> List.of(
                     ChatBotSuggestion.builder().label("Tìm sản phẩm khác").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
                     ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Tìm kiếm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build()
+                    ChatBotSuggestion.builder().label("Tra cứu đơn hàng").intent(ChatBotIntent.INBOUND_LOOKUP).sku(null).build()
             );
             case BATCH_EXPIRING -> List.of(
                     ChatBotSuggestion.builder().label("Xem thông tin sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Tìm sản phẩm khác").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
+                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
                     ChatBotSuggestion.builder().label("Tìm kiếm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build()
             );
-            case UNKNOWN -> List.of(
+            case WAREHOUSE_LOOKUP, PARTNER_LOOKUP, INBOUND_LOOKUP, OUTBOUND_LOOKUP, SYSTEM_GUIDE -> List.of(
                     ChatBotSuggestion.builder().label("Tìm sản phẩm").intent(ChatBotIntent.PRODUCT_LOOKUP).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Xem tồn kho").intent(ChatBotIntent.INVENTORY_SUMMARY).sku(null).build(),
-                    ChatBotSuggestion.builder().label("Batch hết hạn").intent(ChatBotIntent.BATCH_EXPIRING).sku(null).build()
+                    ChatBotSuggestion.builder().label("Danh sách kho").intent(ChatBotIntent.WAREHOUSE_LOOKUP).sku(null).build(),
+                    ChatBotSuggestion.builder().label("Hỗ trợ vận hành").intent(ChatBotIntent.SYSTEM_GUIDE).sku(null).build()
             );
         };
     }
