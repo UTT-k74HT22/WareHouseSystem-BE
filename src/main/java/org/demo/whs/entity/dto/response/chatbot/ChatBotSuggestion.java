@@ -14,4 +14,6 @@ public class ChatBotSuggestion {
     private String label;
     private ChatBotIntent intent;
     private String sku;
+    private String query;
+    private Boolean requiresInput;
 }

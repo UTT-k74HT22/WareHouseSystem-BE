@@ -20,6 +20,7 @@ import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.PurchaseOrdersMapper;
+import org.demo.whs.mapper.PurchaseOrderLinesMapper;
 import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BusinessPartnersRepository;
 import org.demo.whs.repository.PurchaseOrderLinesRepository;
@@ -52,6 +53,7 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
     private final PurchaseOrdersMapper purchaseOrdersMapper;
+    private final PurchaseOrderLinesMapper purchaseOrderLinesMapper;
     private final IdentifierGenerator identifierGenerator;
 
     @Override
@@ -112,7 +114,12 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
         PurchaseOrders purchaseOrders = purchaseOrdersRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Purchase order not found", ErrorCode.PO_001));
 
-        return purchaseOrdersMapper.toResponse(purchaseOrders);
+        List<PurchaseOrderLines> lines = purchaseOrderLinesRepository
+                .findByPurchaseOrderIdOrderByLineNumberAsc(id);
+
+        PurchaseOrdersResponse response = purchaseOrdersMapper.toResponse(purchaseOrders);
+        response.setLines(lines.stream().map(purchaseOrderLinesMapper::toResponse).toList());
+        return response;
     }
 
     @Override

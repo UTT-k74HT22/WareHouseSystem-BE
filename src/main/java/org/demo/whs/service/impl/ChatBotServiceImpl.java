@@ -189,6 +189,16 @@ public class ChatBotServiceImpl implements ChatBotService {
         PageResponse<PurchaseOrdersResponse> pageResponse = purchaseOrdersService.getAll(filter, PageRequest.of(0, 10));
         List<PurchaseOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
 
+        PurchaseOrdersResponse exactOrder = orders.stream()
+                .filter(order -> keyword.equalsIgnoreCase(order.getPurchaseOrderNumber()))
+                .findFirst()
+                .map(order -> purchaseOrdersService.getById(order.getId()))
+                .orElse(null);
+
+        if (exactOrder != null) {
+            return buildResponse(conversationId, responseFormatter.purchaseOrderDetail(exactOrder), command.intent(), null, keyword);
+        }
+
         return buildResponse(conversationId, responseFormatter.purchaseOrderLookup(orders), command.intent(), null, keyword);
     }
 
@@ -203,6 +213,16 @@ public class ChatBotServiceImpl implements ChatBotService {
                 .build();
         PageResponse<SalesOrdersResponse> pageResponse = salesOrdersService.getAll(filter, PageRequest.of(0, 10));
         List<SalesOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
+
+        SalesOrdersResponse exactOrder = orders.stream()
+                .filter(order -> keyword.equalsIgnoreCase(order.getSoNumber()))
+                .findFirst()
+                .map(order -> salesOrdersService.getById(order.getId()))
+                .orElse(null);
+
+        if (exactOrder != null) {
+            return buildResponse(conversationId, responseFormatter.salesOrderDetail(exactOrder), command.intent(), null, keyword);
+        }
 
         return buildResponse(conversationId, responseFormatter.salesOrderLookup(orders), command.intent(), null, keyword);
     }
