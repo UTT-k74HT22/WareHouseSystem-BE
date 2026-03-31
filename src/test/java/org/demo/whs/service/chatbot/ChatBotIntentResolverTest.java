@@ -10,28 +10,42 @@ class ChatBotIntentResolverTest {
 
     @Test
     void shouldClassifyInventoryByLocationBeforeWarehouseLookup() {
-        ChatBotCommand command = resolver.resolve("Sản phẩm này đang ở kho nào?");
+        ChatBotCommand command = resolver.resolve("San pham nay dang o kho nao?");
 
         assertEquals(ChatBotIntent.INVENTORY_BY_LOCATION, command.intent());
     }
 
     @Test
     void shouldClassifyInventorySummaryBeforeOutboundLookup() {
-        ChatBotCommand command = resolver.resolve("Số lượng tồn của SKU-001 còn bao nhiêu?");
+        ChatBotCommand command = resolver.resolve("So luong ton cua SKU-001 con bao nhieu?");
 
         assertEquals(ChatBotIntent.INVENTORY_SUMMARY, command.intent());
     }
 
     @Test
     void shouldKeepOutboundLookupForSalesOrderCodes() {
-        ChatBotCommand command = resolver.resolve("Đơn xuất SO-2024-005");
+        ChatBotCommand command = resolver.resolve("Don xuat SO-2024-005");
 
         assertEquals(ChatBotIntent.OUTBOUND_LOOKUP, command.intent());
     }
 
     @Test
     void shouldKeepWarehouseLookupForWarehouseListingQueries() {
-        ChatBotCommand command = resolver.resolve("Danh sách kho");
+        ChatBotCommand command = resolver.resolve("Danh sach kho");
+
+        assertEquals(ChatBotIntent.WAREHOUSE_LOOKUP, command.intent());
+    }
+
+    @Test
+    void shouldClassifyBatchExpiringForLoSapHetHanQueries() {
+        ChatBotCommand command = resolver.resolve("Lo sap het han");
+
+        assertEquals(ChatBotIntent.BATCH_EXPIRING, command.intent());
+    }
+
+    @Test
+    void shouldKeepWarehouseLookupForWarehouseLocationQueries() {
+        ChatBotCommand command = resolver.resolve("Cac vi tri cua kho TEST FLOW");
 
         assertEquals(ChatBotIntent.WAREHOUSE_LOOKUP, command.intent());
     }

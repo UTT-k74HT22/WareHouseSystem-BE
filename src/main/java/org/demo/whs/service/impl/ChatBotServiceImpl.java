@@ -15,6 +15,7 @@ import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
+import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
@@ -28,6 +29,7 @@ import org.demo.whs.service.BatchService;
 import org.demo.whs.service.BusinessPartnerService;
 import org.demo.whs.service.ChatBotService;
 import org.demo.whs.service.InventoryService;
+import org.demo.whs.service.LocationService;
 import org.demo.whs.service.ProductService;
 import org.demo.whs.service.PurchaseOrdersService;
 import org.demo.whs.service.RedisService;
@@ -68,6 +70,7 @@ public class ChatBotServiceImpl implements ChatBotService {
 
     private final ProductService productService;
     private final InventoryService inventoryService;
+    private final LocationService locationService;
     private final BatchService batchService;
     private final WareHouseService wareHouseService;
     private final BusinessPartnerService businessPartnerService;
@@ -143,17 +146,77 @@ public class ChatBotServiceImpl implements ChatBotService {
     }
 
     private ChatBotResponse handleWarehouseLookup(ChatBotCommand command, String conversationId) {
+        if (isWarehouseLocationQuery(command.normalizedMessage())) {
+            return handleWarehouseLocations(command, conversationId);
+        }
+
         String keyword = command.subjectKeyword();
         List<WareHouseResponse> warehouses = wareHouseService.getWareHouses();
 
         if (StringUtils.hasText(keyword)) {
             warehouses = warehouses.stream()
-                    .filter(w -> (w.getName() != null && w.getName().toLowerCase().contains(keyword.toLowerCase()))
-                            || (w.getCode() != null && w.getCode().toLowerCase().contains(keyword.toLowerCase())))
+                    .filter(w -> containsNormalized(w.getName(), keyword)
+                            || containsNormalized(w.getCode(), keyword))
                     .collect(Collectors.toList());
         }
 
         return buildResponse(conversationId, responseFormatter.warehouseLookup(warehouses), command.intent(), null, keyword);
+    }
+
+    private ChatBotResponse handleWarehouseLocations(ChatBotCommand command, String conversationId) {
+        String warehouseKeyword = extractWarehouseKeyword(command);
+
+        if (!StringUtils.hasText(warehouseKeyword)) {
+            PageResponse<LocationResponse> page = locationService.getAllLocations(0, 20);
+            List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
+            return buildResponse(
+                    conversationId,
+                    responseFormatter.warehouseLocationsOverview(locations),
+                    command.intent(),
+                    null,
+                    null
+            );
+        }
+
+        List<WareHouseResponse> warehouses = wareHouseService.getWareHouses().stream()
+                .filter(w -> containsNormalized(w.getName(), warehouseKeyword)
+                        || containsNormalized(w.getCode(), warehouseKeyword))
+                .collect(Collectors.toList());
+
+        if (warehouses.isEmpty()) {
+            return buildResponse(
+                    conversationId,
+                    "Khong tim thay kho nao khop voi tu khoa '" + warehouseKeyword + "'.",
+                    command.intent(),
+                    null,
+                    warehouseKeyword
+            );
+        }
+
+        if (warehouses.size() > 1) {
+            return buildResponse(
+                    conversationId,
+                    "Tim thay nhieu kho khop voi tu khoa '" + warehouseKeyword + "'. Hay chon ro hon:\n"
+                            + warehouses.stream()
+                            .map(w -> "- " + safeWarehouseLabel(w))
+                            .collect(Collectors.joining("\n")),
+                    command.intent(),
+                    null,
+                    warehouseKeyword
+            );
+        }
+
+        WareHouseResponse warehouse = warehouses.get(0);
+        PageResponse<LocationResponse> page = locationService.getLocationsByWarehouse(warehouse.getId(), 0, 50);
+        List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
+
+        return buildResponse(
+                conversationId,
+                responseFormatter.warehouseLocations(warehouse, locations),
+                command.intent(),
+                null,
+                warehouseKeyword
+        );
     }
 
     private ChatBotResponse handlePartnerLookup(ChatBotCommand command, String conversationId) {
@@ -422,6 +485,55 @@ public class ChatBotServiceImpl implements ChatBotService {
         bySku.setSku(keyword.trim());
         PageResponse<ProductResponse> bySkuPage = productService.searchProducts(bySku, 0, size);
         return bySkuPage.getContent() != null ? bySkuPage.getContent() : List.of();
+    }
+
+    private boolean isWarehouseLocationQuery(String normalizedMessage) {
+        if (!StringUtils.hasText(normalizedMessage)) {
+            return false;
+        }
+
+        return normalizedMessage.contains("vi tri")
+                || normalizedMessage.contains("location")
+                || normalizedMessage.contains("slot");
+    }
+
+    private String extractWarehouseKeyword(ChatBotCommand command) {
+        String source = StringUtils.hasText(command.subjectKeyword())
+                ? command.subjectKeyword()
+                : command.normalizedMessage();
+
+        if (!StringUtils.hasText(source)) {
+            return null;
+        }
+
+        String keyword = source
+                .replaceAll("\\b(cac|tat ca|danh sach|xem|cho toi|giup toi|vui long|vi tri|location|slot|cua|trong|thuoc|tai|o|warehouse|kho)\\b", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return keyword.isBlank() ? null : keyword;
+    }
+
+    private boolean containsNormalized(String source, String keyword) {
+        if (!StringUtils.hasText(source) || !StringUtils.hasText(keyword)) {
+            return false;
+        }
+
+        return normalizeText(source).contains(normalizeText(keyword));
+    }
+
+    private String normalizeText(String value) {
+        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('\u0111', 'd')
+                .replace('\u0110', 'D')
+                .toLowerCase()
+                .trim();
+    }
+
+    private String safeWarehouseLabel(WareHouseResponse warehouse) {
+        return (warehouse.getName() != null ? warehouse.getName() : "N/A")
+                + " (`" + (warehouse.getCode() != null ? warehouse.getCode() : "N/A") + "`)";
     }
 
     private String callGeminiWithRetry(String prompt) {

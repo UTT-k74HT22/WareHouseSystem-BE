@@ -55,7 +55,10 @@ public class ChatBotIntentResolver {
             "het han",
             "expiring batch",
             "lo sap het han",
-            "batch sap het han"
+            "batch sap het han",
+            "lo het han",
+            "cac lo sap het han",
+            "lo hang sap het han"
     );
 
     private static final List<String> WAREHOUSE_LOOKUP_KEYWORDS = List.of(
@@ -139,6 +142,16 @@ public class ChatBotIntentResolver {
             );
         }
 
+        if (isBatchExpiringQuestion(normalizedMessage)) {
+            return new ChatBotCommand(
+                    ChatBotIntent.BATCH_EXPIRING,
+                    safeMessage,
+                    normalizedMessage,
+                    extractSubjectKeyword(normalizedMessage),
+                    extractThresholdDays(normalizedMessage)
+            );
+        }
+
         if (containsAny(normalizedMessage, BATCH_EXPIRING_KEYWORDS)) {
             return new ChatBotCommand(
                     ChatBotIntent.BATCH_EXPIRING,
@@ -207,6 +220,11 @@ public class ChatBotIntentResolver {
             return Integer.parseInt(matcher.group(1));
         }
         return 30;
+    }
+
+    private boolean isBatchExpiringQuestion(String normalizedMessage) {
+        return normalizedMessage.contains("het han")
+                && (normalizedMessage.contains("batch") || normalizedMessage.contains("lo"));
     }
 
     private String extractOrderNumber(String normalizedMessage, Pattern pattern) {

@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
+import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.entity.dto.response.PurchaseOrderLines.PurchaseOrderLinesResponse;
 import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
@@ -71,6 +72,36 @@ public class ChatBotResponseFormatter {
                 .collect(Collectors.joining("\n"));
 
         return "Danh sach kho tim thay:\n" + rows;
+    }
+
+    public String warehouseLocations(WareHouseResponse warehouse, List<LocationResponse> locations) {
+        if (locations == null || locations.isEmpty()) {
+            return "Kho `" + safe(warehouse.getCode()) + "` - " + safe(warehouse.getName()) + " chua co vi tri nao.";
+        }
+
+        String rows = locations.stream()
+                .map(location -> "- `" + safe(location.getCode()) + "` | " + safe(location.getName())
+                        + " | Zone: " + safe(location.getZone())
+                        + " | Type: " + safe(location.getType())
+                        + " | Status: " + safe(location.getStatus()))
+                .collect(Collectors.joining("\n"));
+
+        return "Cac vi tri cua kho `" + safe(warehouse.getCode()) + "` - " + safe(warehouse.getName()) + ":\n" + rows;
+    }
+
+    public String warehouseLocationsOverview(List<LocationResponse> locations) {
+        if (locations == null || locations.isEmpty()) {
+            return "Khong tim thay vi tri kho nao.";
+        }
+
+        String rows = locations.stream()
+                .map(location -> "- `" + safe(location.getCode()) + "` | " + safe(location.getName())
+                        + " | Kho: " + safe(location.getWarehouseName() != null ? location.getWarehouseName() : location.getWarehouseId())
+                        + " | Zone: " + safe(location.getZone())
+                        + " | Type: " + safe(location.getType()))
+                .collect(Collectors.joining("\n"));
+
+        return "Danh sach vi tri kho:\n" + rows;
     }
 
     public String partnerLookup(List<BusinessPartnerResponse> partners) {
