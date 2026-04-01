@@ -105,8 +105,15 @@ public class ChatBotServiceImpl implements ChatBotService {
             command = new ChatBotCommand(intent, "", "", sku, null);
         } else if (intent != null) {
             log.info("Chatbot conversation={} bypass intent={} (no sku)", conversationId, intent);
-            command = new ChatBotCommand(intent, request.getMessage() != null ? request.getMessage().trim() : "", 
-                    request.getMessage() != null ? request.getMessage().trim().toLowerCase() : "", null, null);
+            String originalMessage = request.getMessage() != null ? request.getMessage().trim() : "";
+            ChatBotCommand parsedCommand = intentResolver.resolve(originalMessage);
+            command = new ChatBotCommand(
+                    intent,
+                    originalMessage,
+                    parsedCommand.normalizedMessage(),
+                    parsedCommand.subjectKeyword(),
+                    parsedCommand.thresholdDays()
+            );
         } else {
             String originalMessage = request.getMessage() != null ? request.getMessage().trim() : "";
             command = intentResolver.resolve(originalMessage);

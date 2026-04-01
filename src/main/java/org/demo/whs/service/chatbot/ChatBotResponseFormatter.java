@@ -333,27 +333,9 @@ public class ChatBotResponseFormatter {
     private List<ChatBotSuggestion> dynamicSuggestions(ProductResponse product) {
         String sku = product.getSku();
         return List.of(
-                ChatBotSuggestion.builder()
-                        .label("Sản phẩm này còn bao nhiêu hàng?")
-                        .intent(ChatBotIntent.INVENTORY_SUMMARY)
-                        .sku(sku)
-                        .query("Tồn kho " + sku)
-                        .requiresInput(Boolean.FALSE)
-                        .build(),
-                ChatBotSuggestion.builder()
-                        .label("Sản phẩm này đang ở đâu trong kho?")
-                        .intent(ChatBotIntent.INVENTORY_BY_LOCATION)
-                        .sku(sku)
-                        .query("Tồn kho theo vị trí " + sku)
-                        .requiresInput(Boolean.FALSE)
-                        .build(),
-                ChatBotSuggestion.builder()
-                        .label("Batch của sản phẩm này có sắp hết hạn không?")
-                        .intent(ChatBotIntent.BATCH_EXPIRING)
-                        .sku(sku)
-                        .query("Batch sắp hết hạn " + sku)
-                        .requiresInput(Boolean.FALSE)
-                        .build()
+                suggestion("Sản phẩm này còn bao nhiêu hàng?", ChatBotIntent.INVENTORY_SUMMARY, sku, "Tồn kho " + sku, Boolean.FALSE),
+                suggestion("Sản phẩm này đang ở đâu trong kho?", ChatBotIntent.INVENTORY_BY_LOCATION, sku, "Tồn kho theo vị trí " + sku, Boolean.FALSE),
+                suggestion("Batch của sản phẩm này có sắp hết hạn không?", ChatBotIntent.BATCH_EXPIRING, sku, "Batch sắp hết hạn " + sku, Boolean.FALSE)
         );
     }
 
@@ -380,21 +362,15 @@ public class ChatBotResponseFormatter {
     }
 
     private ChatBotSuggestion actionSuggestion(String label, ChatBotIntent intent, String query) {
-        return ChatBotSuggestion.builder()
-                .label(label)
-                .intent(intent)
-                .query(query)
-                .requiresInput(Boolean.FALSE)
-                .build();
+        return suggestion(label, intent, null, query, Boolean.FALSE);
     }
 
     private ChatBotSuggestion inputSuggestion(String label, ChatBotIntent intent, String query) {
-        return ChatBotSuggestion.builder()
-                .label(label)
-                .intent(intent)
-                .query(query)
-                .requiresInput(Boolean.TRUE)
-                .build();
+        return suggestion(label, intent, null, query, Boolean.TRUE);
+    }
+
+    private ChatBotSuggestion suggestion(String label, ChatBotIntent intent, String sku, String query, Boolean requiresInput) {
+        return new ChatBotSuggestion(label, intent, sku, query, requiresInput);
     }
 
     private String formatLocationLine(InventoryByLocationResponse location, LocationInventoryItemResponse item) {
