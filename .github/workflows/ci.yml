@@ -14,8 +14,6 @@ on:
       - "Dockerfile"
       - "docker-compose.yml"
       - "src/**"
-      - "deploy/**"
-      - "scripts/deploy/**"
   pull_request:
     paths:
       - ".github/workflows/**"
@@ -26,8 +24,6 @@ on:
       - "Dockerfile"
       - "docker-compose.yml"
       - "src/**"
-      - "deploy/**"
-      - "scripts/deploy/**"
   workflow_dispatch:
 
 permissions:
