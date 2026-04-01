@@ -193,7 +193,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (warehouses.isEmpty()) {
             return buildResponse(
                     conversationId,
-                    "Khong tim thay kho nao khop voi tu khoa '" + warehouseKeyword + "'.",
+                    "Không tìm thấy kho nào phù hợp với từ khóa '" + warehouseKeyword + "'.",
                     command.intent(),
                     null,
                     warehouseKeyword
@@ -203,7 +203,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (warehouses.size() > 1) {
             return buildResponse(
                     conversationId,
-                    "Tim thay nhieu kho khop voi tu khoa '" + warehouseKeyword + "'. Hay chon ro hon:\n"
+                    "Tìm thấy nhiều kho phù hợp với từ khóa '" + warehouseKeyword + "'. Hãy chọn rõ hơn:\n"
                             + warehouses.stream()
                             .map(w -> "- " + safeWarehouseLabel(w))
                             .collect(Collectors.joining("\n")),

@@ -247,7 +247,7 @@ public class ChatBotIntentResolver {
         }
 
         String candidate = normalizedMessage
-                .replaceAll("\\b(xin|cho toi|giup toi|vui long|hay|kiem tra|xem|tim|thong tin|ve|cua|cho|san pham|sku|ma|gia|ton kho|con bao nhieu|con hang khong|so luong ton|so luong con|so luong|con trong kho|trong kho con|hien tai trong kho|kiem tra so luong|o kho nao|o dau con|ton theo kho|ton theo vi tri|vi tri nao con|kho nao con|batch|lo|sap het han|het han|trong|ngay|nay|do|ay|no|kho|warehouse|dia chi|doi tac|nha cung cap|khach hang|supplier|customer|partner|nhap hang|po|don nhap|receipt|inbound|xuat hang|so|don xuat|shipment|outbound|quy trinh|lam sao de|cach dung|huong dan)\\b", " ")
+                .replaceAll("\\b(xin|cho toi|giup toi|vui long|hay|kiem tra|xem|tim|thong tin|ve|cua|cho|san pham|sku|ma|gia|ton kho|con bao nhieu|con hang khong|so luong ton|so luong con|so luong|con trong kho|trong kho con|hien tai trong kho|kiem tra so luong|o kho nao|o dau con|ton theo kho|ton theo vi tri|vi tri nao con|kho nao con|batch|lo|sap het han|het han|trong|ngay|nay|do|ay|no|kho|warehouse|dia chi|doi tac|nha cung cap|khach hang|supplier|customer|partner|nhap hang|po|don nhap|receipt|inbound|xuat hang|so|don xuat|shipment|outbound|quy trinh|lam sao de|cach dung|huong dan|danh sach|liet ke|tat ca|he thong|co nhung|nao|dau|gi)\\b", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
 
