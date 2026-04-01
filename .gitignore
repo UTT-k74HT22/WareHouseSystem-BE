@@ -12,6 +12,11 @@ nul
 
 # Environment variables
 .env
+deploy/.env
+deploy/.env.*
+!deploy/.env.prod.example
+deploy/monitoring/grafana/data/
+deploy/monitoring/prometheus/data/
 
 # IDE
 .idea/
@@ -53,7 +58,7 @@ opencode.json
 
 .mvn/
 
-.github/
+
 
 /bin/.env.example
 /bin/.gitignore
@@ -523,3 +528,5 @@ opencode.json
 /bin/src/main/resources/templates/welcome-email.html
 /bin/src/main/java/org/demo/whs/WhsApplication.class
 /bin/src/test/java/org/demo/whs/WhsApplicationTests.class
+
+

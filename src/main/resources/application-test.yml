@@ -22,6 +22,12 @@ spring:
       port: 6379
       password: ""
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
   # H2 database for test execution.
   datasource:
     driver-class-name: org.h2.Driver
@@ -50,6 +56,12 @@ app:
     secret: "p1zs6HE4bebUL6aVjJhSEtj/Bp4rhQPK3vUR2gpcA06muNhYO77Z9kzb3U5sDXBkdpEZwECJfm0tNuDRiVu29g=="
     access-token-expiration: 3600s
     refresh-token-expiration: 86400s
+  minio:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket-name: whs-storage
+    presigned-url-expiry: 3600
 
 logging:
   level:
