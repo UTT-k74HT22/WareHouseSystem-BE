@@ -1,0 +1,16 @@
+package org.demo.whs.service.chatbot;
+
+public enum ChatBotIntent {
+    GREETING,
+    HELP,
+    PRODUCT_LOOKUP,
+    INVENTORY_SUMMARY,
+    INVENTORY_BY_LOCATION,
+    BATCH_EXPIRING,
+    WAREHOUSE_LOOKUP,
+    PARTNER_LOOKUP,
+    INBOUND_LOOKUP,
+    OUTBOUND_LOOKUP,
+    SYSTEM_GUIDE,
+    UNKNOWN
+}

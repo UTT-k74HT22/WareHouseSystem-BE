@@ -181,6 +181,12 @@ app:
     max-attachment-size-mb: 10
     log-retention-days: 90
 
+  # Gemini AI Configuration
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: gemini-2.5-flash
+    base-url: https://generativelanguage.googleapis.com/v1beta/models/
+
   # OTP Configuration
   otp:
     ttl-minutes: ${OTP_TTL_MINUTES:10}

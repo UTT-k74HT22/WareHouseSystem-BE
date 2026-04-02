@@ -9,6 +9,7 @@ import org.demo.whs.entity.enums.PurchaseOrdersStatus;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 
 /**
  * Mapper class for Purchase Orders.
@@ -59,6 +60,7 @@ public class PurchaseOrdersMapper {
                 .confirmedBy(entity.getConfirmedBy())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .lines(new ArrayList<>())
                 .build();
     }
 

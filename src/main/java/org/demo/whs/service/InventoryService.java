@@ -38,6 +38,15 @@ public interface InventoryService {
     InventorySummaryResponse getSummaryByProduct(String productId);
 
     /**
+     * Get inventory summary for a specific product within a specific warehouse.
+     *
+     * @param productId   The product ID
+     * @param warehouseId The warehouse ID
+     * @return Inventory summary
+     */
+    InventorySummaryResponse getSummaryByProductAndWarehouse(String productId, String warehouseId);
+
+    /**
      * Get inventory grouped by location with filtering
      * @param filter InventoryFilterRequest
      * @return List<InventoryByLocationResponse>

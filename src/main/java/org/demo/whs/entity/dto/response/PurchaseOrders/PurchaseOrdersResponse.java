@@ -8,10 +8,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.demo.whs.entity.dto.response.PurchaseOrderLines.PurchaseOrderLinesResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -50,4 +52,6 @@ public class PurchaseOrdersResponse {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    private List<PurchaseOrderLinesResponse> lines;
 }

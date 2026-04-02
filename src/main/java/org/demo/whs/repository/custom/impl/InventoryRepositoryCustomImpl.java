@@ -54,6 +54,38 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
     }
 
     /**
+     * Inventory summary for a product in a specific warehouse.
+     */
+    @Override
+    public Optional<InventorySummaryResponse> getSummaryByProductIdAndWarehouseId(String productId, String warehouseId) {
+
+        Query query = entityManager.createNativeQuery(
+                """
+                SELECT
+                    p.id AS productId,
+                    p.sku AS productSku,
+                    p.name AS productName,
+                    COALESCE(SUM(i.on_hand_quantity),0) AS totalOnHandQuantity,
+                    COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity,
+                    COUNT(DISTINCT i.warehouse_id) AS warehouseCount,
+                    COUNT(DISTINCT i.location_id) AS locationCount
+                FROM products p
+                LEFT JOIN inventory i ON p.id = i.product_id
+                WHERE p.id = :productId AND i.warehouse_id = :warehouseId
+                GROUP BY p.id, p.sku, p.name
+                """,
+                "InventorySummaryResponseMapping"
+        );
+
+        query.setParameter("productId", productId);
+        query.setParameter("warehouseId", warehouseId);
+
+        List<InventorySummaryResponse> result = query.getResultList();
+
+        return result.stream().findFirst();
+    }
+
+    /**
      * Check stock availability.
      */
     @Override

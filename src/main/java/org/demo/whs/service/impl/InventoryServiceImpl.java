@@ -135,6 +135,15 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional(readOnly = true)
+    public InventorySummaryResponse getSummaryByProductAndWarehouse(String productId, String warehouseId) {
+        log.info("Getting inventory summary for product ID: {} in warehouse: {}", productId, warehouseId);
+
+        return inventoryRepository.getSummaryByProductIdAndWarehouseId(productId, warehouseId)
+                .orElseThrow(() -> new NotFoundException(PROD_001));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter) {
         log.info("Getting inventory grouped by location for filters: {}", filter);
 
