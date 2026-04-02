@@ -17,6 +17,15 @@ public interface InventoryRepositoryCustom {
      */
     Optional<InventorySummaryResponse> getSummaryByProductId(String productId);
 
+    /**
+     * Calculates the summary of inventory for a given product within a specific warehouse.
+     *
+     * @param productId   The ID of the product.
+     * @param warehouseId The ID of the warehouse.
+     * @return An optional containing the inventory summary response if found, otherwise empty.
+     */
+    Optional<InventorySummaryResponse> getSummaryByProductIdAndWarehouseId(String productId, String warehouseId);
+
     CheckAvailabilityResponse getAvailability(
             String productId,
             String warehouseId,

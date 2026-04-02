@@ -61,20 +61,47 @@ sequenceDiagram
     Controller-->>User: Hiển thị câu trả lời (Markdown)
 ```
 
-## 4. Danh sách các File đã tạo
+## 4. Cơ chế Bảo mật và Phân quyền (RBAC)
+
+Module Chatbot được thiết kế để tuân thủ nghiêm ngặt hệ thống phân quyền của WareHouseSystem-BE, đảm bảo người dùng chỉ xem được dữ liệu trong phạm vi quyền hạn của mình.
+
+### 4.1 Phân quyền dựa trên Quyền hạn (Permission-based)
+Thay vì chỉ kiểm tra vai trò cứng (`ADMIN`, `MANAGER`, `USER`), Chatbot kiểm tra trực tiếp các quyền hạn (`Permissions`) từ Security Context:
+
+| Tính năng tra cứu | Quyền hạn yêu cầu (Permissions) |
+|:--- |:--- |
+| Sản phẩm | `PERM_PRODUCT_READ` |
+| Tồn kho / Vị trí | `PERM_INVENTORY_READ`, `PERM_LOCATION_READ` |
+| Lô hàng (Batch) | `PERM_BATCH_READ` |
+| Kho hàng | `PERM_WAREHOUSE_READ` |
+| Đối tác (Partner) | `PERM_BUSINESS_PARTNER_READ` |
+| Đơn nhập (PO) | `PERM_PURCHASE_ORDER_READ` |
+| Đơn xuất (SO) | `PERM_SALES_ORDER_READ` |
+
+### 4.2 Xử lý dữ liệu theo phạm vi Kho (Multi-Warehouse Scope)
+Hệ thống tự động áp dụng bộ lọc dữ liệu dựa trên kho hàng được phân công cho người dùng:
+
+1.  **Quản trị viên (Admin)**: Có quyền xem toàn bộ dữ liệu của tất cả các kho trong hệ thống.
+2.  **Quản lý/Nhân viên (Manager/User)**:
+    *   Hệ thống tự động lấy `assignedWarehouseId` từ thông tin nhân viên (`Employee`).
+    *   Tất cả các truy vấn tra cứu Tồn kho, Vị trí, Đơn hàng... sẽ tự động được gắn thêm bộ lọc `warehouse_id` tương ứng.
+    *   Người dùng không thể tra cứu dữ liệu của các kho khác mà họ không được phân công.
+
+## 5. Danh sách các File chính
 
 | Lớp (Layer) | Tên File | Chức năng chính |
 |:--- |:--- |:--- |
-| **Controller** | `ChatBotController.java` | Tiếp nhận Request, áp dụng Rate Limit. |
+| **Controller** | `ChatBotController.java` | Tiếp nhận Request, áp dụng Rate Limit, yêu cầu xác thực (`isAuthenticated`). |
 | **Service** | `ChatBotService.java` | Định nghĩa Interface cho chatbot. |
-| **Service** | `ChatBotServiceImpl.java` | Luồng logic chính, điều phối gọi AI và Service nội bộ. |
+| **Service** | `ChatBotServiceImpl.java` | Luồng logic chính, kiểm tra RBAC, điều phối gọi AI và Service nội bộ. |
 | **Service** | `ChatBotIntentResolver.java` | Phân tích ý định, trích xuất từ khóa, chuẩn hóa tiếng Việt. |
-| **Service** | `ChatBotResponseFormatter.java` | Định dạng các câu trả lời mặc định của hệ thống. |
+| **Service** | `ChatBotResponseFormatter.java` | Định dạng các câu trả lời mặc định, xử lý giao diện Markdown. |
 | **DTOs** | `ChatBotRequest/Response.java` | Cấu trúc dữ liệu trao đổi với Client. |
 | **DTOs** | `GeminiRequest/Response.java` | Cấu trúc dữ liệu trao đổi với Gemini API. |
 | **Enums/Records**| `ChatBotIntent.java`, `ChatBotCommand.java` | Định nghĩa các loại ý định và dữ liệu lệnh. |
+| **Security** | `SecurityUtils.java` | Hỗ trợ lấy thông tin định danh và quyền hạn người dùng hiện tại. |
 
-## 5. Những câu hỏi mẫu có thể hỏi
+## 6. Những câu hỏi mẫu có thể hỏi
 
 Chatbot hỗ trợ cả tiếng Việt có dấu và không dấu.
 

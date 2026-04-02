@@ -13,6 +13,7 @@ import org.demo.whs.entity.dto.request.chatbot.GeminiRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
+import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
@@ -24,10 +25,14 @@ import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotResponse;
 import org.demo.whs.entity.dto.response.chatbot.ChatBotSuggestion;
 import org.demo.whs.entity.dto.response.chatbot.GeminiResponse;
+import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.NotFoundException;
+import org.demo.whs.repository.EmployeeRepository;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.service.BusinessPartnerService;
 import org.demo.whs.service.ChatBotService;
+import org.demo.whs.service.EmployeeService;
 import org.demo.whs.service.InventoryService;
 import org.demo.whs.service.LocationService;
 import org.demo.whs.service.ProductService;
@@ -76,6 +81,8 @@ public class ChatBotServiceImpl implements ChatBotService {
     private final BusinessPartnerService businessPartnerService;
     private final PurchaseOrdersService purchaseOrdersService;
     private final SalesOrdersService salesOrdersService;
+    private final EmployeeService employeeService;
+    private final EmployeeRepository employeeRepository;
     private final WebClient.Builder webClientBuilder;
     private final RedisService redisService;
     private final ChatBotIntentResolver intentResolver;
@@ -90,8 +97,81 @@ public class ChatBotServiceImpl implements ChatBotService {
     @Value("${app.gemini.base-url}")
     private String baseUrl;
 
+    private record CurrentUser(String accountId, RoleType role, String assignedWarehouseId, java.util.Set<String> permissions) {
+        public boolean hasPermission(String permission) {
+            return permissions != null && permissions.contains(permission);
+        }
+        
+        public boolean isAdmin() {
+            return role == RoleType.ADMIN || hasPermission("ROLE_ADMIN");
+        }
+    }
+
+    private CurrentUser getCurrentUser() {
+        String accountId = SecurityUtils.getCurrentAccountId();
+        if (accountId == null) {
+            return null;
+        }
+
+        RoleType role = null;
+        if (SecurityUtils.hasAuthority("ROLE_ADMIN")) {
+            role = RoleType.ADMIN;
+        } else if (SecurityUtils.hasAuthority("ROLE_MANAGER")) {
+            role = RoleType.MANAGER;
+        } else if (SecurityUtils.hasAuthority("ROLE_USER")) {
+            role = RoleType.USER;
+        }
+
+        // Get all authorities (roles and permissions)
+        java.util.Set<String> permissions = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toSet());
+
+        String assignedWarehouseId = null;
+        try {
+            assignedWarehouseId = employeeRepository.findByAccountId(accountId)
+                    .map(org.demo.whs.entity.Employee::getWarehouseId)
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not get warehouse assignment for user: {}", accountId);
+        }
+
+        return new CurrentUser(accountId, role, assignedWarehouseId, permissions);
+    }
+
+    private List<WareHouseResponse> filterWarehousesByRole(List<WareHouseResponse> allWarehouses, CurrentUser user) {
+        if (user == null) {
+            return List.of();
+        }
+
+        if (user.isAdmin()) {
+            return allWarehouses;
+        }
+
+        if (user.assignedWarehouseId() == null) {
+            return List.of();
+        }
+
+        return allWarehouses.stream()
+                .filter(w -> user.assignedWarehouseId().equals(w.getId()))
+                .collect(Collectors.toList());
+    }
+
     @Override
     public ChatBotResponse chat(ChatBotRequest request) {
+        CurrentUser currentUser = getCurrentUser();
+        
+        if (currentUser == null) {
+            return buildResponse(
+                    resolveConversationId(request.getConversationId()),
+                    "Bạn cần đăng nhập để sử dụng tính năng chat.",
+                    ChatBotIntent.UNKNOWN, null, null
+            );
+        }
+
         String conversationId = resolveConversationId(request.getConversationId());
         ChatBotConversationContext conversationContext = loadConversationContext(conversationId);
 
@@ -121,11 +201,13 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
 
         log.info(
-                "Chatbot conversation={} intent={} subject='{}' lastProduct='{}'",
+                "Chatbot conversation={} intent={} subject='{}' lastProduct='{}' role={} permissionsCount={}",
                 conversationId,
                 command.intent(),
                 command.subjectKeyword(),
-                conversationContext.getLastProductSku()
+                conversationContext.getLastProductSku(),
+                currentUser.role(),
+                currentUser.permissions().size()
         );
 
         try {
@@ -133,14 +215,14 @@ public class ChatBotServiceImpl implements ChatBotService {
                 case GREETING -> buildResponse(conversationId, responseFormatter.greeting(), command.intent(), null, null);
                 case HELP -> buildResponse(conversationId, responseFormatter.help(), command.intent(), null, null);
                 case SYSTEM_GUIDE -> buildResponse(conversationId, responseFormatter.systemGuide(), command.intent(), null, null);
-                case PRODUCT_LOOKUP -> handleProductLookup(command, conversationId, conversationContext);
-                case INVENTORY_SUMMARY -> handleInventorySummary(command, conversationId, conversationContext);
-                case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command, conversationId, conversationContext);
-                case BATCH_EXPIRING -> handleBatchExpiring(command, conversationId, conversationContext);
-                case WAREHOUSE_LOOKUP -> handleWarehouseLookup(command, conversationId);
-                case PARTNER_LOOKUP -> handlePartnerLookup(command, conversationId);
-                case INBOUND_LOOKUP -> handleInboundLookup(command, conversationId);
-                case OUTBOUND_LOOKUP -> handleOutboundLookup(command, conversationId);
+                case PRODUCT_LOOKUP -> handleProductLookup(command, conversationId, conversationContext, currentUser);
+                case INVENTORY_SUMMARY -> handleInventorySummary(command, conversationId, conversationContext, currentUser);
+                case INVENTORY_BY_LOCATION -> handleInventoryByLocation(command, conversationId, conversationContext, currentUser);
+                case BATCH_EXPIRING -> handleBatchExpiring(command, conversationId, conversationContext, currentUser);
+                case WAREHOUSE_LOOKUP -> handleWarehouseLookup(command, conversationId, currentUser);
+                case PARTNER_LOOKUP -> handlePartnerLookup(command, conversationId, currentUser);
+                case INBOUND_LOOKUP -> handleInboundLookup(command, conversationId, currentUser);
+                case OUTBOUND_LOOKUP -> handleOutboundLookup(command, conversationId, currentUser);
                 case UNKNOWN -> handleUnknown(command, conversationId, conversationContext);
             };
 
@@ -152,13 +234,18 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
     }
 
-    private ChatBotResponse handleWarehouseLookup(ChatBotCommand command, String conversationId) {
+    private ChatBotResponse handleWarehouseLookup(ChatBotCommand command, String conversationId, CurrentUser currentUser) {
+        if (!currentUser.hasPermission("PERM_WAREHOUSE_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu thông tin kho hàng.", command.intent(), null, null);
+        }
+
         if (isWarehouseLocationQuery(command.normalizedMessage())) {
-            return handleWarehouseLocations(command, conversationId);
+            return handleWarehouseLocations(command, conversationId, currentUser);
         }
 
         String keyword = command.subjectKeyword();
-        List<WareHouseResponse> warehouses = wareHouseService.getWareHouses();
+        List<WareHouseResponse> allWarehouses = wareHouseService.getWareHouses();
+        List<WareHouseResponse> warehouses = filterWarehousesByRole(allWarehouses, currentUser);
 
         if (StringUtils.hasText(keyword)) {
             warehouses = warehouses.stream()
@@ -170,22 +257,50 @@ public class ChatBotServiceImpl implements ChatBotService {
         return buildResponse(conversationId, responseFormatter.warehouseLookup(warehouses), command.intent(), null, keyword);
     }
 
-    private ChatBotResponse handleWarehouseLocations(ChatBotCommand command, String conversationId) {
+    private ChatBotResponse handleWarehouseLocations(ChatBotCommand command, String conversationId, CurrentUser currentUser) {
+        if (!currentUser.hasPermission("PERM_LOCATION_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu vị trí kho.", command.intent(), null, null);
+        }
+
         String warehouseKeyword = extractWarehouseKeyword(command);
 
         if (!StringUtils.hasText(warehouseKeyword)) {
-            PageResponse<LocationResponse> page = locationService.getAllLocations(0, 20);
-            List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
+            if (currentUser.isAdmin()) {
+                PageResponse<LocationResponse> page = locationService.getAllLocations(0, 20);
+                List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
+                return buildResponse(
+                        conversationId,
+                        responseFormatter.warehouseLocationsOverview(locations),
+                        command.intent(),
+                        null,
+                        null
+                );
+            }
+            
+            if (currentUser.assignedWarehouseId() != null) {
+                PageResponse<LocationResponse> page = locationService.getLocationsByWarehouse(currentUser.assignedWarehouseId(), 0, 20);
+                List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
+                return buildResponse(
+                        conversationId,
+                        "Danh sách vị trí tại kho bạn được phân công:\n" + 
+                        responseFormatter.warehouseLocationsOverview(locations),
+                        command.intent(),
+                        null,
+                        null
+                );
+            }
+
             return buildResponse(
                     conversationId,
-                    responseFormatter.warehouseLocationsOverview(locations),
+                    "Vui lòng cung cấp tên kho hoặc mã kho để tôi tra cứu vị trí.",
                     command.intent(),
                     null,
                     null
             );
         }
 
-        List<WareHouseResponse> warehouses = wareHouseService.getWareHouses().stream()
+        List<WareHouseResponse> allWarehouses = wareHouseService.getWareHouses();
+        List<WareHouseResponse> warehouses = filterWarehousesByRole(allWarehouses, currentUser).stream()
                 .filter(w -> containsNormalized(w.getName(), warehouseKeyword)
                         || containsNormalized(w.getCode(), warehouseKeyword))
                 .collect(Collectors.toList());
@@ -193,7 +308,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         if (warehouses.isEmpty()) {
             return buildResponse(
                     conversationId,
-                    "Không tìm thấy kho nào phù hợp với từ khóa '" + warehouseKeyword + "'.",
+                    "Không tìm thấy kho nào phù hợp với từ khóa '" + warehouseKeyword + "' hoặc bạn không có quyền xem kho này.",
                     command.intent(),
                     null,
                     warehouseKeyword
@@ -226,7 +341,11 @@ public class ChatBotServiceImpl implements ChatBotService {
         );
     }
 
-    private ChatBotResponse handlePartnerLookup(ChatBotCommand command, String conversationId) {
+    private ChatBotResponse handlePartnerLookup(ChatBotCommand command, String conversationId, CurrentUser currentUser) {
+        if (!currentUser.hasPermission("PERM_BUSINESS_PARTNER_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu thông tin đối tác.", command.intent(), null, null);
+        }
+
         String keyword = command.subjectKeyword();
         if (!StringUtils.hasText(keyword)) {
             return buildResponse(conversationId, "Bạn hãy cung cấp tên hoặc mã đối tác để tôi tìm kiếm.", command.intent(), null, null);
@@ -234,6 +353,7 @@ public class ChatBotServiceImpl implements ChatBotService {
 
         SearchBusinessPartnerRequest searchRequest = new SearchBusinessPartnerRequest();
         searchRequest.setName(keyword);
+        
         PageResponse<BusinessPartnerResponse> pageResponse = businessPartnerService.searchBusinessPartners(searchRequest, 0, 10);
         List<BusinessPartnerResponse> partners = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
 
@@ -247,16 +367,24 @@ public class ChatBotServiceImpl implements ChatBotService {
         return buildResponse(conversationId, responseFormatter.partnerLookup(partners), command.intent(), null, keyword);
     }
 
-    private ChatBotResponse handleInboundLookup(ChatBotCommand command, String conversationId) {
+    private ChatBotResponse handleInboundLookup(ChatBotCommand command, String conversationId, CurrentUser currentUser) {
+        if (!currentUser.hasPermission("PERM_PURCHASE_ORDER_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu đơn nhập hàng.", command.intent(), null, null);
+        }
+
         String keyword = command.subjectKeyword();
         if (!StringUtils.hasText(keyword)) {
             return buildResponse(conversationId, "Bạn hãy cung cấp mã đơn nhập (PO) hoặc từ khóa để tôi tìm kiếm.", command.intent(), null, null);
         }
 
-        PurchaseOrdersFilterRequest filter = PurchaseOrdersFilterRequest.builder()
-                .purchaseOrderNumber(keyword)
-                .build();
-        PageResponse<PurchaseOrdersResponse> pageResponse = purchaseOrdersService.getAll(filter, PageRequest.of(0, 10));
+        var filterBuilder = PurchaseOrdersFilterRequest.builder()
+                .purchaseOrderNumber(keyword);
+        
+        if (!currentUser.isAdmin() && currentUser.assignedWarehouseId() != null) {
+            filterBuilder.warehouseId(currentUser.assignedWarehouseId());
+        }
+        
+        PageResponse<PurchaseOrdersResponse> pageResponse = purchaseOrdersService.getAll(filterBuilder.build(), PageRequest.of(0, 10));
         List<PurchaseOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
 
         PurchaseOrdersResponse exactOrder = orders.stream()
@@ -272,16 +400,24 @@ public class ChatBotServiceImpl implements ChatBotService {
         return buildResponse(conversationId, responseFormatter.purchaseOrderLookup(orders), command.intent(), null, keyword);
     }
 
-    private ChatBotResponse handleOutboundLookup(ChatBotCommand command, String conversationId) {
+    private ChatBotResponse handleOutboundLookup(ChatBotCommand command, String conversationId, CurrentUser currentUser) {
+        if (!currentUser.hasPermission("PERM_SALES_ORDER_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu đơn xuất hàng.", command.intent(), null, null);
+        }
+
         String keyword = command.subjectKeyword();
         if (!StringUtils.hasText(keyword)) {
             return buildResponse(conversationId, "Bạn hãy cung cấp mã đơn xuất (SO) hoặc từ khóa để tôi tìm kiếm.", command.intent(), null, null);
         }
 
-        SalesOrdersFilterRequest filter = SalesOrdersFilterRequest.builder()
-                .soNumber(keyword)
-                .build();
-        PageResponse<SalesOrdersResponse> pageResponse = salesOrdersService.getAll(filter, PageRequest.of(0, 10));
+        var filterBuilder = SalesOrdersFilterRequest.builder()
+                .soNumber(keyword);
+        
+        if (!currentUser.isAdmin() && currentUser.assignedWarehouseId() != null) {
+            filterBuilder.warehouseId(currentUser.assignedWarehouseId());
+        }
+        
+        PageResponse<SalesOrdersResponse> pageResponse = salesOrdersService.getAll(filterBuilder.build(), PageRequest.of(0, 10));
         List<SalesOrdersResponse> orders = pageResponse.getContent() != null ? pageResponse.getContent() : List.of();
 
         SalesOrdersResponse exactOrder = orders.stream()
@@ -300,8 +436,13 @@ public class ChatBotServiceImpl implements ChatBotService {
     private ChatBotResponse handleProductLookup(
             ChatBotCommand command,
             String conversationId,
-            ChatBotConversationContext conversationContext
+            ChatBotConversationContext conversationContext,
+            CurrentUser currentUser
     ) {
+        if (!currentUser.hasPermission("PERM_PRODUCT_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu thông tin sản phẩm.", command.intent(), null, null);
+        }
+
         String keyword = resolveLookupKeyword(command, conversationContext);
         List<ProductResponse> products = findProducts(keyword, PRODUCT_LOOKUP_LIMIT);
 
@@ -320,8 +461,13 @@ public class ChatBotServiceImpl implements ChatBotService {
     private ChatBotResponse handleInventorySummary(
             ChatBotCommand command,
             String conversationId,
-            ChatBotConversationContext conversationContext
+            ChatBotConversationContext conversationContext,
+            CurrentUser currentUser
     ) {
+        if (!currentUser.hasPermission("PERM_INVENTORY_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu tồn kho.", command.intent(), null, null);
+        }
+
         ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
             String keyword = resolveLookupKeyword(command, conversationContext);
@@ -331,7 +477,11 @@ public class ChatBotServiceImpl implements ChatBotService {
 
         InventorySummaryResponse summary;
         try {
-            summary = inventoryService.getSummaryByProduct(product.getId());
+            if (!currentUser.isAdmin() && currentUser.assignedWarehouseId() != null) {
+                summary = inventoryService.getSummaryByProductAndWarehouse(product.getId(), currentUser.assignedWarehouseId());
+            } else {
+                summary = inventoryService.getSummaryByProduct(product.getId());
+            }
         } catch (NotFoundException ex) {
             summary = emptyInventorySummary(product);
         }
@@ -343,8 +493,13 @@ public class ChatBotServiceImpl implements ChatBotService {
     private ChatBotResponse handleInventoryByLocation(
             ChatBotCommand command,
             String conversationId,
-            ChatBotConversationContext conversationContext
+            ChatBotConversationContext conversationContext,
+            CurrentUser currentUser
     ) {
+        if (!currentUser.hasPermission("PERM_INVENTORY_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu tồn kho theo vị trí.", command.intent(), null, null);
+        }
+
         ProductResponse product = resolveSingleProduct(command, conversationContext);
         if (product == null) {
             String keyword = resolveLookupKeyword(command, conversationContext);
@@ -352,11 +507,14 @@ public class ChatBotServiceImpl implements ChatBotService {
             return buildResponse(conversationId, responseFormatter.noProductMatch(keyword), command.intent(), null, keyword);
         }
 
-        InventoryFilterRequest filterRequest = InventoryFilterRequest.builder()
-                .productId(product.getId())
-                .build();
-
-        List<InventoryByLocationResponse> locations = inventoryService.getInventoryByLocation(filterRequest);
+        var filterBuilder = InventoryFilterRequest.builder()
+                .productId(product.getId());
+        
+        if (!currentUser.isAdmin() && currentUser.assignedWarehouseId() != null) {
+            filterBuilder.warehouseId(currentUser.assignedWarehouseId());
+        }
+        
+        List<InventoryByLocationResponse> locations = inventoryService.getInventoryByLocation(filterBuilder.build());
         rememberConversation(conversationContext, command.intent(), product, command.thresholdDays(), resolveLookupKeyword(command, conversationContext));
 
         if (locations == null || locations.isEmpty()) {
@@ -369,13 +527,19 @@ public class ChatBotServiceImpl implements ChatBotService {
     private ChatBotResponse handleBatchExpiring(
             ChatBotCommand command,
             String conversationId,
-            ChatBotConversationContext conversationContext
+            ChatBotConversationContext conversationContext,
+            CurrentUser currentUser
     ) {
+        if (!currentUser.hasPermission("PERM_BATCH_READ") && !currentUser.isAdmin()) {
+            return buildResponse(conversationId, "Bạn không có quyền tra cứu thông tin lô hàng.", command.intent(), null, null);
+        }
+
         int thresholdDays = command.thresholdDays() != null ? command.thresholdDays() : 30;
         String keyword = resolveLookupKeyword(command, conversationContext);
+        String warehouseId = !currentUser.isAdmin() ? currentUser.assignedWarehouseId() : null;
 
         if (!StringUtils.hasText(keyword)) {
-            List<BatchExpiringResponse> batches = batchService.getExpiringBatches(thresholdDays, null);
+            List<BatchExpiringResponse> batches = batchService.getExpiringBatches(thresholdDays, warehouseId);
             rememberConversation(conversationContext, command.intent(), null, thresholdDays, null);
 
             if (batches == null || batches.isEmpty()) {
@@ -393,7 +557,7 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
 
         LocalDate deadline = LocalDate.now().plusDays(thresholdDays);
-        List<BatchByProductResponse> batches = batchService.getBatchesByProduct(product.getId(), null).stream()
+        List<BatchByProductResponse> batches = batchService.getBatchesByProduct(product.getId(), warehouseId).stream()
                 .filter(batch -> batch.getExpiryDate() != null)
                 .filter(batch -> !batch.getExpiryDate().isAfter(deadline))
                 .filter(batch -> batch.getInventorySnapshot() != null
