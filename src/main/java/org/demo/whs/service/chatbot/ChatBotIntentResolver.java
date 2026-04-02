@@ -115,6 +115,7 @@ public class ChatBotIntentResolver {
     private static final Pattern SKU_AFTER_LABEL_PATTERN = Pattern.compile("(?i)\\b(?:sku|ma)\\b(?:\\s*[:#]\\s*|\\s+)([A-Za-z0-9][A-Za-z0-9_-]*)\\b");
     private static final Pattern PO_PATTERN = Pattern.compile("(?i)\\b(po|receipt)[-_][A-Za-z0-9_-]+\\b");
     private static final Pattern SO_PATTERN = Pattern.compile("(?i)\\b(so|shipment)[-_][A-Za-z0-9_-]+\\b");
+    private static final Pattern UUID_PATTERN = Pattern.compile("\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b", Pattern.CASE_INSENSITIVE);
 
     public ChatBotCommand resolve(String originalMessage) {
         String safeMessage = originalMessage == null ? "" : originalMessage.trim();
@@ -188,7 +189,7 @@ public class ChatBotIntentResolver {
             return new ChatBotCommand(ChatBotIntent.PARTNER_LOOKUP, safeMessage, normalizedMessage, extractSubjectKeyword(normalizedMessage), null);
         }
 
-        if (containsAny(normalizedMessage, PRODUCT_LOOKUP_KEYWORDS) || looksLikeSku(safeMessage) || isShortLookup(normalizedMessage)) {
+        if (containsAny(normalizedMessage, PRODUCT_LOOKUP_KEYWORDS) || looksLikeSku(safeMessage) || isShortLookup(normalizedMessage) || containsUuid(safeMessage)) {
             return new ChatBotCommand(
                     ChatBotIntent.PRODUCT_LOOKUP,
                     safeMessage,
@@ -212,6 +213,10 @@ public class ChatBotIntentResolver {
 
     private boolean isShortLookup(String normalizedMessage) {
         return !normalizedMessage.contains(" ") && normalizedMessage.length() >= 3;
+    }
+
+    private boolean containsUuid(String message) {
+        return UUID_PATTERN.matcher(message).find();
     }
 
     private Integer extractThresholdDays(String normalizedMessage) {
