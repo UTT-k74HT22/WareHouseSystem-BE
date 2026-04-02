@@ -51,4 +51,16 @@ public class PageResponse<T> {
                 .isLast(page.isLast())
                 .build();
     }
+
+    public static <T> PageResponse<T> of(int page, int size, List<T> content) {
+        return PageResponse.<T>builder()
+                .content(content)
+                .page(page)
+                .size(size)
+                .totalElements((long) content.size())
+                .totalPages(1)
+                .isFirst(true)
+                .isLast(true)
+                .build();
+    }
 }

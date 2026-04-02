@@ -8,40 +8,50 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
+/**
+ * Service Interface for managing User-Role assignments.
+ */
 public interface UserRoleService {
 
     /**
-     * Assign roles to a user.
+     * Assign roles to user (add new roles, remove unselected roles).
      *
-     * @param userId  the ID of the user
-     * @param request the request containing role IDs to assign
-     * @return list of assigned roles
+     * @param userId the user ID
+     * @param request the request containing role IDs
+     * @return list of assigned role responses
      */
     List<RoleResponse> assignRolesToUser(String userId, AssignRolesRequest request);
 
     /**
-     * Remove a role from a user.
+     * Remove a single role from user.
      *
-     * @param userId the ID of the user
-     * @param roleId the ID of the role to remove
+     * @param userId the user ID
+     * @param roleId the role ID to remove
      */
     void removeRoleFromUser(String userId, String roleId);
 
     /**
-     * Get roles assigned to a user with pagination.
+     * Remove all roles from user.
      *
-     * @param userId   the ID of the user
-     * @param pageable pagination information
-     * @return paginated list of roles assigned to the user
+     * @param userId the user ID
+     */
+    void removeAllRolesFromUser(String userId);
+
+    /**
+     * Get roles of a user.
+     *
+     * @param userId the user ID
+     * @param pageable pagination info
+     * @return page of role responses
      */
     PageResponse<RoleResponse> getUserRoles(String userId, Pageable pageable);
 
     /**
-     * Get users assigned to a role with pagination.
+     * Get users of a role.
      *
-     * @param roleId   the ID of the role
-     * @param pageable pagination information
-     * @return paginated list of users assigned to the role
+     * @param roleId the role ID
+     * @param pageable pagination info
+     * @return page of account responses
      */
     PageResponse<AccountResponse> getRoleUsers(String roleId, Pageable pageable);
 }
