@@ -44,7 +44,6 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<List<RoleResponse>>> assignRolesToUser(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @RequestBody @Valid AssignRolesRequest request
@@ -106,5 +105,26 @@ public class UserRoleController {
         PageResponse<RoleResponse> response = userRoleService.getUserRoles(userId, pageable);
 
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Remove all roles from user.
+     * API: DELETE /api/v1/users/{id}/roles/all
+     */
+    @DeleteMapping("/all")
+    @PreAuthorize("hasAuthority('PERM_USER_ROLE_DELETE')")
+    public ResponseEntity<BaseResponse<Void>> removeAllRolesFromUser(
+
+            @PathVariable
+            String userId
+    ) {
+
+        log.info("Remove all roles from user {}", userId);
+
+        userRoleService.removeAllRolesFromUser(userId);
+
+        return ResponseEntity.ok(
+                BaseResponse.success(null, "All roles removed successfully")
+        );
     }
 }
