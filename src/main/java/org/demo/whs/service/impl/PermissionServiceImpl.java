@@ -224,15 +224,11 @@ public class PermissionServiceImpl implements PermissionService {
      * Generate permission code based on resource and action.
      */
     private String generatePermissionCode(String resource, ActionType action) {
-        String normalizedResource = normalizeResource(resource);
         if (action == null) {
-            throw new IllegalArgumentException("Action cannot be null");
+            throw new BadRequestException(ErrorCode.PERM_010);
         }
 
-        return "PERM_" +
-                normalizedResource +
-                "_" +
-                action.name();
+        return "PERM_" + normalizeResource(resource) + "_" + action.name();
     }
 
     private String normalizeResource(String resource) {
@@ -240,7 +236,12 @@ public class PermissionServiceImpl implements PermissionService {
             throw new BadRequestException(ErrorCode.PERM_009);
         }
 
-        return resource.trim().toUpperCase();
+        String normalized = resource.trim();
+        if (!normalized.matches("^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$")) {
+            throw new BadRequestException(ErrorCode.PERM_009);
+        }
+
+        return normalized;
     }
 
     private void validateDuplicateName(String name, String id) {

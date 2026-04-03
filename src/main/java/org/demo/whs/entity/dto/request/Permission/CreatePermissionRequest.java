@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,10 @@ public class CreatePermissionRequest {
 
     @NotBlank(message = "Resource is required")
     @Size(max = 50, message = "Resource must not exceed 50 characters")
+    @Pattern(
+            regexp = "^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$",
+            message = "Resource must use canonical UPPER_SNAKE_CASE format"
+    )
     private String resource;
 
     @NotNull(message = "Action is required")
