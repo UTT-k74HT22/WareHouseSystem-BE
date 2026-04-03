@@ -389,18 +389,23 @@ public class AuthServiceImpl implements AuthService {
      * PERM_USER_CREATE
      */
     private String generatePermissionCode(String resource, ActionType action) {
-
-        if (resource == null || resource.isBlank()) {
-            throw new IllegalArgumentException("Resource cannot be null or blank");
-        }
-
         if (action == null) {
-            throw new IllegalArgumentException("Action cannot be null");
+            throw new BadRequestException(ErrorCode.PERM_010);
         }
 
-        return "PERM_" +
-                resource.trim().toUpperCase() +
-                "_" +
-                action.name();
+        return "PERM_" + normalizeResource(resource) + "_" + action.name();
+    }
+
+    private String normalizeResource(String resource) {
+        if (resource == null || resource.isBlank()) {
+            throw new BadRequestException(ErrorCode.PERM_009);
+        }
+
+        String normalized = resource.trim();
+        if (!normalized.matches("^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$")) {
+            throw new BadRequestException(ErrorCode.PERM_009);
+        }
+
+        return normalized;
     }
 }

@@ -200,14 +200,14 @@ public class AuthController {
      * @return
      */
     @PostMapping("/check-permission")
-    public ResponseEntity<BaseResponse<Boolean>> checkPermission(
+    public ResponseEntity<BaseResponse<CheckPermissionResponse>> checkPermission(
             @Valid @RequestBody CheckPermissionRequest request) {
         boolean allowed = authService.checkPermission(
                 request.getResource(),
                 request.getAction()
         );
 
-        return ResponseEntity.ok(BaseResponse.success(allowed));
+        return ResponseEntity.ok(BaseResponse.success(new CheckPermissionResponse(allowed)));
     }
 
     @GetMapping("/my-permissions")
