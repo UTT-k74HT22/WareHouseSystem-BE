@@ -226,6 +226,7 @@ public enum ErrorCode {
     PERM_010("PERM_010", "Invalid action"),
     PERM_011("PERM_011", "Permission code cannot be changed"),
     PERM_012("PERM_012", "Permission resource cannot be changed"),
+    PERM_013("PERM_013", "Permission source is temporarily unavailable"),
 
     //User Role errors
     USER_ROLE_001("USER_ROLE_001", "User not found"),

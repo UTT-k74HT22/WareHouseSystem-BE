@@ -5,10 +5,13 @@ import org.demo.whs.entity.dto.request.LoginRequest;
 import org.demo.whs.entity.dto.request.RefreshTokenRequest;
 import org.demo.whs.entity.dto.response.AuthResponse;
 import org.demo.whs.entity.dto.response.RefreshTokenResponse;
+import org.demo.whs.entity.dto.request.Permission.CheckPermissionRequest;
+import org.demo.whs.entity.dto.response.Permission.CheckPermissionResponse;
 import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.exception.AuthenticationFailedException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.StorageException;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
@@ -220,6 +223,69 @@ class AuthControllerTest {
 
             mockMvc.perform(get("/api/v1/auth/my-permissions"))
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("Get my permissions service unavailable")
+        void getMyPermissions_ServiceUnavailable() throws Exception {
+            when(authService.getMyPermissions()).thenThrow(new StorageException(ErrorCode.PERM_013, org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE));
+
+            mockMvc.perform(get("/api/v1/auth/my-permissions"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("PERM_013"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Check Permission Tests")
+    class CheckPermissionTests {
+
+        @Test
+        @DisplayName("Check permission success")
+        void checkPermission_Success() throws Exception {
+            when(authService.checkPermission("USER", org.demo.whs.entity.enums.ActionType.READ)).thenReturn(true);
+
+            CheckPermissionRequest request = new CheckPermissionRequest();
+            request.setResource("USER");
+            request.setAction(org.demo.whs.entity.enums.ActionType.READ);
+
+            mockMvc.perform(post("/api/v1/auth/check-permission")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.allowed").value(true));
+        }
+
+        @Test
+        @DisplayName("Check permission fail on non canonical resource")
+        void checkPermission_Fail_NonCanonicalResource() throws Exception {
+            CheckPermissionRequest request = new CheckPermissionRequest();
+            request.setResource("stock-adjustment");
+            request.setAction(org.demo.whs.entity.enums.ActionType.READ);
+
+            mockMvc.perform(post("/api/v1/auth/check-permission")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("COM_001"));
+        }
+
+        @Test
+        @DisplayName("Check permission service unavailable")
+        void checkPermission_ServiceUnavailable() throws Exception {
+            when(authService.checkPermission("USER", org.demo.whs.entity.enums.ActionType.READ))
+                    .thenThrow(new StorageException(ErrorCode.PERM_013, org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE));
+
+            CheckPermissionRequest request = new CheckPermissionRequest();
+            request.setResource("USER");
+            request.setAction(org.demo.whs.entity.enums.ActionType.READ);
+
+            mockMvc.perform(post("/api/v1/auth/check-permission")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("PERM_013"));
         }
     }
 }
