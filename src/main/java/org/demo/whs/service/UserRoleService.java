@@ -31,13 +31,6 @@ public interface UserRoleService {
     void removeRoleFromUser(String userId, String roleId);
 
     /**
-     * Remove all roles from user.
-     *
-     * @param userId the user ID
-     */
-    void removeAllRolesFromUser(String userId);
-
-    /**
      * Get roles of a user.
      *
      * @param userId the user ID

@@ -1,14 +1,12 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
-import org.demo.whs.service.RoleService;
 import org.demo.whs.service.UserRoleService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,9 +27,6 @@ import java.util.List;
 @Slf4j
 @Validated
 public class UserRoleController {
-
-    private static final String UUID_PATTERN =
-            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final UserRoleService userRoleService;
 
@@ -107,24 +102,4 @@ public class UserRoleController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
-    /**
-     * Remove all roles from user.
-     * API: DELETE /api/v1/users/{id}/roles/all
-     */
-    @DeleteMapping("/all")
-    @PreAuthorize("hasAuthority('PERM_USER_ROLE_DELETE')")
-    public ResponseEntity<BaseResponse<Void>> removeAllRolesFromUser(
-
-            @PathVariable
-            String userId
-    ) {
-
-        log.info("Remove all roles from user {}", userId);
-
-        userRoleService.removeAllRolesFromUser(userId);
-
-        return ResponseEntity.ok(
-                BaseResponse.success(null, "All roles removed successfully")
-        );
-    }
 }
