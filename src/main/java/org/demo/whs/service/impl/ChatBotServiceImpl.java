@@ -3,6 +3,7 @@ package org.demo.whs.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.Products;
 import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Product.SearchProductRequest;
@@ -13,7 +14,6 @@ import org.demo.whs.entity.dto.request.chatbot.GeminiRequest;
 import org.demo.whs.entity.dto.response.Batch.BatchByProductResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchExpiringResponse;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
-import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
@@ -28,6 +28,7 @@ import org.demo.whs.entity.dto.response.chatbot.GeminiResponse;
 import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.EmployeeRepository;
+import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.service.BusinessPartnerService;
@@ -83,6 +84,7 @@ public class ChatBotServiceImpl implements ChatBotService {
     private final SalesOrdersService salesOrdersService;
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
+    private final ProductRepository productRepository;
     private final WebClient.Builder webClientBuilder;
     private final RedisService redisService;
     private final ChatBotIntentResolver intentResolver;
@@ -535,7 +537,15 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
 
         int thresholdDays = command.thresholdDays() != null ? command.thresholdDays() : 30;
-        String keyword = resolveLookupKeyword(command, conversationContext);
+        String keyword = command.subjectKeyword();
+        
+        if (!StringUtils.hasText(keyword) && StringUtils.hasText(command.originalMessage())) {
+            String original = command.originalMessage().toLowerCase();
+            if (!original.contains("sku") && !original.contains("ma ") && !isValidUuid(original.trim())) {
+                keyword = null;
+            }
+        }
+
         String warehouseId = !currentUser.isAdmin() ? currentUser.assignedWarehouseId() : null;
 
         if (!StringUtils.hasText(keyword)) {
@@ -645,17 +655,54 @@ public class ChatBotServiceImpl implements ChatBotService {
             return List.of();
         }
 
+        String trimmedKeyword = keyword.trim();
+
+        if (isValidUuid(trimmedKeyword)) {
+            return productRepository.findById(trimmedKeyword)
+                    .map(p -> List.of(mapToProductResponse(p)))
+                    .orElse(List.of());
+        }
+
         SearchProductRequest byName = new SearchProductRequest();
-        byName.setName(keyword.trim());
+        byName.setName(trimmedKeyword);
         PageResponse<ProductResponse> byNamePage = productService.searchProducts(byName, 0, size);
         if (byNamePage.getContent() != null && !byNamePage.getContent().isEmpty()) {
             return byNamePage.getContent();
         }
 
         SearchProductRequest bySku = new SearchProductRequest();
-        bySku.setSku(keyword.trim());
+        bySku.setSku(trimmedKeyword);
         PageResponse<ProductResponse> bySkuPage = productService.searchProducts(bySku, 0, size);
         return bySkuPage.getContent() != null ? bySkuPage.getContent() : List.of();
+    }
+
+    private boolean isValidUuid(String str) {
+        if (str == null || str.isBlank()) {
+            return false;
+        }
+        java.util.regex.Pattern uuidPattern = java.util.regex.Pattern.compile(
+                "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+        return uuidPattern.matcher(str).matches();
+    }
+
+    private ProductResponse mapToProductResponse( Products p) {
+        return ProductResponse.builder()
+                .id(p.getId())
+                .sku(p.getSku())
+                .name(p.getName())
+                .description(p.getDescription())
+                .categoryId(p.getCategoryId())
+                .categoryName(null)
+                .uomId(p.getUomId())
+                .uomName(null)
+                .requiresBatchTracking(p.getRequiresBatchTracking())
+                .status(p.getStatus())
+                .imageUrl(p.getImageUrl())
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
+                .build();
     }
 
     private boolean isWarehouseLocationQuery(String normalizedMessage) {
