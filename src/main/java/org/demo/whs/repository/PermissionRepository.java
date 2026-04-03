@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -54,4 +55,11 @@ public interface PermissionRepository extends JpaRepository<Permission, String>,
         WHERE ar.account_id = :userId
     """, nativeQuery = true)
     Set<String> getPermissionCodesByUserId(String userId);
+
+    @Query("""
+        SELECT DISTINCT p.resource
+        FROM Permission p
+        ORDER BY p.resource
+    """)
+    List<String> findDistinctResources();
 }

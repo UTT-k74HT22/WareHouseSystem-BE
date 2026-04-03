@@ -166,6 +166,11 @@ public class PermissionServiceImpl implements PermissionService {
         }
     }
 
+    @Override
+    public List<String> getPermissionResources() {
+        return permissionRepository.findDistinctResources();
+    }
+
     /**
      * Validate dữ liệu khi tạo permission.
      *
