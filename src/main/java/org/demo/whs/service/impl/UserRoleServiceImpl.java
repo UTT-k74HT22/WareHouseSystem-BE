@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.AccountHasRole;
-import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -154,30 +153,6 @@ public class UserRoleServiceImpl implements UserRoleService {
         if (actualCount == 0) {
             throw new IllegalStateException("User must have at least one role");
         }
-    }
-
-    @Override
-    @Transactional
-    public void removeAllRolesFromUser(String userId) {
-
-        log.info("Removing all roles from user {}", userId);
-
-        if (!accountRepository.existsById(userId)) {
-            throw new NotFoundException(ErrorCode.USER_ROLE_001);
-        }
-
-        List<AccountHasRole> existing = accountHasRoleRepository.findByIdAccountId(userId);
-        
-        if (existing.isEmpty()) {
-            log.warn("User {} has no roles to remove", userId);
-            return;
-        }
-
-        accountHasRoleRepository.deleteAll(existing);
-
-        permissionCacheService.evictPermissions(userId);
-
-        log.info("Removed all {} roles from user {}", existing.size(), userId);
     }
 
     @Override
