@@ -148,7 +148,7 @@ public class ChatBotIntentResolver {
                     ChatBotIntent.BATCH_EXPIRING,
                     safeMessage,
                     normalizedMessage,
-                    extractSubjectKeyword(normalizedMessage),
+                    extractProductFromBatchQuery(normalizedMessage),
                     extractThresholdDays(normalizedMessage)
             );
         }
@@ -158,7 +158,7 @@ public class ChatBotIntentResolver {
                     ChatBotIntent.BATCH_EXPIRING,
                     safeMessage,
                     normalizedMessage,
-                    extractSubjectKeyword(normalizedMessage),
+                    extractProductFromBatchQuery(normalizedMessage),
                     extractThresholdDays(normalizedMessage)
             );
         }
@@ -230,6 +230,24 @@ public class ChatBotIntentResolver {
     private boolean isBatchExpiringQuestion(String normalizedMessage) {
         return normalizedMessage.contains("het han")
                 && (normalizedMessage.contains("batch") || normalizedMessage.contains("lo"));
+    }
+
+    private String extractProductFromBatchQuery(String normalizedMessage) {
+        Matcher skuTokenMatcher = SKU_TOKEN_PATTERN.matcher(normalizedMessage);
+        if (skuTokenMatcher.find()) {
+            return skuTokenMatcher.group().trim();
+        }
+
+        Matcher skuMatcher = SKU_AFTER_LABEL_PATTERN.matcher(normalizedMessage);
+        if (skuMatcher.find()) {
+            return skuMatcher.group(1).trim();
+        }
+
+        if (UUID_PATTERN.matcher(normalizedMessage).find()) {
+            return UUID_PATTERN.matcher(normalizedMessage).group();
+        }
+
+        return null;
     }
 
     private String extractOrderNumber(String normalizedMessage, Pattern pattern) {

@@ -537,7 +537,15 @@ public class ChatBotServiceImpl implements ChatBotService {
         }
 
         int thresholdDays = command.thresholdDays() != null ? command.thresholdDays() : 30;
-        String keyword = resolveLookupKeyword(command, conversationContext);
+        String keyword = command.subjectKeyword();
+        
+        if (!StringUtils.hasText(keyword) && StringUtils.hasText(command.originalMessage())) {
+            String original = command.originalMessage().toLowerCase();
+            if (!original.contains("sku") && !original.contains("ma ") && !isValidUuid(original.trim())) {
+                keyword = null;
+            }
+        }
+
         String warehouseId = !currentUser.isAdmin() ? currentUser.assignedWarehouseId() : null;
 
         if (!StringUtils.hasText(keyword)) {
