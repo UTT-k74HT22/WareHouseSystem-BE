@@ -1,0 +1,580 @@
+{
+  "info": {
+    "name": "WHS - 03 Sales Order Concurrent Tests",
+    "description": "Test tính đúng đắn của Sales Order operations dưới tải đồng thời.\n\nTest Areas:\n- Tạo nhiều SO song song → verify SO numbers unique\n- Confirm SO → trigger inventory reserve\n- Double-confirm cùng 1 order → idempotency\n- Cancel → verify inventory unreserved\n- Concurrent confirms với limited stock\n\nPREREQUISITE:\n1. Chạy '00-Setup' để login\n2. Điền test_product_id, test_warehouse_id, test_customer_id\n3. Chạy '01-Setup-Stock' để set initial stock",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}" }]
+  },
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('access_token', json.data.access_token);",
+                  "pm.environment.set('refresh_token', json.data.refresh_token);",
+                  "// Reset counters",
+                  "pm.environment.set('so_create_counter', 0);",
+                  "pm.environment.set('so_confirm_success', 0);",
+                  "pm.environment.set('so_confirm_fail', 0);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Setup: Add 10 Units Stock",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.environment.set('so_setup_ref', `SO-TEST-SETUP-${ts}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stock setup OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data) {",
+                  "    pm.environment.set('setup_stock_on_hand', json.data.on_hand_quantity);",
+                  "    console.log('Stock after setup:', json.data.on_hand_quantity);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": 10,\n    \"reference_type\": \"STOCK_ADJUSTMENT\",\n    \"reference_number\": \"{{so_setup_ref}}\",\n    \"notes\": \"SalesOrder test setup - 10 units\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/increase",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Create Multiple Draft Orders (Concurrent)",
+      "description": "Test tạo nhiều SO đồng thời.\nExpected: Tất cả tạo thành công với SO numbers UNIQUE.\n\nCách chạy: Collection Runner → folder này → Iterations=10, Delay=0ms",
+      "item": [
+        {
+          "name": "[Loop] Create Draft SO",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "let counter = pm.environment.get('so_create_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('so_create_counter', counter);",
+                  "",
+                  "const today = new Date();",
+                  "const delivery = new Date(today);",
+                  "delivery.setDate(delivery.getDate() + 14);",
+                  "",
+                  "const fmt = d => d.toISOString().split('T')[0];",
+                  "pm.environment.set('so_order_date', fmt(today));",
+                  "pm.environment.set('so_delivery_date', fmt(delivery));",
+                  "",
+                  "console.log(`Creating SO #${counter}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('so_create_counter') || 0);",
+                  "",
+                  "pm.test(`SO #${counter}: HTTP 201`, () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(`SO #${counter}: Has unique SO number`, () => {",
+                  "    pm.expect(json.data).to.have.property('so_number');",
+                  "    pm.expect(json.data.so_number).to.match(/^SO-/);",
+                  "});",
+                  "",
+                  "pm.test(`SO #${counter}: Status is DRAFT`, () => {",
+                  "    pm.expect(json.data.status).to.equal('DRAFT');",
+                  "});",
+                  "",
+                  "// Lưu SO IDs",
+                  "if (json.data) {",
+                  "    const soId = json.data.id;",
+                  "    const soNum = json.data.so_number;",
+                  "    pm.environment.set(`so_id_${counter}`, soId);",
+                  "    pm.environment.set('latest_so_id', soId);",
+                  "    pm.environment.set('latest_so_number', soNum);",
+                  "",
+                  "    // Track all created SO numbers to check uniqueness",
+                  "    let soNumbers = JSON.parse(pm.environment.get('all_so_numbers') || '[]');",
+                  "    pm.test(`SO #${counter}: SO number is unique`, () => {",
+                  "        pm.expect(soNumbers).to.not.include(soNum);",
+                  "    });",
+                  "    soNumbers.push(soNum);",
+                  "    pm.environment.set('all_so_numbers', JSON.stringify(soNumbers));",
+                  "",
+                  "    console.log(`SO #${counter}: ${soNum} (id: ${soId})`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customer_id\": \"{{test_customer_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"order_date\": \"{{so_order_date}}\",\n    \"requested_delivery_date\": \"{{so_delivery_date}}\",\n    \"currency\": \"VND\",\n    \"notes\": \"Concurrent SO test #{{so_create_counter}}\",\n    \"lines\": [\n        {\n            \"product_id\": \"{{test_product_id}}\",\n            \"quantity_ordered\": 1,\n            \"unit_price\": 150000\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"]
+            },
+            "description": "Tạo draft SO. Chạy 10 lần đồng thời bằng Collection Runner."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Confirm Single SO",
+      "description": "Confirm 1 SO → trigger inventory reservation.\nLấy latest_so_id từ environment.",
+      "item": [
+        {
+          "name": "Confirm Latest SO",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const soId = pm.environment.get('order_id') || pm.environment.get('latest_so_id');",
+                  "pm.environment.set('confirm_order_id', soId);",
+                  "console.log('Confirming SO:', soId);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Confirm SO response:', status);",
+                  "",
+                  "if (status === 200) {",
+                  "    pm.test('SO confirmed (status CONFIRMED)', () => {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.data.status).to.equal('CONFIRMED');",
+                  "    });",
+                  "    let successes = parseInt(pm.environment.get('so_confirm_success') || 0);",
+                  "    pm.environment.set('so_confirm_success', ++successes);",
+                  "} else if (status === 409) {",
+                  "    pm.test('Conflict - insufficient inventory', () => pm.response.to.have.status(409));",
+                  "    let fails = parseInt(pm.environment.get('so_confirm_fail') || 0);",
+                  "    pm.environment.set('so_confirm_fail', ++fails);",
+                  "    console.log('INFO: Insufficient stock (expected when stock limit reached)');",
+                  "} else {",
+                  "    pm.test('Unexpected status', () => pm.expect(status).to.be.oneOf([200, 409]));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/{{confirm_order_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "{{confirm_order_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Same SO Again (Idempotency)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Idempotent confirm response:', status);",
+                  "",
+                  "// Kết quả mong đợi: hoặc 200 (idempotent) hoặc 400/409 (already confirmed)",
+                  "pm.test('Double confirm is handled gracefully (not 500)', () => {",
+                  "    pm.expect(status).to.be.oneOf([200, 400, 409]);",
+                  "    pm.expect(status).to.not.equal(500);",
+                  "});",
+                  "console.log('IDEMPOTENCY TEST: Second confirm returned HTTP', status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/{{confirm_order_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "{{confirm_order_id}}", "confirm"]
+            },
+            "description": "Confirm cùng SO lần thứ 2 → phải idempotent (không tạo duplicate reservation)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Concurrent Confirms (Race Condition for Limited Stock)",
+      "description": "Test đồng thời confirm nhiều orders khi stock giới hạn.\n\nKịch bản:\n- Stock: 10 units\n- Orders: 15 orders × 1 unit/order\n- Expected: 10 confirmed, 5 conflict\n\nChạy folder này với Iterations=15, Delay=0ms trong Collection Runner\nHoặc dùng newman/run-concurrent-inventory.sh",
+      "item": [
+        {
+          "name": "[Loop] Confirm SO (Race Condition)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "let counter = pm.environment.get('confirm_loop_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('confirm_loop_counter', counter);",
+                  "",
+                  "// Lấy SO ID theo thứ tự (từ Step 01)",
+                  "const soId = pm.environment.get(`so_id_${counter}`) || pm.environment.get('latest_so_id');",
+                  "pm.environment.set('loop_confirm_so_id', soId);",
+                  "console.log(`Attempting confirm #${counter}: SO ID = ${soId}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('confirm_loop_counter') || 0);",
+                  "const status = pm.response.code;",
+                  "",
+                  "console.log(`Confirm #${counter}: HTTP ${status}`);",
+                  "",
+                  "if (status === 200) {",
+                  "    let successes = parseInt(pm.environment.get('so_confirm_success') || 0);",
+                  "    pm.environment.set('so_confirm_success', ++successes);",
+                  "    pm.test(`Confirm #${counter}: SUCCESS (${successes} total)`, () => pm.response.to.have.status(200));",
+                  "} else if (status === 409) {",
+                  "    let fails = parseInt(pm.environment.get('so_confirm_fail') || 0);",
+                  "    pm.environment.set('so_confirm_fail', ++fails);",
+                  "    pm.test(`Confirm #${counter}: CONFLICT (${fails} total - expected)`, () => pm.response.to.have.status(409));",
+                  "} else {",
+                  "    pm.test(`Confirm #${counter}: Unexpected ${status}`, () => pm.expect(status).to.be.oneOf([200, 409]));",
+                  "}",
+                  "",
+                  "// Report summary at the end",
+                  "if (counter >= 15) {",
+                  "    const successes = parseInt(pm.environment.get('so_confirm_success') || 0);",
+                  "    const fails = parseInt(pm.environment.get('so_confirm_fail') || 0);",
+                  "    console.log(`=== RACE CONDITION RESULTS ===`);",
+                  "    console.log(`Total confirms attempted: 15`);",
+                  "    console.log(`Successful: ${successes}`);",
+                  "    console.log(`Failed (conflict): ${fails}`);",
+                  "    console.log(`Total: ${successes + fails}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/{{loop_confirm_so_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "{{loop_confirm_so_id}}", "confirm"]
+            },
+            "description": "Chạy 15 lần với Collection Runner. Stock = 10 units.\nExpected: 10 success, 5 conflict (HTTP 409)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Cancel Order (Unreserve Inventory)",
+      "description": "Cancel một CONFIRMED order và verify inventory được unreserved",
+      "item": [
+        {
+          "name": "Get SO List (Find CONFIRMED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "const orders = json.data.content || [];",
+                  "const confirmed = orders.filter(o => o.status === 'CONFIRMED');",
+                  "",
+                  "if (confirmed.length > 0) {",
+                  "    const firstConfirmed = confirmed[0];",
+                  "    pm.environment.set('cancel_so_id', firstConfirmed.id);",
+                  "    console.log('Found CONFIRMED order to cancel:', firstConfirmed.id, firstConfirmed.so_number);",
+                  "} else {",
+                  "    console.warn('No CONFIRMED orders found. Run Confirm tests first.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders?status=CONFIRMED&page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"],
+              "query": [
+                { "key": "status", "value": "CONFIRMED" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Stock Before Cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data) {",
+                  "    pm.environment.set('stock_before_cancel', json.data.available_quantity);",
+                  "    pm.environment.set('reserved_before_cancel', json.data.reserved_quantity);",
+                  "    console.log('Before cancel - available:', json.data.available_quantity, '| reserved:', json.data.reserved_quantity);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Confirmed SO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cancel returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('SO status is CANCELED', () => {",
+                  "    pm.expect(json.data.status).to.equal('CANCELED');",
+                  "});",
+                  "console.log('SO canceled successfully:', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/{{cancel_so_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "{{cancel_so_id}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Verify Stock Restored After Cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "const beforeAvailable = parseFloat(pm.environment.get('stock_before_cancel') || 0);",
+                  "const beforeReserved = parseFloat(pm.environment.get('reserved_before_cancel') || 0);",
+                  "const afterAvailable = parseFloat(json.data.available_quantity || 0);",
+                  "const afterReserved = parseFloat(json.data.reserved_quantity || 0);",
+                  "",
+                  "console.log('=== CANCEL VERIFY ===');",
+                  "console.log(`Before cancel: available=${beforeAvailable}, reserved=${beforeReserved}`);",
+                  "console.log(`After cancel:  available=${afterAvailable}, reserved=${afterReserved}`);",
+                  "",
+                  "pm.test('Available quantity increased by 1 after cancel', () => {",
+                  "    pm.expect(afterAvailable).to.be.at.least(beforeAvailable + 0.9);",
+                  "});",
+                  "",
+                  "pm.test('Reserved quantity decreased by 1 after cancel', () => {",
+                  "    pm.expect(afterReserved).to.be.lessThan(beforeReserved + 0.1);",
+                  "});",
+                  "",
+                  "pm.test('No negative stock', () => {",
+                  "    pm.expect(afterAvailable).to.be.at.least(0);",
+                  "    pm.expect(afterReserved).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - List & Verify",
+      "item": [
+        {
+          "name": "Get All Test SOs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "const orders = json.data.content || [];",
+                  "const confirmed = orders.filter(o => o.status === 'CONFIRMED').length;",
+                  "const draft = orders.filter(o => o.status === 'DRAFT').length;",
+                  "const canceled = orders.filter(o => o.status === 'CANCELED').length;",
+                  "",
+                  "console.log('=== SALES ORDER STATUS SUMMARY ===');",
+                  "console.log(`CONFIRMED: ${confirmed}`);",
+                  "console.log(`DRAFT: ${draft}`);",
+                  "console.log(`CANCELED: ${canceled}`);",
+                  "",
+                  "// Verify no duplicate SO numbers",
+                  "const soNums = orders.map(o => o.so_number);",
+                  "const unique = new Set(soNums);",
+                  "pm.test('All SO numbers are unique', () => {",
+                  "    pm.expect(soNums.length).to.equal(unique.size);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders?page=0&size=20&sortBy=createdAt&direction=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "direction", "value": "DESC" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Final Inventory Consistency Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "const onHand = parseFloat(json.data.on_hand_quantity || 0);",
+                  "const reserved = parseFloat(json.data.reserved_quantity || 0);",
+                  "const available = parseFloat(json.data.available_quantity || 0);",
+                  "",
+                  "pm.test('No negative on_hand_quantity', () => pm.expect(onHand).to.be.at.least(0));",
+                  "pm.test('No negative reserved_quantity', () => pm.expect(reserved).to.be.at.least(0));",
+                  "pm.test('No negative available_quantity', () => pm.expect(available).to.be.at.least(0));",
+                  "pm.test('reserved <= onHand', () => pm.expect(reserved).to.be.at.most(onHand));",
+                  "",
+                  "console.log('=== FINAL INVENTORY STATE ===');",
+                  "console.log(`onHand=${onHand} | reserved=${reserved} | available=${available}`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

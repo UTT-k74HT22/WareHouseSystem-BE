@@ -1,0 +1,678 @@
+P|0||TRƯỜNG ĐẠI HỌC CÔNG NGHỆ GTVT
+P|1||KHOA CÔNG NGHỆ THÔNG TIN
+P|2||-----o0o-----
+P|3||HỌC PHẦN
+P|4||KIỂM THỬ PHẦN MỀM
+P|5||Báo cáo:
+P|6||TÌM HIỂU VỀ KIỂM THỬ VÀ CÔNG CỤ KIỂM THỬ POSTMAN
+T|7||[GIÁO VIÊN HƯỚNG DẪN: | NGUYỄN THỊ LAN ANH] || [SINH VIÊN THỰC HIỆN: | ĐỖ HOÀNNGUYỄN QUỐC TOẢNBÙI DANH TOẢNHOÀNG ĐÌNH DŨNGĐỖ BÁ HUY] || [LỚP: | 74DCHT22]
+P|8||HÀ NỘI 2026
+P|9|Heading1|MỤC LỤC
+P|10|Heading1|MỞ ĐẦU
+P|11||Tên đề tài
+P|12||Tìm hiểu công cụ kiểm thử test API Postman
+P|13||Lý do chọn đề tài
+P|14||Nhắc đến kiểm thử API, không thể không kể đến một trong những công cụ phổ biến và mạnh mẽ nhất hiện nay là Postman. Đây là công cụ hỗ trợ kiểm thử API với nhiều tính năng như gửi yêu cầu HTTP, phân tích phản hồi, tự động hóa kiểm thử và quản lý tập hợp các API một cách hiệu quả.
+P|15||Postman cho phép nhà phát triển kiểm tra tính đúng đắn, độ ổn định và hiệu suất của API mà không cần xây dựng giao diện người dùng. Ngoài ra, công cụ này còn hỗ trợ tạo và quản lý các collection, viết script kiểm thử tự động, cũng như tích hợp với các hệ thống CI/CD, giúp tối ưu hóa quy trình phát triển và đảm bảo chất lượng phần mềm.
+P|16||Theo thống kê từ Postman, hiện nay có hơn 30 triệu người dùng và hơn 500.000 tổ chức trên toàn thế giới đang sử dụng công cụ này trong quá trình phát triển và kiểm thử API.
+P|17||"Kiểm thử phần mềm" là một học phần mang tính thực tiễn cao và có vai trò quan trọng trong quá trình phát triển phần mềm. Thông qua học phần này, nhóm chúng em đã có cơ hội tìm hiểu sâu hơn về quy trình kiểm thử, các phương pháp và công cụ kiểm thử hiện đại.
+P|18||Nhận thức được tầm quan trọng của kiểm thử API trong hệ thống phần mềm, đặc biệt là việc sử dụng Postman trong kiểm thử, nhóm chúng em đã lựa chọn thực hiện đề tài này.
+P|19||Mục đích nghiên cứu
+P|20||Báo cáo này nhằm mục đích nghiên cứu toàn diện về kiểm thử API sử dụng công cụ Postman, từ lý thuyết đến thực hành. Cụ thể bao gồm:
+P|21|ListParagraph|Tìm hiểu tổng quan về API và các kỹ thuật kiểm thử API.
+P|22|ListParagraph|Nghiên cứu các tính năng chính của công cụ Postman trong kiểm thử API.
+P|23|ListParagraph|Thực hành kiểm thử API trên một hệ thống cụ thể bằng Postman.
+P|24|ListParagraph|Đánh giá hiệu quả của việc sử dụng Postman trong kiểm thử API.
+P|25||Đối tượng và phạm vi nghiên cứu 
+P|26||Đối tượng nghiên cứu:Đối tượng nghiên cứu của đề tài là các kỹ thuật kiểm thử API trong phát triển phần mềm, đặc biệt là kiểm thử các API theo kiến trúc RESTful. Ngoài ra, đề tài tập trung nghiên cứu công cụ Postman và cách sử dụng công cụ này để thực hiện kiểm thử API.
+P|27||Phạm vi nghiên cứu:Đề tài tập trung vào việc tìm hiểu và thực hành kiểm thử API ở mức cơ bản và trung bình, bao gồm các phương thức HTTP phổ biến như GET, POST, PUT và DELETE. Việc kiểm thử được thực hiện thông qua công cụ Postman trên một hệ thống API mẫu.
+P|28||Phương pháp nghiên cứu
+P|29||Phương pháp nghiên cứu lý thuyết:Thu thập, tổng hợp và phân tích các tài liệu liên quan đến kiểm thử phần mềm, kiểm thử API và công cụ Postman từ sách, tài liệu học thuật và các nguồn trên Internet.
+P|30||Phương pháp phân tích và tổng hợp:Phân tích các khái niệm, quy trình và kỹ thuật kiểm thử API, từ đó hệ thống hóa lại kiến thức phục vụ cho việc xây dựng nội dung đề tài.
+P|31||Phương pháp thực nghiệm:Tiến hành xây dựng các kịch bản kiểm thử và thực hiện kiểm thử API trên hệ thống cụ thể bằng công cụ Postman. Ghi nhận kết quả, so sánh với mong đợi và đánh giá hiệu quả của quá trình kiểm thử.
+P|32||Phương pháp so sánh và đánh giá:So sánh giữa các phương pháp kiểm thử khác nhau (thủ công và tự động), cũng như đánh giá ưu, nhược điểm của Postman trong quá trình kiểm thử API.
+P|33||Phương pháp mô hình hóa:Mô tả quy trình kiểm thử API thông qua các bước cụ thể, từ phân tích yêu cầu, thiết kế test case đến thực hiện và đánh giá kết quả kiểm thử.
+P|34||Bố cục báo cáo
+P|35||Báo cáo được chia thành ba phần chính như sau:
+P|36||Phần I. Mở đầu:Trình bày lý do chọn đề tài, mục đích nghiên cứu, đối tượng và phạm vi nghiên cứu, phương pháp nghiên cứu và bố cục của báo cáo.
+P|37||Phần II. Nội dung:Gồm 4 chương chính:
+P|38||Chương 1: Tổng quan về kiểm thử phần mềm
+P|39||Trình bày các khái niệm cơ bản, vai trò, quy trình và các phương pháp kiểm thử phần mềm.
+P|40||Chương 2: API và kiểm thử API
+P|41||Giới thiệu về API, giao thức HTTP, định dạng dữ liệu và vai trò của kiểm thử API trong hệ thống phần mềm.
+P|42||Chương 3: Công cụ kiểm thử Postman
+P|43||Trình bày các chức năng chính của Postman và hướng dẫn sử dụng công cụ trong kiểm thử API.
+P|44||Chương 4: Kiểm thử API với Postman
+P|45||Thực hiện kiểm thử API thông qua việc xây dựng test case, sử dụng Postman để gửi request, phân tích response và đánh giá kết quả kiểm thử.
+P|46||Phần III. Kết luận:Tổng kết những kết quả đạt được, nêu ra các hạn chế và đề xuất hướng phát triển trong tương lai.
+P|47|Heading1|BẢNG KÝ HIỆU VIẾT TẮT
+T|48||[STT | Tên viết tắt | Tên đầy đủ | Ý nghĩa] || [1 | API | Application Programming Interface | Giao diện lập trình ứng dụng] || [2 | HTTP | Hypertext Transfer Protocol | Giao thức truyền tải siêu văn bản] || [3 | JSON | JavaScript Object Notation | Ký hiệu đối tượng JavaScript] || [4 | XML | Extensible Markup Language | Ngôn ngữ đánh dấu mở rộng] || [5 | TC | Test Case | Trường hợp kiểm thử]
+P|49|Heading1|DANH MỤC ẢNH
+P|50|TableofFigures|Hình 1.1. Quy trình kiểm thử phần mềm.12
+P|51|TableofFigures|Hình 1.2. Các giai đoạn trong vòng đời kiểm thử phần mềm13
+P|52|TableofFigures|Hình 1.3. Phân loại kiểm thử phần mềm14
+P|53|TableofFigures|Hình 2.1. Mô hình hoạt động của API16
+P|54|TableofFigures|Hình 2.2. Mô hình Client – Server trong API17
+P|55|TableofFigures|Hình 2.3. Giao thức mạng17
+P|56|TableofFigures|Hình 2.4. Mô hình tương tác Client-Server qua giao thức HTTP.18
+P|57|TableofFigures|Hình 2.5. Cấu trúc dữ liệu định dạng JSON19
+P|58|TableofFigures|Hình 2.6. Cấu trúc dữ liệu định dạng XML20
+P|59|TableofFigures|Hình 2.7. Kiến trúc hệ thống Web API21
+P|60|TableofFigures|Hình 2.8. Công cụ Postman26
+P|61|TableofFigures|Hình 2.9.Công cụ Katalon26
+P|62|TableofFigures|Hình 2.10. Công cụ Swagger27
+P|63|TableofFigures|Hình 2.11. Công cụ SoapUI27
+P|64|TableofFigures|Hình 3.1. Trang chủ Postman32
+P|65|TableofFigures|Hình 3.2. Trang download33
+P|66|TableofFigures|Hình 3.3. Trang Sign In33
+P|67|TableofFigures|Hình 3.4. Giao diện người dùng phần mềm Postman.34
+P|68|TableofFigures|Hình 3.5. Giao diện Postman34
+P|69|TableofFigures|Hình 3.6. Quản lý Collection và các API Request trong Postman35
+P|70|TableofFigures|Hình 3.7. Chi tiết thiết lập một API Request trong Postman36
+P|71|TableofFigures|Hình 3.8. Kết quả phản hồi (Response) từ API ở định dạng JSON36
+P|72|TableofFigures|Hình 3.9. Các thành phần chính của một Request và Response trong Postman37
+P|73|TableofFigures|Hình 4.1. Case Login57
+P|74|TableofFigures|Hình 4.2. Case Create58
+P|75|TableofFigures|Hình 4.3. Case Get All58
+P|76|TableofFigures|Hình 4.4. Case Get By ID59
+P|77|TableofFigures|Hình 4.5. Case Get By Sku59
+P|78|TableofFigures|Hình 4.6. Case Update60
+P|79|TableofFigures|Hình 4.7. Case Delete60
+P|80|Heading1|DANH MỤC BẢNG
+P|81|TableofFigures|Bảng 4.1. Bảng TestCase Create47
+P|82|TableofFigures|Bảng 4.2. Bảng TestCase GetAll49
+P|83|TableofFigures|Bảng 4.3. Bảng TestCase Get By ID50
+P|84|TableofFigures|Bảng 4.4. Bảng TestCase Update52
+P|85|TableofFigures|Bảng 4.5. Bảng TestCase Delete54
+P|86|Heading1|CHƯƠNG 1
+P|87|Heading1|TỔNG QUAN VỀ KIỂM THỬ PHẦN MỀM
+P|88|Heading2|1.1. Khái niệm và vai trò của kiểm thử phần mềm
+P|89|ListParagraph|Khái niệm kiểm thử phần mềm:
+P|90||Kiểm thử phần mềm (Software Testing) là quá trình kiểm tra và đánh giá một hệ thống hoặc ứng dụng nhằm phát hiện lỗi, đảm bảo phần mềm hoạt động đúng theo yêu cầu đã đề ra. Quá trình này bao gồm việc thực hiện các kịch bản kiểm thử, so sánh kết quả thực tế với kết quả mong đợi, từ đó xác định tính chính xác và độ ổn định của hệ thống.
+P|91||Vai trò của kiểm thử phần mềm:Kiểm thử phần mềm đóng vai trò quan trọng trong toàn bộ vòng đời phát triển phần mềm, cụ thể:
+P|92||Phát hiện lỗi sớm:Giúp tìm ra các lỗi trong quá trình phát triển, từ đó giảm chi phí sửa lỗi ở giai đoạn sau.
+P|93||Đảm bảo chất lượng phần mềm:Giúp hệ thống hoạt động đúng chức năng, ổn định và đáp ứng yêu cầu người dùng.
+P|94||Tăng độ tin cậy của hệ thống:Một hệ thống được kiểm thử kỹ lưỡng sẽ hạn chế lỗi khi đưa vào sử dụng thực tế.
+P|95||Hỗ trợ phát triển và bảo trì:Kiểm thử giúp phát hiện các vấn đề khi nâng cấp hoặc thay đổi hệ thống.
+P|96||Cải thiện trải nghiệm người dùng:Phần mềm ít lỗi sẽ mang lại trải nghiệm tốt hơn cho người sử dụng.
+P|97||Trong bối cảnh phát triển các hệ thống Web hiện đại, đặc biệt là các hệ thống sử dụng kiến trúc API (RESTful), kiểm thử phần mềm, đặc biệt là kiểm thử API, trở thành một bước không thể thiếu nhằm đảm bảo tính chính xác và hiệu quả của hệ thống backend.
+P|98|Heading2|1.2. Các nguyên tắc cơ bản trong kiểm thử phần mềm
+P|99||Trong kiểm thử phần mềm, có một số nguyên tắc cơ bản giúp định hướng quá trình kiểm thử hiệu quả hơn. Các nguyên tắc này được tổng kết từ thực tiễn phát triển phần mềm và được sử dụng rộng rãi trong ngành.
+P|100||Nguyên tắc 1: Kiểm thử chỉ chứng minh sự tồn tại của lỗiKiểm thử giúp phát hiện lỗi trong phần mềm, nhưng không thể chứng minh rằng phần mềm hoàn toàn không có lỗi.
+P|101||Nguyên tắc 2: Không thể kiểm thử toàn diện (Exhaustive Testing là không khả thi)Không thể kiểm thử tất cả các trường hợp với mọi dữ liệu đầu vào, do đó cần lựa chọn các test case tiêu biểu và quan trọng.
+P|102||Nguyên tắc 3: Kiểm thử càng sớm càng tốtViệc kiểm thử nên được thực hiện từ giai đoạn sớm trong quá trình phát triển để giảm chi phí và thời gian sửa lỗi.
+P|103||Nguyên tắc 4: Lỗi thường tập trung (Defect Clustering)Phần lớn lỗi thường tập trung ở một số module hoặc chức năng nhất định, do đó cần ưu tiên kiểm thử các khu vực này.
+P|104||Nguyên tắc 5: Nghịch lý thuốc trừ sâu (Pesticide Paradox)Nếu lặp lại cùng một bộ test case nhiều lần, chúng sẽ không còn hiệu quả trong việc phát hiện lỗi mới. Vì vậy, cần thường xuyên cập nhật và bổ sung test case.
+P|105||Nguyên tắc 6: Kiểm thử phụ thuộc vào ngữ cảnhChiến lược kiểm thử sẽ khác nhau tùy theo loại phần mềm, mục đích sử dụng và môi trường triển khai.
+P|106||Nguyên tắc 7: Ngụy biện không có lỗi (Absence-of-errors fallacy)Việc phần mềm không còn lỗi không có nghĩa là nó đáp ứng đúng nhu cầu người dùng.
+P|107||Trong thực tế phát triển backend, các nguyên tắc này giúp định hướng việc kiểm thử API hiệu quả hơn, đặc biệt trong việc lựa chọn test case, tối ưu thời gian kiểm thử và tập trung vào các chức năng quan trọng của hệ thống.
+P|108|Heading2|1.3. Quy trình kiểm thử phần mềm
+P|109|Caption|Hình 1.1. Quy trình kiểm thử phần mềm.
+P|110||Quy trình kiểm thử phần mềm có thể được mô tả qua các giai đoạn chính sau:
+P|111||Lập kế hoạch và kiểm soát kiểm thử (Test Planning & Control):Xác định phạm vi kiểm thử, mục tiêu, chiến lược, tài nguyên và công cụ sử dụng trong quá trình kiểm thử.
+P|112||Phân tích và thiết kế kiểm thử (Test Analysis & Design):Phân tích yêu cầu hệ thống, từ đó thiết kế các test case phù hợp nhằm kiểm tra các chức năng của phần mềm.
+P|113||Thực hiện kiểm thử (Test Execution):Tiến hành thực hiện các test case đã thiết kế, ghi nhận kết quả thực tế và so sánh với kết quả mong đợi.
+P|114||Đánh giá và báo cáo (Test Evaluation & Reporting):Phân tích kết quả kiểm thử, xác định lỗi, đánh giá mức độ ảnh hưởng và lập báo cáo gửi cho nhóm phát triển.
+P|115||Hoàn tất kiểm thử (Test Closure):Tổng kết quá trình kiểm thử, đánh giá hiệu quả, rút kinh nghiệm và lưu trữ tài liệu kiểm thử.
+P|116|Heading2|1.4. Phân loại kiểm thử
+P|117||Kiểm thử phần mềm có thể được phân loại theo nhiều cách khác nhau tùy thuộc vào mục đích và phạm vi kiểm thử. Trong phạm vi đề tài này, kiểm thử được phân loại thành hai nhóm chính: kiểm thử thủ công và kiểm thử tự động.
+P|118|Heading3|1.4.1. Kiểm thử thủ công (Manual Testing)
+P|119|Caption|Hình 1.2. Các giai đoạn trong vòng đời kiểm thử phần mềm
+P|120||Kiểm thử thủ công (Manual Testing) là phương pháp kiểm thử trong đó toàn bộ quá trình đánh giá phần mềm được thực hiện trực tiếp bởi con người, không có sự hỗ trợ của các công cụ tự động hóa. Trong phương pháp này, người kiểm thử đóng vai trò chủ động trong việc thiết lập các kịch bản kiểm thử, thao tác trên hệ thống, gửi các yêu cầu và quan sát phản hồi thu được.
+P|121||Thông qua việc đối chiếu giữa kết quả thực tế và kết quả kỳ vọng, người kiểm thử có thể phát hiện các sai lệch, lỗi chức năng hoặc các vấn đề tiềm ẩn trong hệ thống. Do phụ thuộc vào khả năng phân tích và kinh nghiệm của con người, kiểm thử thủ công thường linh hoạt trong việc phát hiện các lỗi phức tạp, đặc biệt trong các tình huống kiểm thử mang tính khám phá.
+P|122||Kiểm thử thủ công mang lại một số ưu điểm đáng kể trong quá trình phát triển phần mềm. Trước hết, phương pháp này tương đối dễ tiếp cận, không đòi hỏi người thực hiện phải có kiến thức lập trình chuyên sâu. Bên cạnh đó, kiểm thử thủ công cho phép người kiểm thử linh hoạt trong việc đánh giá các tình huống phức tạp hoặc các trường hợp kiểm thử mang tính khám phá mà các công cụ tự động khó có thể bao quát. Ngoài ra, phương pháp này đặc biệt phù hợp trong giai đoạn đầu của dự án, khi hệ thống chưa ổn định và yêu cầu có thể thay đổi liên tục.
+P|123||Tuy nhiên, kiểm thử thủ công cũng tồn tại nhiều hạn chế. Việc thực hiện kiểm thử hoàn toàn bằng con người thường tiêu tốn nhiều thời gian và công sức, đặc biệt khi cần lặp lại nhiều lần. Đồng thời, kết quả kiểm thử có thể bị ảnh hưởng bởi yếu tố chủ quan, dẫn đến sai sót hoặc thiếu nhất quán. Khi hệ thống ngày càng mở rộng và phức tạp, kiểm thử thủ công trở nên khó quản lý và không đáp ứng được yêu cầu về hiệu quả cũng như khả năng mở rộng.
+P|124||Trong kiểm thử API, việc sử dụng Postman để gửi request và kiểm tra response được xem là một hình thức kiểm thử thủ công.
+P|125|Heading3|1.4.2. Kiểm thử tự động (Automation Testing)
+P|126|Caption|Hình 1.3. Phân loại kiểm thử phần mềm
+P|127||Kiểm thử tự động (Automation Testing) là phương pháp kiểm thử trong đó các test case được thực thi thông qua các công cụ và kịch bản lập trình mà không cần sự can thiệp trực tiếp của con người. Thay vì thao tác thủ công, quá trình kiểm thử được tự động hóa nhằm đảm bảo tính nhất quán, khả năng lặp lại và hiệu quả trong việc đánh giá chất lượng phần mềm.
+P|128||Phương pháp này mang lại nhiều ưu điểm nổi bật. Trước hết, kiểm thử tự động giúp tiết kiệm đáng kể thời gian khi cần thực hiện các kịch bản kiểm thử lặp lại nhiều lần. Bên cạnh đó, việc sử dụng script giúp giảm thiểu sai sót do yếu tố con người, từ đó nâng cao độ chính xác của kết quả kiểm thử. Ngoài ra, kiểm thử tự động có thể dễ dàng tích hợp vào các quy trình phát triển phần mềm hiện đại như CI/CD, góp phần nâng cao hiệu quả và tốc độ triển khai hệ thống.
+P|129||Tuy nhiên, kiểm thử tự động cũng tồn tại một số hạn chế nhất định. Việc xây dựng và duy trì các kịch bản kiểm thử đòi hỏi người thực hiện phải có kiến thức lập trình và hiểu biết về công cụ sử dụng. Đồng thời, chi phí thiết lập ban đầu có thể tương đối cao, đặc biệt đối với các hệ thống phức tạp. Hơn nữa, không phải mọi loại kiểm thử đều phù hợp để tự động hóa, đặc biệt là các trường hợp kiểm thử mang tính khám phá hoặc phụ thuộc nhiều vào đánh giá chủ quan của con người.
+P|130||Trong kiểm thử API, kiểm thử tự động thường được triển khai thông qua các công cụ và thư viện như RestAssured hoặc thông qua việc viết script kiểm thử trực tiếp trong Postman. Phương pháp này đặc biệt hiệu quả trong việc kiểm thử hồi quy và đảm bảo tính ổn định của hệ thống backend trong quá trình phát triển và triển khai.
+P|131|Heading3|1.4.3. Khi nào nên sử dụng từng loại kiểm thử
+P|132||Trong quá trình phát triển phần mềm, kiểm thử là một hoạt động bắt buộc nhằm đảm bảo hệ thống hoạt động đúng yêu cầu và hạn chế lỗi khi triển khai thực tế. Người thực hiện kiểm thử có thể là lập trình viên hoặc kiểm thử viên, do đó việc trang bị kiến thức về kiểm thử và lựa chọn phương pháp phù hợp là rất cần thiết.
+P|133||Mỗi phương pháp kiểm thử đều có những ưu điểm và hạn chế riêng. Kiểm thử thủ công được sử dụng rộng rãi nhờ tính linh hoạt, dễ triển khai và phù hợp trong giai đoạn đầu khi hệ thống còn chưa ổn định. Ngược lại, kiểm thử tự động phát huy hiệu quả trong các trường hợp cần thực hiện kiểm thử lặp lại nhiều lần, xử lý khối lượng test case lớn hoặc yêu cầu kiểm thử hiệu năng và tải.
+P|134||Trong thực tế, không có phương pháp nào có thể thay thế hoàn toàn phương pháp còn lại. Việc lựa chọn hình thức kiểm thử cần dựa trên đặc điểm hệ thống, mục tiêu kiểm thử và nguồn lực của dự án. Do đó, việc kết hợp giữa kiểm thử thủ công và kiểm thử tự động là hướng tiếp cận phổ biến, giúp tận dụng ưu điểm của cả hai phương pháp, từ đó nâng cao chất lượng và độ tin cậy của phần mềm.
+P|135|Heading1|CHƯƠNG 2
+P|136|Heading1|API VÀ KIỂM THỬ API
+P|137|Heading2|2.1. Tổng quan về API
+P|138|Heading3|2.1.1. API là gì
+P|139|Caption|Hình 2.1. Mô hình hoạt động của API
+P|140||API (Application Programming Interface) là một tập hợp các quy tắc, giao thức và định nghĩa cho phép các hệ thống phần mềm khác nhau có thể giao tiếp và trao đổi dữ liệu với nhau. API đóng vai trò như một lớp trung gian, giúp các thành phần trong hệ thống hoặc các hệ thống độc lập có thể tương tác mà không cần quan tâm đến cách thức triển khai bên trong của nhau.
+P|141||Trong các hệ thống phần mềm hiện đại, API thường được sử dụng để kết nối giữa các thành phần như client và server. Client có thể là trình duyệt, ứng dụng di động hoặc các hệ thống khác, trong khi server chịu trách nhiệm xử lý yêu cầu và cung cấp dữ liệu. Quá trình giao tiếp này thường diễn ra thông qua cơ chế gửi yêu cầu (request) từ client và nhận phản hồi (response) từ server, phổ biến nhất là thông qua giao thức HTTP.
+P|142||API không chỉ giới hạn trong các hệ thống Web mà còn được sử dụng rộng rãi trong nhiều lĩnh vực khác như hệ điều hành, thư viện phần mềm và các framework. Thông qua API, các nhà phát triển có thể tận dụng lại các chức năng đã được xây dựng sẵn, từ đó nâng cao hiệu quả phát triển, giảm sự phụ thuộc giữa các thành phần và tăng khả năng mở rộng của hệ thống.
+P|143||Trong bối cảnh phát triển phần mềm hiện nay, đặc biệt là các hệ thống dựa trên kiến trúc dịch vụ (service-oriented) hoặc microservices, API giữ vai trò trung tâm trong việc kết nối và điều phối hoạt động giữa các thành phần của hệ thống.
+P|144|Heading2|2.2. Giao thức trong RESTful API
+P|145|Caption|Hình 2.2. Mô hình Client – Server trong API
+P|146|Heading3|2.2.1. Protocol là gì
+P|147||Protocol (giao thức) là tập hợp các quy tắc và tiêu chuẩn được sử dụng để xác định cách thức các hệ thống hoặc thiết bị trao đổi dữ liệu với nhau trong một môi trường mạng. Các quy tắc này quy định cách thiết lập kết nối, định dạng dữ liệu, cách truyền tải cũng như cách xử lý thông tin giữa các bên tham gia giao tiếp.
+P|148|Caption|Hình 2.3. Giao thức mạng
+P|149||Trong lĩnh vực phát triển phần mềm, đặc biệt là các hệ thống Web, protocol đóng vai trò quan trọng trong việc đảm bảo sự thống nhất và tương thích giữa client và server. Nhờ có giao thức, các hệ thống khác nhau có thể hiểu và xử lý dữ liệu một cách chính xác.
+P|150||Một trong những giao thức phổ biến nhất được sử dụng trong kiểm thử API là HTTP (HyperText Transfer Protocol), cho phép truyền tải dữ liệu giữa client và server thông qua cơ chế request và response. Giao thức này là nền tảng cho hầu hết các API trong các hệ thống Web hiện đại.
+P|151|Heading3|2.2.2. HTTP hoạt động như thế nào
+P|152|Caption|Hình 2.4. Mô hình tương tác Client-Server qua giao thức HTTP.
+P|153||HTTP (HyperText Transfer Protocol) là giao thức được sử dụng để truyền tải dữ liệu giữa client và server trong các hệ thống Web. HTTP hoạt động theo mô hình request – response, trong đó client gửi yêu cầu (request) đến server và server xử lý, sau đó trả về phản hồi (response).
+P|154||Quá trình hoạt động của HTTP diễn ra theo các bước cơ bản sau:
+P|155||• Client gửi request:Client (trình duyệt, ứng dụng hoặc công cụ như Postman) gửi một yêu cầu đến server thông qua một địa chỉ URL. Yêu cầu này bao gồm các thông tin như phương thức (GET, POST, PUT, DELETE), header và dữ liệu (nếu có).
+P|156||• Server tiếp nhận và xử lý:Server nhận request, tiến hành xử lý logic nghiệp vụ như truy vấn cơ sở dữ liệu, kiểm tra dữ liệu hoặc thực hiện các thao tác cần thiết.
+P|157||• Server trả về response:Sau khi xử lý, server gửi lại phản hồi cho client. Response bao gồm mã trạng thái (status code), header và nội dung dữ liệu (thường ở dạng JSON).
+P|158||• Client nhận và xử lý kết quả:Client nhận response và hiển thị dữ liệu hoặc thực hiện các xử lý tiếp theo dựa trên kết quả nhận được.
+P|159||HTTP là giao thức không trạng thái (stateless), nghĩa là mỗi request được xử lý độc lập và server không lưu lại thông tin của các request trước đó. Điều này giúp hệ thống dễ mở rộng nhưng cũng yêu cầu các cơ chế bổ sung như token hoặc session để quản lý trạng thái người dùng.
+P|160||Trong kiểm thử API, việc hiểu rõ cách hoạt động của HTTP giúp người kiểm thử xây dựng request chính xác, phân tích response và đánh giá đúng kết quả trả về từ hệ thống.
+P|161|Heading2|2.3. Định dạng dữ liệu trong API
+P|162|Heading3|2.3.1. JSON
+P|163|Caption|Hình 2.5. Cấu trúc dữ liệu định dạng JSON
+P|164||JSON (JavaScript Object Notation) là một định dạng dữ liệu dạng văn bản, được sử dụng phổ biến để trao đổi dữ liệu giữa client và server trong các hệ thống Web. JSON được thiết kế đơn giản, dễ đọc và dễ phân tích, giúp việc truyền tải và xử lý dữ liệu trở nên hiệu quả.
+P|165||Dữ liệu trong JSON được biểu diễn dưới dạng các cặp khóa – giá trị (key – value), trong đó khóa là chuỗi và giá trị có thể là nhiều kiểu dữ liệu khác nhau như chuỗi, số, boolean, mảng hoặc đối tượng. Cấu trúc này cho phép JSON biểu diễn dữ liệu một cách linh hoạt và dễ mở rộng.
+P|166||Một trong những ưu điểm nổi bật của JSON là tính nhẹ (lightweight), giúp giảm dung lượng dữ liệu khi truyền tải so với các định dạng khác. Đồng thời, JSON được hỗ trợ rộng rãi bởi nhiều ngôn ngữ lập trình, giúp dễ dàng tích hợp trong các hệ thống khác nhau.
+P|167||Trong kiểm thử API, JSON thường được sử dụng làm định dạng chính cho request và response. Việc hiểu rõ cấu trúc và cách biểu diễn dữ liệu của JSON giúp người kiểm thử dễ dàng phân tích dữ liệu trả về và kiểm tra tính chính xác của hệ thống.
+P|168|Heading3|2.3.2. XML
+P|169|Caption|Hình 2.6. Cấu trúc dữ liệu định dạng XML
+P|170||XML (eXtensible Markup Language) là một định dạng dữ liệu dạng văn bản được sử dụng để lưu trữ và trao đổi dữ liệu giữa các hệ thống. XML cho phép người dùng định nghĩa các thẻ (tag) riêng để mô tả cấu trúc và ý nghĩa của dữ liệu, từ đó giúp dữ liệu có tính tự mô tả cao.
+P|171||Dữ liệu trong XML được tổ chức theo dạng cây với các phần tử lồng nhau, mỗi phần tử được bao bởi các thẻ mở và thẻ đóng. Cấu trúc này giúp biểu diễn dữ liệu phức tạp một cách rõ ràng và có tính hệ thống.
+P|172||Một ưu điểm của XML là tính linh hoạt và khả năng mở rộng cao, phù hợp với các hệ thống yêu cầu định dạng dữ liệu chặt chẽ. Tuy nhiên, so với JSON, XML thường có cấu trúc dài hơn, tốn nhiều dung lượng và khó đọc hơn đối với con người.
+P|173||Trong kiểm thử API, XML vẫn được sử dụng trong một số hệ thống cũ hoặc các dịch vụ yêu cầu tiêu chuẩn nghiêm ngặt. Tuy nhiên, trong các hệ thống Web hiện đại, XML dần được thay thế bởi JSON do tính đơn giản và hiệu quả hơn.
+P|174|Heading3|2.3.3. Dữ liệu trong HTTP
+P|175||Trong giao thức HTTP, dữ liệu được truyền tải giữa client và server thông qua hai thành phần chính là request và response. Mỗi thông điệp HTTP đều bao gồm các phần cơ bản như: dòng bắt đầu (start line), header và body.
+P|176||Request:Là dữ liệu được gửi từ client đến server, bao gồm phương thức (GET, POST, PUT, DELETE), đường dẫn (URL), header và phần body (nếu có). Phần body thường chứa dữ liệu được gửi lên server, phổ biến nhất là ở định dạng JSON hoặc XML.
+P|177||Response:Là dữ liệu được server trả về cho client sau khi xử lý request. Response bao gồm mã trạng thái (status code), header và body. Phần body chứa dữ liệu phản hồi, thường được biểu diễn dưới dạng JSON trong các API hiện đại.
+P|178||Header:Header chứa các thông tin bổ sung về request hoặc response, chẳng hạn như kiểu dữ liệu (Content-Type), thông tin xác thực (Authorization) hoặc các cấu hình liên quan đến việc truyền tải dữ liệu.
+P|179||Trong các hệ thống API, dữ liệu trong HTTP đóng vai trò quan trọng trong việc trao đổi thông tin giữa các thành phần. Việc hiểu rõ cấu trúc và cách truyền dữ liệu trong HTTP giúp người phát triển và kiểm thử dễ dàng xây dựng request, phân tích response và đảm bảo tính chính xác của hệ thống.
+P|180|Heading2|2.4. Web API
+P|181|Heading3|2.4.1. Khái niệm
+P|182|Caption|Hình 2.7. Kiến trúc hệ thống Web API
+P|183||Web API là một dạng giao diện lập trình ứng dụng được xây dựng để hoạt động trong môi trường Web, cho phép các hệ thống phần mềm giao tiếp và trao đổi dữ liệu với nhau thông qua giao thức HTTP. Thông qua Web API, các ứng dụng có thể gửi yêu cầu và nhận dữ liệu từ server mà không cần quan tâm đến cách thức xử lý bên trong của hệ thống.
+P|184||Trong các hệ thống phần mềm hiện đại, Web API đóng vai trò trung tâm trong việc kết nối giữa các thành phần như frontend, backend và các dịch vụ bên ngoài. Nhờ đó, các hệ thống có thể được thiết kế theo hướng tách biệt, linh hoạt và dễ dàng mở rộng.
+P|185|Heading3|2.4.2. Đặc điểm
+P|186||Web API sở hữu nhiều đặc điểm quan trọng giúp nó trở thành thành phần không thể thiếu trong các hệ thống Web hiện nay.
+P|187||Trước hết, Web API hoạt động dựa trên giao thức HTTP, cho phép truyền tải dữ liệu một cách thống nhất và dễ dàng trên Internet. Điều này giúp các ứng dụng ở nhiều nền tảng khác nhau có thể giao tiếp với nhau một cách thuận tiện.
+P|188||Bên cạnh đó, Web API không phụ thuộc vào nền tảng, nghĩa là có thể được sử dụng bởi nhiều loại client như trình duyệt, ứng dụng di động hoặc các hệ thống bên thứ ba. Điều này giúp tăng khả năng tích hợp và mở rộng của hệ thống.
+P|189||Ngoài ra, dữ liệu trong Web API thường được trao đổi dưới dạng JSON hoặc XML, là các định dạng phổ biến, dễ xử lý và được hỗ trợ rộng rãi. Một đặc điểm quan trọng khác là tính stateless, trong đó mỗi request được xử lý độc lập, không phụ thuộc vào các request trước đó, giúp hệ thống dễ dàng mở rộng và quản lý.
+P|190|Heading3|2.4.3. Cách hoạt động
+P|191||Web API hoạt động dựa trên mô hình client – server thông qua cơ chế request – response. Khi người dùng thực hiện một thao tác trên ứng dụng, client sẽ gửi một request đến server thông qua một endpoint cụ thể.
+P|192||Sau khi nhận được request, server sẽ tiến hành xử lý các nghiệp vụ cần thiết như truy xuất dữ liệu, kiểm tra điều kiện hoặc thực hiện các thao tác liên quan. Kết quả xử lý sau đó được đóng gói thành response và gửi lại cho client.
+P|193||Client nhận response và sử dụng dữ liệu này để hiển thị hoặc thực hiện các xử lý tiếp theo. Toàn bộ quá trình này diễn ra liên tục, tạo nên sự tương tác giữa người dùng và hệ thống.
+P|194||Trong thực tế, cơ chế hoạt động của Web API là nền tảng cho việc kiểm thử API bằng các công cụ như Postman, giúp người kiểm thử dễ dàng mô phỏng request, phân tích response và đánh giá hoạt động của hệ thống một cách hiệu quả.
+P|195|Heading2|2.5. Kiểm thử API
+P|196|Heading3|2.5.1. Khái niệm
+P|197||Kiểm thử API là quá trình kiểm tra các giao diện lập trình ứng dụng nhằm đảm bảo các chức năng hoạt động đúng theo yêu cầu, dữ liệu được xử lý chính xác và hệ thống phản hồi đúng với các điều kiện đầu vào. Khác với kiểm thử giao diện, kiểm thử API tập trung vào logic xử lý, dữ liệu trao đổi và hiệu năng của hệ thống.
+P|198|Heading3|2.5.2. Tại sao cần kiểm thử API
+P|199||Trong quá trình phát triển phần mềm, client và server thường được xây dựng và hoạt động độc lập. Do đó, không thể phụ thuộc hoàn toàn vào client để kiểm tra dữ liệu, mà cần thực hiện kiểm thử API một cách riêng biệt nhằm đảm bảo hệ thống hoạt động chính xác.
+P|200||Việc kiểm thử API giúp phát hiện lỗi sớm ngay từ phía server, ngay cả khi client chưa hoàn thiện. Điều này giúp giảm sự phụ thuộc giữa các thành phần trong hệ thống và đảm bảo quá trình phát triển diễn ra liên tục, không bị gián đoạn.
+P|201||Ngoài ra, trong nhiều trường hợp, khi phát sinh lỗi trên client, việc kiểm thử API sẽ giúp xác định nguyên nhân đến từ phía server hay client, từ đó hỗ trợ quá trình xử lý và khắc phục lỗi một cách nhanh chóng và hiệu quả hơn.
+P|202||Đối với các hệ thống Web Services, đôi khi API được cung cấp cho bên thứ ba sử dụng mà không có client đi kèm. Vì vậy, việc kiểm thử API độc lập là cần thiết để đảm bảo chất lượng và độ tin cậy của hệ thống trước khi đưa vào sử dụng.
+P|203|Heading3|2.5.3. Chuẩn bị trước khi test API
+P|204||Thiết lập môi trường kiểm thử API: 
+P|205||Thiết lập môi trường kiểm thử API với tập hợp các tham số cần thiết của API
+P|206||Cấu hình cơ sở dữ liệu và máy chủ theo các yêu cầu của ứng dụng.
+P|207||Thử thực hiện gọi API để đảm bảo không có lỗi gì trước khi tiến hành kiểm thử.  Xác định phạm vi và yêu cầu kiểm thử: Đặt các câu hỏi liên quan đến API để xác định phạm vi và yêu cầu kiểm thử. 
+P|208||Ví dụ:  
+P|209|ListParagraph|Những môi trường nào nên sử dụng API như thế nào? 
+P|210|ListParagraph|Độ ưu tiên trong kiểm thử API? 
+P|211|ListParagraph|Điều gì sẽ xảy ra trong những trường hợp bình thường, trường hợp bất thường
+P|212|ListParagraph| API nào khác có thể tương tác với API này? 
+P|213||Quyết định phương pháp kiểm thử API: 
+P|214||Một số phương pháp kiểm thử API phổ biến:
+P|215|ListParagraph|Functionality Testing:Xác nhận API hoạt động chính xác theo đúng chức năng mà nó được tạo ra. 
+P|216|ListParagraph|Usability Testing: Xác nhận API có thể sử dụng một cách dễ dàng.
+P|217|ListParagraph|Reliability Testing: Xác nhận việc gọi API và trả kết quả hoạt động ổn định và nhất quán.
+P|218||Trước khi tiến hành kiểm thử API, cần chuẩn bị đầy đủ các thông tin cần thiết như:
+P|219|ListParagraph|Danh sách API và tài liệu mô tả (API documentation)
+P|220|ListParagraph|Endpoint, phương thức HTTP (GET, POST, PUT, DELETE)
+P|221|ListParagraph|Dữ liệu đầu vào và kết quả mong đợi
+P|222|ListParagraph|Thông tin xác thực (token, API key nếu có)
+P|223|ListParagraph|Công cụ kiểm thử như Postman
+P|224||Việc chuẩn bị đầy đủ giúp quá trình kiểm thử diễn ra nhanh chóng và chính xác hơn.
+P|225|Heading3|2.5.4. Thiết kế Test Case cho API
+P|226||Các trường hợp thử nghiệm về kiểm tra API dựa trên:
+P|227|ListParagraph|Kiểm tra các giá trị trả về dựa trên điều kiện đầu vào
+P|228|ListParagraph|Xác minh nếu API không trả lại bất kỳ kết quả gì hoặc kết quả sai 
+P|229|ListParagraph|Xác minh nếu API kích hoạt một số sự kiện khác hoặc gọi một API khác.
+P|230|ListParagraph|Xác minh xem API đang cập nhật bất kỳ cấu trúc dữ liệu nào.
+P|231||Ví dụ: 
+P|232||Mục đích kiểm thử:Kiểm tra tính đúng đắn và ổn định của chức năng đăng nhập, đảm bảo hệ thống xác thực chính xác thông tin người dùng và trả về dữ liệu phù hợp khi đăng nhập thành công.
+P|233||Điều kiện tiên quyết (Pre-condition)
+P|234||Đường dẫn: http://localhost:3000/login
+P|235||Dữ liệu mẫu:
+P|236||{  "username": "UsernameTest",
+P|237||  "password": "123456"
+P|238||}
+P|239||Test Case 1: Đăng nhập thành công
+P|240||Mô tả:
+P|241||Kiểm tra khả năng đăng nhập khi người dùng nhập đúng thông tin tài khoản.
+P|242||Dữ liệu đầu vào:
+P|243|ListParagraph|username: tồn tại trong cơ sở dữ liệu 
+P|244|ListParagraph|password: đúng với username tương ứng
+P|245||Kết quả mong đợi:
+P|246||Hệ thống trả về:
+P|247||statusCode: 200 
+P|248||message: thông báo thành công 
+P|249||Accestoken: chuỗi xác thực người dùng 
+P|250||Refreshtoken: duy trì đăng nhập
+P|251||Test Case 2: Đăng nhập thất bại với username có khoảng trắng
+P|252||Mô tả:
+P|253||Kiểm tra hệ thống có xử lý đúng khi người dùng nhập username có khoảng trắng ở đầu hoặc cuối hay không.
+P|254||Dữ liệu đầu vào:
+P|255|ListParagraph|username: tồn tại trong cơ sở dữ liệu nhưng có khoảng trắng ở đầu hoặc cuối(ví dụ: " UsernameTest ") 
+P|256|ListParagraph|password: đúng với username tương ứng
+P|257||Kết quả mong đợi:
+P|258|ListParagraph|Không xác thực được người dùng.
+P|259||Trả về: 
+P|260||statusCode: 401 Unauthorized (hoặc 400 tùy design)
+P|261||message: thông báo sai thông tin đăng nhập 
+P|262||Không trả về accessToken và refreshToken
+P|263||Test case cho API cần được xây dựng dựa trên yêu cầu nghiệp vụ, đặc tả kỹ thuật và hành vi mong đợi của hệ thống. Mỗi test case cần xác định rõ các thành phần cơ bản như dữ liệu đầu vào, điều kiện tiên quyết, các bước thực hiện, kết quả mong đợi và tiêu chí đánh giá pass/fail. Việc thiết kế test case không chỉ nhằm kiểm tra API có trả về đúng dữ liệu hay không, mà còn phải xác minh khả năng xử lý các tình huống hợp lệ và không hợp lệ, mức độ tuân thủ ràng buộc dữ liệu, cơ chế phản hồi lỗi, cũng như tính ổn định của hệ thống trong các trường hợp biên.
+P|264||Trong thực tế, test case API thường được chia thành nhiều nhóm. Kiểm thử chức năng đúng (valid data) nhằm xác nhận API hoạt động chính xác khi nhận dữ liệu hợp lệ và trả về kết quả đúng như yêu cầu. Kiểm thử dữ liệu sai (invalid data) dùng để kiểm tra cách hệ thống xử lý các trường hợp nhập sai kiểu dữ liệu, sai định dạng, hoặc giá trị không thỏa mãn điều kiện ràng buộc. Kiểm thử thiếu dữ liệu (missing field) giúp đánh giá khả năng kiểm tra dữ liệu bắt buộc của API, đảm bảo hệ thống trả về lỗi phù hợp khi một hoặc nhiều trường quan trọng bị bỏ trống. Kiểm thử biên (edge case) tập trung vào các giá trị sát ngưỡng hoặc tình huống đặc biệt như giá trị rỗng, giá trị cực đại, khoảng trắng thừa, hoặc dữ liệu trùng lặp, nhằm phát hiện các lỗi khó thấy trong quá trình kiểm thử thông thường.
+P|265||Việc thiết kế test case đầy đủ và hợp lý giúp đảm bảo API được kiểm tra toàn diện hơn, giảm nguy cơ bỏ sót lỗi và nâng cao độ tin cậy của hệ thống khi đưa vào vận hành thực tế. Đồng thời, test case được xây dựng tốt còn hỗ trợ quá trình bảo trì, kiểm thử hồi quy và phát hiện sớm các lỗi phát sinh khi hệ thống thay đổi hoặc mở rộng
+P|266|Heading3|2.5.5. Công cụ kiểm thử API
+P|267||Một số công cụ kiểm thử API:
+P|268||Postman:
+P|269|Caption|Hình 2.8. Công cụ Postman
+P|270||Postman là công cụ kiểm tra tự động hóa API được ưa thích nhất. Nó là tốt nhất cho những người thử nghiệm muốn tránh mã hóa trong IDE bằng cách sử dụng ngôn ngữ phát triển.
+P|271||Các tính năng của nó là: 
+P|272|ListParagraph|Dễ sử dụng. 
+P|273|ListParagraph|Giao diện bắt mắt. 
+P|274|ListParagraph| Hỗ trợ cả kiểm thử tự động và thủ công. 
+P|275|ListParagraph|Hỗ trợ hệ điều hành MacOS, Windows, Linux. 
+P|276|ListParagraph|Hỗ trợ định dạng Swagger và RAML.
+P|277|ListParagraph|Cung cấp các tính năng chạy, kiểm tra, lập tài liệu và giám sát.
+P|278|ListParagraph|Chia sẻ kiến thức dễ dàng. 
+P|279|ListParagraph|Hỗ trợ yêu cầu GRAPHQL và các biến GRAPHQL, lược đồ và chức năng tự động hoàn thành truy vấn GRAPHQL.
+P|280||Katalon Studio:
+P|281|Caption|Hình 2.9.Công cụ Katalon
+P|282||Katalon Studio là một công cụ kiểm thử tự động API, cung cấp nhiều tính năng hỗ trợ người kiểm thử trong quá trình xây dựng và thực thi test case. Công cụ này cho phép tạo, quản lý và chạy các bài kiểm thử một cách trực quan, đồng thời hỗ trợ kiểm thử tự động cho nhiều loại ứng dụng khác nhau. Với giao diện thân thiện và các chức năng tương đối đầy đủ, Katalon Studio giúp đơn giản hóa quá trình kiểm thử, giảm thời gian thực hiện thủ công và nâng cao hiệu quả kiểm tra chất lượng phần mềm. 
+P|283||Một số tính năng của nó là: 
+P|284|ListParagraph|Hỗ trợ cho cả SOAP API và REST API. 
+P|285|ListParagraph|Hỗ trợ kiểm thử tự động API một cách đầy đủ.
+P|286|ListParagraph|Phương pháp tiếp cận theo hướng dữ liệu. 
+P|287|ListParagraph|Hỗ trợ cả kiểm thử tự động và thủ công. 
+P|288|ListParagraph|Tương thích với thư viện AssertJ.
+P|289|ListParagraph|Hỗ trợ tích hợp CI / CD. 
+P|290|ListParagraph|Dễ dàng sử dụng ngay cả đối với những người không chuyên về công nghệ
+P|291||Swagger (Swagger / OpenAPI)
+P|292|Caption|Hình 2.10. Công cụ Swagger
+P|293||Swagger (hay còn gọi là OpenAPI) là một công cụ mạnh mẽ không chỉ dùng để tài liệu hóa API mà còn hỗ trợ kiểm thử API trực tiếp ngay trên giao diện web. Đây là một trong những công cụ gần như “tiêu chuẩn” trong phát triển backend hiện đại, đặc biệt phổ biến trong các dự án sử dụng Spring Boot.
+P|294||Tính năng:
+P|295||Tự động sinh tài liệu API. 
+P|296||Cho phép test API trực tiếp trên UI. 
+P|297||Chuẩn hóa API theo OpenAPI. 
+P|298||Dễ tích hợp với backend (Spring Boot rất hay dùng). 
+P|299||Thực tế: dev backend thường expose Swagger cho QA test luôn.
+P|300||SoapUI
+P|301|Caption|Hình 2.11. Công cụ SoapUI
+P|302||SoapUI là một công cụ kiểm thử API chuyên nghiệp, được sử dụng phổ biến trong các hệ thống doanh nghiệp lớn, đặc biệt là những hệ thống áp dụng giao thức SOAP. Công cụ này hỗ trợ kiểm tra đầy đủ các yêu cầu của API như gửi request, nhận response, xác thực dữ liệu trả về, kiểm tra mã trạng thái và xử lý các trường hợp lỗi. Ngoài SOAP, SoapUI còn hỗ trợ kiểm thử REST API, cho phép người dùng tạo, quản lý và thực thi các test case một cách trực quan. Nhờ khả năng tự động hóa cao, hỗ trợ kiểm thử chức năng, kiểm thử bảo mật và kiểm thử hiệu năng ở mức cơ bản, SoapUI giúp giảm thời gian kiểm thử thủ công và nâng cao độ tin cậy của hệ thống.
+P|303||Tính năng nổi bật:
+P|304||Hỗ trợ kiểm thử cả SOAP và REST API. 
+P|305||Cho phép tạo test case phức tạp với nhiều bước xử lý. 
+P|306||Hỗ trợ kiểm thử bảo mật (Security Testing). 
+P|307||Có khả năng mock API để test khi backend chưa hoàn thiện. 
+P|308||Hỗ trợ load testing trong phiên bản nâng cao.
+P|309||Vai trò trong thực tế:
+P|310||SoapUI thường được sử dụng trong các hệ thống enterprise, nơi yêu cầu kiểm thử API ở mức độ sâu hơn như bảo mật, tính toàn vẹn dữ liệu và khả năng chịu tải. Đây là công cụ phù hợp cho QA chuyên nghiệp hơn là developer.
+P|311||Lựa chọn công cụ kiểm thử API:
+P|312||Việc lựa chọn công cụ kiểm thử API không có một đáp án cố định mà phụ thuộc vào nhiều yếu tố như yêu cầu hệ thống, quy mô dự án, cũng như năng lực kỹ thuật của đội ngũ phát triển và kiểm thử. Do đó, trước khi đưa ra quyết định, cần đánh giá kỹ các tiêu chí như: tính năng hỗ trợ, mức độ dễ sử dụng, khả năng tích hợp với các hệ thống khác và mức độ phù hợp với quy trình phát triển phần mềm.
+P|313||Trong phạm vi dự án, công cụ Postman được lựa chọn để thực hiện kiểm thử API nhờ các ưu điểm nổi bật sau:
+P|314||Khả năng truy cập linh hoạt:Postman cho phép người dùng đăng nhập tài khoản để đồng bộ và truy cập dữ liệu ở mọi nơi. Công cụ hỗ trợ cả phiên bản web và ứng dụng cài đặt trên máy tính, giúp thuận tiện trong quá trình làm việc nhóm. 
+P|315||Hỗ trợ đa dạng loại kiểm thử:Postman hỗ trợ nhiều loại kiểm thử như kiểm thử chức năng (Functional Testing), kiểm thử tích hợp (Integration Testing), kiểm thử hồi quy (Regression Testing), kiểm thử đầu cuối (End-to-End Testing) và kiểm thử giả lập (Mock Testing). Điều này giúp đáp ứng hầu hết các nhu cầu kiểm thử API trong thực tế. 
+P|316||Đa nền tảng:Công cụ hoạt động trên nhiều hệ điều hành như Windows, MacOS và Linux, đồng thời có thể sử dụng trực tiếp trên trình duyệt thông qua Postman Web, giúp tăng tính linh hoạt cho người dùng. 
+P|317||Khả năng báo cáo và theo dõi:Postman cung cấp các tính năng thống kê và báo cáo chi tiết như số lượng API, workspace, thời gian phản hồi, tần suất sử dụng API, kích thước response và tỷ lệ test thành công/thất bại. Những thông tin này hỗ trợ hiệu quả trong việc đánh giá chất lượng hệ thống. 
+P|318||Phù hợp với nhiều đối tượng người dùng:Với giao diện trực quan, Postman phù hợp với cả người mới bắt đầu lẫn người có kinh nghiệm. Người dùng nâng cao có thể viết script kiểm thử bằng JavaScript để mở rộng khả năng kiểm thử. 
+P|319||Hỗ trợ kiểm thử tự động và tích hợp CI/CD:Postman cho phép xây dựng và chạy các kịch bản kiểm thử tự động. Thông qua công cụ Newman, các test script có thể được tích hợp vào pipeline CI/CD, giúp tự động hóa quá trình kiểm thử và đảm bảo chất lượng phần mềm liên tục.
+P|320|Heading1|CHƯƠNG 3
+P|321|Heading1|CÔNG CỤ KIỂM THỬ POSTMAN
+P|322|Heading2|3.1. Giới thiệu về Postman
+P|323|Heading3|3.1.1. Postman là gì
+P|324||Postman được tạo ra bởi Abhinav Asthana vào năm 2012 tại Bangalore, Ấn Độ. Ban đầu, Abhinav phát triển Postman như một tiện ích mở rộng (extension) cho trình duyệt Google Chrome nhằm giải quyết vấn đề thiếu công cụ đơn giản để kiểm tra API trong quá trình phát triển phần mềm. Năm 2013, tiện ích Postman được đăng tải lên Chrome Web Store và nhanh chóng nhận được sự chào đón từ cộng đồng lập trình viên. Năm 2014, Abhinav cùng với Ankit Sobti và Abhijit Kane thành lập Postman Inc. tại San Francisco. Năm 2016, Postman ra mắt phiên bản ứng dụng máy tính để bàn độc lập cho Windows, Mac và Linux. Năm 2019, Postman đạt 10 triệu người dùng và huy động 50 triệu USD. Đến năm 2021, con số này tăng lên 17 triệu người dùng với định giá 5.6 tỷ USD. Hiện nay (2024), Postman có hơn 30 triệu người dùng tại hơn 500,000 tổ chức trên toàn thế giới.
+P|325||Postman là một công cụ phát triển và kiểm thử API phổ biến, được sử dụng rộng rãi bởi cả lập trình viên (developer) và kiểm thử viên (tester) trong quá trình xây dựng và vận hành hệ thống phần mềm. Ban đầu, Postman được phát triển như một tiện ích mở rộng trên trình duyệt Chrome, tuy nhiên hiện nay đã trở thành một nền tảng độc lập với đầy đủ tính năng mạnh mẽ, hỗ trợ trên nhiều hệ điều hành như Windows, MacOS và Linux.
+P|326||Về bản chất, Postman là một công cụ cho phép người dùng gửi các yêu cầu HTTP/HTTPS đến server và nhận phản hồi (response) từ server đó. Thông qua việc này, người dùng có thể kiểm tra tính đúng đắn của API, xác minh dữ liệu trả về, cũng như đánh giá cách hệ thống xử lý các yêu cầu từ phía client. Postman hỗ trợ đầy đủ các phương thức HTTP phổ biến như GET, POST, PUT, DELETE, PATCH, giúp người dùng dễ dàng kiểm thử các chức năng CRUD trong hệ thống.
+P|327||Một trong những điểm mạnh của Postman là giao diện trực quan và dễ sử dụng. Người dùng có thể nhanh chóng tạo request, cấu hình header, query parameter, body (JSON, form-data, x-www-form-urlencoded…) mà không cần viết code phức tạp. Ngoài ra, Postman còn cung cấp tính năng lưu trữ các request dưới dạng Collection, cho phép tổ chức và quản lý các API một cách khoa học, thuận tiện cho việc tái sử dụng và chia sẻ trong nhóm.
+P|328||Không chỉ dừng lại ở kiểm thử thủ công, Postman còn hỗ trợ kiểm thử tự động thông qua việc viết các script bằng JavaScript. Người dùng có thể định nghĩa các điều kiện kiểm tra (assertion) cho response như kiểm tra status code, nội dung trả về hoặc thời gian phản hồi. Điều này giúp đảm bảo API hoạt động đúng như mong đợi và giảm thiểu lỗi trong quá trình phát triển.
+P|329||Bên cạnh đó, Postman còn hỗ trợ các tính năng nâng cao như tạo môi trường (environment) với các biến động (variables), giúp dễ dàng chuyển đổi giữa các môi trường khác nhau như development, staging và production. Công cụ cũng hỗ trợ tích hợp với hệ thống CI/CD thông qua Newman – một công cụ chạy Postman Collection trên command line, giúp tự động hóa quá trình kiểm thử trong pipeline.
+P|330||Postman còn đóng vai trò như một nền tảng cộng tác, cho phép các thành viên trong nhóm chia sẻ Collection, tài liệu API và kết quả kiểm thử thông qua Workspace. Điều này giúp tăng hiệu quả làm việc nhóm và giảm thiểu sai sót trong quá trình trao đổi thông tin giữa các bên.
+P|331||Postman không chỉ là một công cụ kiểm thử API đơn thuần mà còn là một nền tảng hỗ trợ toàn diện cho quá trình phát triển, kiểm thử và quản lý API. Với những ưu điểm về tính dễ sử dụng, khả năng mở rộng và tích hợp linh hoạt, Postman đã trở thành một trong những công cụ không thể thiếu trong quy trình phát triển phần mềm hiện đại.
+P|332|Heading3|3.1.2. Ưu điểm và nhược điểm
+P|333|ListParagraph|Ưu điểm 
+P|334||Linh hoạt trong kiểm thử API: Postman cho phép người dùng dễ dàng tạo, tổ chức và quản lý các request API thông qua Collection. Điều này giúp việc kiểm thử trở nên có hệ thống, dễ theo dõi và tái sử dụng trong nhiều kịch bản khác nhau. 
+P|335||Khả năng nhập dữ liệu từ nhiều nguồn: Công cụ hỗ trợ import API từ các nền tảng khác như Swagger/OpenAPI, giúp tiết kiệm thời gian và công sức so với việc phải tạo mới toàn bộ request hoặc môi trường làm việc. 
+P|336||Hỗ trợ gỡ lỗi hiệu quả: Postman cung cấp các công cụ debug mạnh mẽ, cho phép kiểm tra request/response, header, body và các tham số liên quan. Nhờ đó, người dùng có thể dễ dàng phát hiện lỗi và đảm bảo tính chính xác của dữ liệu. 
+P|337||Hỗ trợ đa dạng môi trường sử dụng: Postman hoạt động cả trên giao diện người dùng (UI) và thông qua dòng lệnh (CLI) với Newman. Ngoài ra, công cụ còn hỗ trợ sinh mã tự động cho nhiều ngôn ngữ lập trình như Java, JavaScript, Python… giúp dễ dàng tích hợp vào hệ thống.
+P|338|ListParagraph|Nhược điểm 
+P|339||Giới hạn tính năng ở phiên bản miễn phí: Mặc dù Postman cung cấp nhiều tính năng hữu ích, một số chức năng nâng cao như monitoring nâng cao, mock server nâng cao, quản lý team quy mô lớn hoặc phân quyền chi tiết chỉ khả dụng trong các gói trả phí. 
+P|340||Chi phí khi mở rộng sử dụng: Khi dự án phát triển với quy mô lớn hoặc cần làm việc nhóm chuyên sâu, việc nâng cấp lên các gói trả phí là cần thiết. Điều này có thể làm phát sinh chi phí đáng kể, đặc biệt đối với cá nhân hoặc nhóm nhỏ. 
+P|341||Hiệu năng khi làm việc với collection lớn: Khi số lượng request trong collection quá lớn hoặc test script phức tạp, Postman có thể trở nên chậm hoặc tiêu tốn nhiều tài nguyên máy. 
+P|342||Không tối ưu cho kiểm thử hiệu năng: Postman không phải là công cụ chuyên dụng cho load testing hoặc stress testing, do đó không thể thay thế các công cụ như JMeter trong việc đánh giá hiệu năng hệ thống.
+P|343|Heading3|3.1.3. Cài đặt Postman
+P|344||Là một công cụ mã nguồn mở (Open Source), Postman có thể dễ dàng tải về. Truy cậo trang chủ link và chọn nền tảng muốn cài đặt như cho MacOS, Windows hoặc Linux rồi tiến hành cài đặt
+P|345||Bước 1: Truy cập vào trang chủ: https://www.getpostman.com
+P|346|Caption|Hình 3.1. Trang chủ Postman
+P|347||Tại đây chúng ta có thể tạo tài khoản đăng nhập để Postman có thể đồng bộ dữ liệu.
+P|348||Chọn Product, sau đó chọn Download Postman, lựa chọn phiên bản Postman phù hợp với Hệ điều hành đang dùng (Hỗ trợ cho MacOS, Windows 32bit, và Windows 64bit).
+P|349|Caption|Hình 3.2. Trang download
+P|350||Bước 2: File tải về sẽ được hiển thị ở dưới cửa sổ của trình duyệt. Khi quá trình tải về hoàn tất, kích nút Open file.
+P|351||Thực hiện mở File và nhấn Install.
+P|352||Bước 3: Sau khi cài đặt thành công thực hiện mở Postman:
+P|353||Trong màn hình kế tiếp, đăng nhập với một tài khoản Postman (bằng cách tạo một tài khoản Postman mới).
+P|354|Caption|Hình 3.3. Trang Sign In
+P|355||Chú ý: Có hai cách để đăng nhập vào tài khoản Postman. Một cách tạo một tài khoản riêng trên hệ thống của Postman và một cách khác sử dụng tài khoản Google hoặc SSO.
+P|356||Bước 4: Đăng kí hoặc đăng nhập thành công app sẽ đưa chúng ta đến màn hình bắt đầu của Postman.
+P|357|Caption|Hình 3.4. Giao diện người dùng phần mềm Postman.
+P|358|Heading3|3.1.4. Các thành phần chính
+P|359||Giao diện của PostMan:
+P|360|Caption|Hình 3.5. Giao diện Postman
+P|361||Giao diện Postman gồm ba phần chính:
+P|362||Thanh bên trái (Collections): quản lý các request API theo từng dự án. 
+P|363|Caption|Hình 3.6. Quản lý Collection và các API Request trong Postman
+P|364||Khu vực trung tâm: nơi tạo và gửi request, import API hoặc làm việc với các giao thức như HTTP, GraphQL.
+P|365||Thanh trên cùng: chứa các chức năng như tạo mới, tìm kiếm, chọn environment và quản lý workspace.
+P|366||Giao diện được thiết kế trực quan, giúp người dùng dễ dàng thao tác và kiểm thử API.
+P|367||Trong API Content bao gồm 3 phần chính: 
+P|368||Environments:Là nơi lưu trữ các thông tin cấu hình môi trường như URL, token,… phục vụ cho việc kiểm thử. Ví dụ, trong một dự án có thể có nhiều môi trường như Dev, Staging và Production. Nhờ đó, người dùng có thể chuyển đổi nhanh giữa các môi trường mà không cần chỉnh sửa lại từng request.
+P|369||Request là thông điệp do client gửi đến server để yêu cầu hệ thống thực hiện một thao tác cụ thể. Trong giao tiếp API, request đóng vai trò là phương tiện truyền tải thông tin từ phía người dùng hoặc ứng dụng đến phía máy chủ. Một request không chỉ đơn thuần là địa chỉ gọi API, mà còn bao gồm nhiều thành phần giúp server hiểu chính xác yêu cầu cần xử lý, như phương thức HTTP, URL, header, tham số và dữ liệu gửi kèm trong body.
+P|370||Cụ thể, phương thức HTTP xác định hành động mà client muốn thực hiện, chẳng hạn lấy dữ liệu, tạo mới, cập nhật hoặc xóa tài nguyên. URL xác định đúng endpoint mà request hướng tới. Header chứa các thông tin bổ sung như kiểu dữ liệu, thông tin xác thực hoặc ngôn ngữ phản hồi mong muốn. Tham số có thể xuất hiện trong URL hoặc trong đường dẫn để truyền thêm điều kiện xử lý. Body là phần dữ liệu chính được gửi lên server, thường dùng trong các request tạo mới hoặc cập nhật dữ liệu.
+P|371||Trong kiểm thử API, việc hiểu rõ cấu trúc request có ý nghĩa rất quan trọng vì nó giúp người kiểm thử xây dựng dữ liệu đầu vào chính xác, xác định đúng chức năng cần kiểm tra và đánh giá phản hồi của hệ thống một cách đầy đủ. Nói cách khác, request là nền tảng của toàn bộ quá trình giao tiếp giữa client và server trong kiến trúc API.
+P|372|Caption|Hình 3.7. Chi tiết thiết lập một API Request trong Postman
+P|373||Response là thông điệp do server trả về cho client sau khi nhận và xử lý request. Đây là kết quả phản ánh việc yêu cầu của client có được thực hiện thành công hay không, đồng thời cung cấp dữ liệu hoặc thông tin cần thiết để client tiếp tục xử lý.
+P|374||Một response trong API thường bao gồm các thành phần chính sau:
+P|375||Status Code (mã trạng thái):Cho biết kết quả xử lý của request. Ví dụ: 
+P|376||200 OK: xử lý thành công 
+P|377||201 Created: tạo mới thành công 
+P|378||400 Bad Request: dữ liệu gửi lên không hợp lệ 
+P|379||401 Unauthorized: chưa xác thực 
+P|380||403 Forbidden: không có quyền truy cập 
+P|381||404 Not Found: không tìm thấy tài nguyên 
+P|382||500 Internal Server Error: lỗi phía server 
+P|383||Response Body (dữ liệu trả về):Là nội dung chính mà server trả về, thường ở định dạng JSON.Có thể bao gồm: 
+P|384||Dữ liệu (data) 
+P|385||Thông báo (message) 
+P|386||Token (trong API login) 
+P|387||Thông tin lỗi (error details) 
+P|388||Header:Chứa các thông tin bổ sung về response, ví dụ: 
+P|389||Content-Type: định dạng dữ liệu trả về 
+P|390||Content-Length: kích thước dữ liệu 
+P|391||Các thông tin liên quan đến caching hoặc bảo mật 
+P|392||Thời gian phản hồi (Response Time):Là khoảng thời gian server xử lý request và trả kết quả.Đây là yếu tố quan trọng để đánh giá hiệu năng của API.
+P|393|Caption|Hình 3.8. Kết quả phản hồi (Response) từ API ở định dạng JSON
+P|394|Heading2|3.2. Tạo và gửi Request trong Postman
+P|395|Heading3|3.2.1. Tạo Request GET
+P|396||Request GET là phương thức HTTP được sử dụng để truy vấn và lấy dữ liệu từ server mà không làm thay đổi trạng thái của hệ thống. Đây là một trong những phương thức phổ biến nhất trong các API, thường được dùng để đọc dữ liệu từ cơ sở dữ liệu hoặc lấy thông tin tài nguyên.
+P|397||Đặc điểm quan trọng của GET là tính “an toàn” (safe) và không thay đổi dữ liệu (read-only), nghĩa là việc gọi nhiều lần cùng một request GET sẽ không làm thay đổi trạng thái của hệ thống. Ngoài ra, GET còn có tính idempotent, tức là gửi nhiều lần cùng một request sẽ luôn cho ra kết quả giống nhau (trong cùng một điều kiện dữ liệu).
+P|398||Trong request GET, dữ liệu thường được truyền thông qua:
+P|399|ListParagraph|Query parameters: dùng để lọc, tìmkiếm hoặc phân trang dữ liệu(ví dụ: /products?page=1&size=10) 
+P|400|ListParagraph|Path variables: dùng để xác định tài nguyên cụ thể(ví dụ: /products/1) 
+P|401||Thông thường, request GET không sử dụng body, mà toàn bộ thông tin cần thiết sẽ được truyền qua URL và header.
+P|402|Caption|Hình 3.9. Các thành phần chính của một Request và Response trong Postman
+P|403||Để tạo một Request GET trong Postman, thực hiện các bước sau:
+P|404||Bước 1: Mở Postman và chọn New → HTTP Request hoặc nhấn dấu “+” để tạo tab mới. 
+P|405||Bước 2: Chọn phương thức GET từ danh sách các phương thức HTTP. 
+P|406||Bước 3: Nhập URL của API cần kiểm thử vào ô địa chỉ. 
+P|407||Bước 4: (Tùy chọn) Thêm các tham số vào mục Params hoặc cấu hình Headers nếu cần. 
+P|408||Bước 5: Nhấn nút Send để gửi request đến server. 
+P|409||Sau khi gửi request, kết quả sẽ được hiển thị tại phần Response, bao gồm:
+P|410||Status code (ví dụ: 200 OK) 
+P|411||Dữ liệu trả về (thường ở dạng JSON) 
+P|412||Thời gian phản hồi.
+P|413||Chú ý: Có thể có nhiều trường hợp Request GET không thành công. Nó có thể là do URL của Request không hợp lệ hoặc do chứng thực không thành công (Authentication).
+P|414|Heading3|3.2.2. Tạo Request POST
+P|415||Request POST là phương thức HTTP được sử dụng để gửi dữ liệu từ client lên server nhằm tạo mới tài nguyên trong hệ thống. Phương thức này thường được dùng trong các chức năng như tạo tài khoản, tạo đơn hàng hoặc thêm mới dữ liệu vào cơ sở dữ liệu.
+P|416||Khác với GET, request POST làm thay đổi trạng thái của hệ thống, vì nó tạo ra dữ liệu mới. Dữ liệu được gửi lên server thường nằm trong request body, phổ biến nhất là định dạng JSON. Server sẽ tiếp nhận dữ liệu, xử lý logic nghiệp vụ (validate, lưu database…) và trả về kết quả tương ứng.
+P|417||Một số đặc điểm quan trọng của POST:
+P|418||Không idempotent: gửi nhiều lần cùng một request có thể tạo ra nhiều bản ghi khác nhau 
+P|419||Có request body: chứa dữ liệu cần tạo mới 
+P|420||Thường trả về status code 201 Created khi tạo thành công (hoặc 200 tùy thiết kế) 
+P|421||Có thể trả về dữ liệu của tài nguyên vừa được tạo (ví dụ: ID, SKU, thông tin chi tiết) 
+P|422||Ngoài ra, request POST thường đi kèm với các header như:
+P|423||Content-Type: application/json để xác định định dạng dữ liệu 
+P|424||Authorization: Bearer <token> nếu API yêu cầu xác thực 
+P|425||Để tạo một Request POST trong Postman, thực hiện các bước sau:
+P|426||Bước 1: Mở Postman và tạo request mới. 
+P|427||Bước 2: Chọn phương thức POST. 
+P|428||Bước 3: Nhập URL của API cần kiểm thử. 
+P|429||Bước 4: Chọn tab Body, sau đó chọn định dạng dữ liệu (thường là raw → JSON).
+P|430||Bước 5: Nhập dữ liệu cần gửi (request body) theo định dạng JSON. 
+P|431||Bước 6: (Tùy chọn) Thêm Headers như Content-Type: application/json. 
+P|432||Bước 7: Nhấn Send để gửi request. 
+P|433||Sau khi gửi request, kết quả sẽ hiển thị ở phần Response, bao gồm:
+P|434||Status code (ví dụ: 201 Created) 
+P|435||Dữ liệu trả về 
+P|436||Thông tin xác nhận tài nguyên đã được tạo.
+P|437||Chú ý: Request POST nên đúng định dạng để đảm bảo dữ liệu được yêu cầu sẽ được tạo
+P|438|Heading3|3.2.3. Tạo Request PUT
+P|439||Request PUT là phương thức HTTP được sử dụng để cập nhật dữ liệu đã tồn tại trên server, thường dùng khi cần thay đổi toàn bộ thông tin của một tài nguyên. Phương thức này yêu cầu client gửi đầy đủ dữ liệu của tài nguyên cần cập nhật, và server sẽ thay thế toàn bộ dữ liệu cũ bằng dữ liệu mới.
+P|440||Khác với POST, PUT có tính idempotent, nghĩa là gửi cùng một request nhiều lần sẽ không làm thay đổi thêm trạng thái của hệ thống sau lần đầu tiên. Điều này giúp đảm bảo tính ổn định khi xảy ra việc gửi lại request (retry).
+P|441||Trong request PUT:
+P|442||URL thường chứa định danh của tài nguyên cần cập nhật(ví dụ: /api/v1/products/1) 
+P|443||Request body chứa toàn bộ dữ liệu mới của tài nguyên 
+P|444||Header có thể bao gồm Content-Type: application/json và Authorization nếu cần xác thực 
+P|445||Khi xử lý thành công, server thường trả về:
+P|446||200 OK: cập nhật thành công và có trả dữ liệu 
+P|447||hoặc 204 No Content: cập nhật thành công nhưng không trả dữ liệu
+P|448||Để tạo một Request PUT trong Postman, thực hiện các bước sau:
+P|449||Bước 1: Mở Postman và tạo request mới. 
+P|450||Bước 2: Chọn phương thức PUT. 
+P|451||Bước 3: Nhập URL của API cần kiểm thử (thường kèm theo ID của tài nguyên). 
+P|452||Bước 4: Chọn tab Body, chọn raw → JSON. 
+P|453||Bước 5: Nhập dữ liệu cần cập nhật theo định dạng JSON. 
+P|454||Bước 6: (Tùy chọn) Thêm Headers như Content-Type: application/json. 
+P|455||Bước 7: Nhấn Send để gửi request. 
+P|456||Sau khi gửi request, kết quả sẽ hiển thị ở phần Response, bao gồm:
+P|457||Status code (ví dụ: 200 OK hoặc 204 No Content) 
+P|458||Dữ liệu sau khi được cập nhật (nếu có) 
+P|459||Thông tin xác nhận cập nhật thành công 
+P|460|Heading3|3.2.4. Tạo Request DELETE
+P|461||Request DELETE là phương thức HTTP được sử dụng để xóa một tài nguyên đã tồn tại trên server. Phương thức này thường áp dụng trong các chức năng như xóa người dùng, xóa sản phẩm hoặc hủy đơn hàng trong hệ thống.
+P|462||Trong request DELETE:
+P|463||URL thường chứa định danh của tài nguyên cần xóa(ví dụ: /api/v1/products/1) 
+P|464||Thông thường không có request body, vì chỉ cần ID là đủ để xác định tài nguyên 
+P|465||Có thể cần header Authorization nếu API yêu cầu xác thực và phân quyền 
+P|466||Một đặc điểm quan trọng của DELETE là tính idempotent, nghĩa là:
+P|467||Xóa 1 lần → tài nguyên bị xóa 
+P|468||Xóa nhiều lần → trạng thái hệ thống vẫn như nhau (tài nguyên không còn tồn tại) 
+P|469||Khi xử lý thành công, server thường trả về:
+P|470||200 OK: xóa thành công và có thông báo 
+P|471||204 No Content: xóa thành công nhưng không trả dữ liệu 
+P|472||404 Not Found: tài nguyên không tồn tại (đã bị xóa trước đó hoặc sai ID)
+P|473||Để tạo một Request DELETE trong Postman, thực hiện các bước sau:
+P|474||Bước 1: Mở Postman và tạo request mới. 
+P|475||Bước 2: Chọn phương thức DELETE. 
+P|476||Bước 3: Nhập URL của API cần kiểm thử (thường kèm theo ID của tài nguyên cần xóa). 
+P|477||Bước 4: (Tùy chọn) Thêm Headers nếu API yêu cầu xác thực (Authorization). 
+P|478||Bước 5: Nhấn Send để gửi request. 
+P|479||Sau khi gửi request, kết quả sẽ hiển thị ở phần Response, bao gồm:
+P|480||Status code (ví dụ: 200 OK hoặc 204 No Content) 
+P|481||Thông báo xác nhận xóa thành công 
+P|482||Dữ liệu trả về (nếu có)
+P|483|Heading2|3.3. Làm việc với Collection
+P|484|Heading3|3.3.1. Tạo Collection
+P|485||Collection là một thành phần quan trọng trong Postman, dùng để tổ chức và quản lý các request API theo từng nhóm logic, chẳng hạn như theo module chức năng hoặc theo từng dự án. Việc sử dụng Collection giúp quá trình kiểm thử trở nên có hệ thống, dễ theo dõi và thuận tiện cho việc tái sử dụng.
+P|486||Ngoài ra, Collection còn hỗ trợ import và export, giúp người dùng dễ dàng chia sẻ các bộ kiểm thử giữa các thành viên trong nhóm hoặc sử dụng lại cho các dự án khác.
+P|487||Để tạo một Collection trong Postman, thực hiện các bước sau:
+P|488||Bước 1: Mở Postman và chọn New → Collection. 
+P|489||Bước 2: Nhập tên Collection và mô tả (nếu cần). 
+P|490||Bước 3: Nhấn Create để hoàn tất tạo Collection. 
+P|491||Bước 4: Thêm các request vào Collection bằng cách lưu (Save) request vào Collection đã tạo. 
+P|492||Sau khi tạo, Collection sẽ hiển thị ở thanh bên trái, cho phép người dùng dễ dàng quản lý và thực thi các request liên quan.
+P|493|Heading3|3.3.2. Quản lý Collection
+P|494||Quản lý Collection là bước quan trọng giúp đảm bảo các request API được tổ chức khoa học và dễ dàng sử dụng trong quá trình kiểm thử.
+P|495||Postman cung cấp nhiều chức năng hỗ trợ quản lý Collection hiệu quả, bao gồm:
+P|496||Tổ chức request theo cấu trúc thư mục:Người dùng có thể tạo các folder bên trong Collection để phân loại request theo từng chức năng như Authentication, User, Order… giúp dễ tìm kiếm và quản lý. 
+P|497||Chỉnh sửa và cập nhật Collection:Có thể thay đổi tên, mô tả hoặc chỉnh sửa các request trong Collection bất kỳ lúc nào, đảm bảo dữ liệu luôn được cập nhật theo hệ thống. 
+P|498||Chạy Collection (Collection Runner):Postman cho phép chạy toàn bộ Collection hoặc từng phần theo thứ tự, giúp kiểm thử hàng loạt API một cách tự động. 
+P|499||Chia sẻ và cộng tác:Collection có thể được chia sẻ với các thành viên trong workspace, hỗ trợ làm việc nhóm hiệu quả và đồng bộ dữ liệu kiểm thử. 
+P|500||Import/Export Collection:Người dùng có thể xuất Collection dưới dạng file JSON để lưu trữ hoặc chia sẻ, đồng thời cũng có thể import lại khi cần sử dụng. 
+P|501||Tích hợp kiểm thử tự động:Các Collection có thể được chạy thông qua Newman để tích hợp vào hệ thống CI/CD, giúp tự động hóa quá trình kiểm thử.
+P|502|Heading1|CHƯƠNG 4
+P|503|Heading1|KIỂM THỬ API BẰNG POSTMAN
+P|504|Heading2|4.1. Phân tích yêu cầu và lập kế hoạch kiểm thử
+P|505|Heading3|4.1.1. Mô tả hệ thống/API cần kiểm thử
+P|506||Hệ thống được kiểm thử là module quản lý sản phẩm (Product Management) thuộc backend hệ thống quản lý kho (Warehouse Management System).
+P|507||Module này cung cấp các API RESTful cho phép thực hiện các thao tác chính liên quan đến sản phẩm, bao gồm:
+P|508||Tạo mới sản phẩm 
+P|509||Cập nhật thông tin sản phẩm 
+P|510||Xóa sản phẩm 
+P|511||Truy vấn danh sách sản phẩm 
+P|512||Tìm kiếm sản phẩm theo nhiều tiêu chí 
+P|513||Lấy thông tin sản phẩm theo ID 
+P|514||Hệ thống sử dụng kiến trúc RESTful API, xử lý dữ liệu thông qua Spring Boot và kết nối với cơ sở dữ liệu quan hệ.
+P|515|Heading3|4.1.2. Xác định các chức năng cần kiểm thử
+P|516||Các chức năng chính cần kiểm thử bao gồm:
+P|517||1. CRUD cơ bản
+P|518||Tạo sản phẩm mới 
+P|519||Cập nhật thông tin sản phẩm 
+P|520||Xóa sản phẩm 
+P|521||Lấy thông tin sản phẩm 
+P|522||2. Truy vấn & tìm kiếm
+P|523||Lấy danh sách sản phẩm (pagination nếu có) 
+P|524||Tìm kiếm theo keyword 
+P|525||3. Validate dữ liệu
+P|526|ListParagraph|Các trường bắt buộc không được để trống 
+P|527|ListParagraph|SKU: Mã của sản phẩm không được gửi đi từ client, hệ thống tự sinh nếu dữ liệu được gửi đi báo lỗi validation.
+P|528|ListParagraph|Tên sản phẩm không được để trống độ dài tối đa 200 ký tự.
+P|529|ListParagraph|Giá trị ngày tháng, trạng thái hoặc số lượng phải hợp lệ.
+P|530|ListParagraph|Các trường mã định danh phải đúng format.
+P|531||Các ràng buộc dữ liệu trên được sử dụng để xây dựng các test case kiểm thử dữ liệu hợp lệ, không hợp lệ và các trường hợp biên, nhằm đảm bảo hệ thống kiểm soát chặt chẽ dữ liệu đầu vào trước khi xử lý nghiệp vụ.
+P|532||4. Xử lý lỗi
+P|533||ID không tồn tại 
+P|534||Input sai format 
+P|535||Exception từ database
+P|536||Lỗi phát sinh từ cơ sở dữ liệu hoặc server
+P|537||4.1.3. Phạm vi kiểm thử
+P|538||Trong phạm vi (In-scope):
+P|539||Kiểm thử API backend (Product module) 
+P|540||Kiểm thử functional (đúng logic nghiệp vụ) 
+P|541||Kiểm thử validation dữ liệu 
+P|542||Kiểm thử response (status code, format JSON) 
+P|543||Kiểm thử database interaction (CRUD đúng) 
+P|544||Ngoài phạm vi (Out-of-scope):
+P|545||Giao diện frontend (Angular) 
+P|546||Hiệu năng hệ thống (performance test) 
+P|547||Bảo mật nâng cao (penetration test) 
+P|548||Tích hợp với hệ thống bên ngoài (nếu có)
+P|549|Heading2|4.2. Thiết kế Test Case
+P|550|Heading3|4.2.1. Nguyên tắc thiết kế test case
+P|551||Việc thiết kế test case cần tuân theo một số nguyên tắc nhằm đảm bảo quá trình kiểm thử hiệu quả, đầy đủ và dễ bảo trì:
+P|552||Bao phủ đầy đủ chức năng (Test Coverage):Các test case cần bao quát toàn bộ chức năng của hệ thống, bao gồm cả trường hợp hợp lệ và không hợp lệ, nhằm hạn chế bỏ sót lỗi trong quá trình kiểm thử. 
+P|553||Phân loại rõ ràng các trường hợp kiểm thử:Test case nên được chia theo từng nhóm như: dữ liệu hợp lệ, dữ liệu không hợp lệ, thiếu dữ liệu, trường hợp biên… giúp dễ quản lý và theo dõi kết quả kiểm thử. 
+P|554||Độc lập giữa các test case (Independence):Mỗi test case nên có thể thực thi riêng biệt, không phụ thuộc vào kết quả của test case khác, giúp tránh lỗi dây chuyền và dễ dàng xác định nguyên nhân khi xảy ra lỗi. 
+P|555||Dữ liệu kiểm thử rõ ràng, có kiểm soát:Dữ liệu đầu vào cần được xác định cụ thể, có thể tái sử dụng và kiểm soát được trạng thái (ví dụ: dữ liệu tồn tại trong database), nhằm đảm bảo tính chính xác của kết quả kiểm thử. 
+P|556||Kiểm tra đầy đủ response:Không chỉ kiểm tra status code, mà còn cần xác minh nội dung response như cấu trúc JSON, dữ liệu trả về, thông báo lỗi và các thông tin liên quan. 
+P|557||Ưu tiên kiểm thử business logic quan trọng:Các chức năng cốt lõi của hệ thống (như tạo, cập nhật, xóa dữ liệu) cần được ưu tiên kiểm thử trước để đảm bảo hệ thống hoạt động đúng theo yêu cầu nghiệp vụ.
+P|558|Heading3|4.2.2. Danh sách test case cho API
+P|559||1. Create Product API
+P|560|Caption|Bảng 4.1. Bảng TestCase Create
+T|561||[Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result] || [TC01 | Tạo sản phẩm thành công | name="Laptop Dell XPS 15", categoryId="92000000-0000-0000-0000-000000000001", uomId="91000000-0000-0000-0000-000000000001", sellingPrice=25000000.00 | 1.POST http://localhost:8080/api/v1/products2. Body: valid JSON with required fields3. Send request | 201 Created, return product data with generated SKU | Passed] || [TC02 | Tạo sản phẩm thiếu trường bắt buộc | name="", categoryId="", uomId="" | 1.POST http://localhost:8080/api/v1/products2. Body: JSON missing required fields3. Send request | 400 Bad Request, validation error | Failed] || [TC03 | Tạo sản phẩm định dạng giá không hợp lệ | sellingPrice="abc" | 1.POST http://localhost:8080/api/v1/products2. Body: JSON with invalid price format3. Send request | 400 Bad Request, validation error | Failed] || [TC04 | Tồn kho âm | min_stock_level=-1 | 1.POST http://localhost:8080/api/v1/products2. Body: JSON with invalid price format3. Send request | 400 Bad Request | Failed]
+P|562||Bảng quyết định
+T|563||[Conditions / Test Case | TC01 | TC02 | TC03 | TC04] || [C1: Đủ field | T | F | T | T] || [C2: Giá hợp lệ | T | T | F | T] || [C3: Tồn kho ≥ 0 | T | T | T | F] || [A1: 201 Created | X |  |  | ] || [A2: 400 Bad Request |  | X | X | X]
+P|564||2. Get All Products
+P|565|Caption|Bảng 4.2. Bảng TestCase GetAll
+T|566||[Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result] || [TC01 | Lấy toàn bộ danh sách |  | 1. GET http://localhost:8080/api/v1/products2. Send request | 200 OK, return list | Passed] || [TC02 | Không có dữ liệu | no data | 1. GET http://localhost:8080/api/v1/products2. Send request | 200 OK, empty list | Passed] || [TC03 | Tìm kiếm phân trang âm | page=-1 | 1.GET http://localhost:8080/api/v1/products?page=-12. Send request | 400 Bad Request | Failed]
+P|567||Bảng quyết định
+T|568||[Conditions / Test Case | TC01 | TC02 | TC03] || [C1: Có dữ liệu trong DB | T | F | T] || [C2: Page hợp lệ (≥ 0) | T | T | F] || [A1: 200 + có dữ liệu | X |  | ] || [A2: 200 + danh sách rỗng |  | X | ] || [A3: 400 Bad Request |  |  | X]
+P|569||3. Get Product by ID
+P|570|Caption|Bảng 4.3. Bảng TestCase Get By ID
+T|571||[Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result] || [TC01 | Lấy sản phẩm theo ID thành công | productId="95000000-0000-0000-0000-000000000001" | 1.GET http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000012. Send request | 200 OK, return product data | Passed] || [TC02 | Lấy sản phẩm theo ID không tồn tại | productId="99999999-9999-9999-9999-999999999999" | 1.GET http://localhost:8080/api/v1/products/99999999-9999-9999-9999-9999999999992. Send request | 404 Not Found | Failed] || [TC03 | Lấy sản phẩm theo ID thành công | productId="95000000-0000-0000-0000-000000000001" | 1.GET http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000012. Send request | 200 OK, return product data | Passed]
+P|572||Bảng quyết định
+T|573||[Conditions / Test Case | TC01 | TC02 | TC03] || [C1: ID tồn tại | T | F | T] || [A1: 200 OK | X |  | X] || [A2: 404 Not Found |  | X | ]
+P|574||4. Update Product
+P|575|Caption|Bảng 4.4. Bảng TestCase Update
+T|576||[Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result] || [TC01 | Cập nhật sản phẩm thành công | id="95000000-0000-0000-0000-000000000001", name="Dev Product 1 Updated", sellingPrice=15000.00 | 1.PUT http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000012. Body: valid JSON with updated fields3. Send request | 200 OK | Passed] || [TC02 | Cập nhật sản phẩm không tồn tại | id="99999999-9999-9999-9999-999999999999" | 1.PUT http://localhost:8080/api/v1/products/99999999-9999-9999-9999-9999999999992. Body: valid JSON3. Send request | 404 Not Found | Failed] || [TC03 | Cập nhật lỗi sản phẩm | id="95000000-0000-0000-0000-000000000001", name="", sellingPrice=-10 | 1.PUT http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000012. Body: JSON with invalid fields3. Send request | 400 Bad Request, validation errors | Failed] || [TC04 | Cập nhật sản phẩm thay đổi trạng thái | id="95000000-0000-0000-0000-000000000001", status="INACTIVE" | 1.PUT http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000012. Body: JSON with status field3. Send request | 200 OK, return updated product with new status | Passed]
+P|577||Bảng quyết định
+T|578||[Conditions / Test Case | TC01 | TC02 | TC03 | TC04] || [C1: ID hợp lệ (format đúng) | T | T | T | T] || [C2: ID tồn tại trong DB | T | F | T | T] || [C3: Dữ liệu hợp lệ | T | T | F | T] || [C4: Có thay đổi trạng thái | F | F | F | T] || [A1: 200 OK (update thành công) | X |  |  | X] || [A2: 404 Not Found |  | X |  | ] || [A3: 400 Bad Request |  |  | X | ]
+P|579||5. Delete Product
+P|580|Caption|Bảng 4.5. Bảng TestCase Delete
+T|581||[Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result] || [TC01 | Xóa sản phẩm thành công | productId="95000000-0000-0000-0000-000000000005" | 1.DELETE http://localhost:8080/api/v1/products/95000000-0000-0000-0000-0000000000052. Send request | 200 OK, success message | Passed] || [TC02 | Xóa sản phẩm không tồn tại | productId="99999999-9999-9999-9999-999999999999" | 1.DELETE http://localhost:8080/api/v1/products/99999999-9999-9999-9999-9999999999992. Send request | 404 Not Found | Failed]
+P|582||Bảng quyết định
+T|583||[Conditions / Test Case | TC01 | TC02] || [C1: ID hợp lệ (format đúng) | T | T] || [C2: ID tồn tại trong DB | T | F] || [A1: 200 OK (xóa thành công) | X | ] || [A2: 404 Not Found |  | X]
+P|584|Heading2|4.3. Thực hiện kiểm thử bằng Postman
+P|585|Heading3|4.3.1. Chuẩn bị môi trường
+P|586|ListParagraph|Cài đặt Postman 
+P|587||Bước 1: Tải và cài đặt Postman  
+P|588|ListParagraph|Truy cập vào trang web chính thức của Postman theo đường dẫn: https://www.postman.com/ 
+P|589|ListParagraph| Tải xuống phiên bản Postman phù hợp với hệ điều hành (Windows, MacOS, hoặc Linux). 
+P|590|ListParagraph|Thực hiện các bước cài đặt theo hướng dẫn trên trang Web. 
+P|591|| Bước 2: Khởi động Postman 
+P|592|ListParagraph|Sau khi cài đặt thành công, khởi động ứng dụng Postman. 
+P|593|ListParagraph|Đăng ký hoặc đăng nhập vào tài khoản Postman của bạn để lưu trữ và quản lý các Request.
+P|594|ListParagraph|Tạo Collection
+P|595|| Bước 1: Tạo Collection mới 
+P|596|ListParagraph|Mở Postman và chọn “Collections” từ thanh điều hướng bên trái.  Nhấn vào nút “New Collection” và đặt tên cho Collection.
+P|597||Bước 2: Thêm các Request vào Collection 
+P|598|ListParagraph|Trong Collection mới tạo, nhấn vào dấu “+” để thêm Request mới. 
+P|599|ListParagraph|Đặt tên cho mỗi Request và thêm vào URL, phương thức HTTP (GET, POST, PUT, DELETE), và các chi tiết khác như Body và Header. 
+P|600|ListParagraph|Lưu các Request vào Collection tương ứng.
+P|601|Heading3|4.3.2. Thực hiện kiểm thử
+P|602|ListParagraph|Chú thích: 
+P|603|ListParagraph|Base URL: http://localhost:8080
+P|604|ListParagraph|Server phải được khởi động trước khi test 
+P|605|ListParagraph|Port 8080 không bị trùng
+P|606|ListParagraph|TokenAccess
+P|607|ListParagraph|Trong trường hợp hệ thống có authentication (Spring Security + JWT):
+P|608|ListParagraph|Chuẩn bị:
+P|609|ListParagraph|Tài khoản test (VD: admin / user) 
+P|610|ListParagraph|Gọi API login để lấy token: 
+P|611|ListParagraph|POST /auth/login
+P|612|ListParagraph|Sử dụng token:
+P|613|ListParagraph|Thêm vào header mỗi request: 
+P|614|ListParagraph|Authorization: Bearer <access_token>
+P|615||Mục đích:
+P|616|ListParagraph|Xácthực(Authentication):Đảm bảo request được gửi từ người dùng hợp lệ, đã đăng nhập thành công. 
+P|617|ListParagraph|Phân quyền (Authorization):Dựa vào role (ví dụ: ADMIN, USER) được mã hóa trong token để: 
+P|618|ListParagraph|Cho phép hoặc từ chối truy cập API 
+P|619|ListParagraph|Kiểm soát hành động (ví dụ: ADMIN được xóa, USER thì không) 
+P|620|ListParagraph|Bảo mật hệ thống:Tránh việc truy cập trái phép vào API, đặc biệt với các endpoint nhạy cảm. 
+P|621|ListParagraph|Hỗ trợ kiểm thử đầy đủ kịch bản:Tester có thể kiểm tra: 
+P|622|ListParagraph|Truy cập không có token → bị từ chối (401) 
+P|623|ListParagraph|Token sai / hết hạn → lỗi xác thực 
+P|624|ListParagraph|Token đúng nhưng không đủ quyền → lỗi phân quyền (403)
+P|625|Caption|Hình 4.1. Case Login
+P|626|Caption|Hình 4.2. Case Create
+P|627|Caption|Hình 4.3. Case Get All
+P|628|Caption|Hình 4.4. Case Get By ID
+P|629|Caption|Hình 4.5. Case Get By Sku
+P|630|Caption|Hình 4.6. Case Update
+P|631|Caption|Hình 4.7. Case Delete
+P|632|Heading1|KẾT LUẬN
+P|633||1. Những vấn đề đã đạt được
+P|634||Sau thời gian nghiên cứu và thực hiện đề tài dưới sự hướng dẫn của Cô giáo Nguyễn Thị Lan Anh, đề tài “Tìm hiểu công cụ kiểm thử test API PostMan” đã hoàn thành và đạt được các kết quả chính như sau:
+P|635||Nắm vững kiến thức về API và kiểm thử API:Hiểu rõ vai trò của API trong kiến trúc hệ thống backend, cũng như tầm quan trọng của kiểm thử API trong việc đảm bảo chất lượng phần mềm. 
+P|636||Sử dụng thành thạo công cụ Postman:Thực hiện được các thao tác như gửi HTTP request (GET, POST, PUT, DELETE), kiểm tra response (status code, body, header), và tổ chức collection phục vụ kiểm thử. 
+P|637||Xây dựng bộ test case cho API:Thiết kế và triển khai các kịch bản kiểm thử cho module Product API, bao gồm: 
+P|638||Kiểm thử chức năng (functional testing) 
+P|639||Kiểm thử dữ liệu đầu vào (validation testing) 
+P|640||Kiểm thử các trường hợp lỗi (negative testing) 
+P|641||Thực hiện kiểm thử API trên môi trường thực tế:Tiến hành kiểm thử trên hệ thống backend sử dụng Spring Boot với cơ sở dữ liệu thực, đảm bảo các API hoạt động đúng logic nghiệp vụ. 
+P|642||Bên cạnh kiến thức chuyên môn, đề tài còn giúp phát triển các kỹ năng mềm:
+P|643||Kỹ năng làm việc nhóm: Phối hợp và trao đổi hiệu quả trong quá trình thực hiện 
+P|644||Kỹ năng quản lý thời gian: Lập kế hoạch và phân bổ công việc hợp lý 
+P|645||Kỹ năng tự học và giải quyết vấn đề: Chủ động tìm hiểu tài liệu và xử lý các lỗi phát sinh trong quá trình kiểm thử 
+P|646||2. Hạn chế
+P|647||Mặc dù đạt được những kết quả nhất định, đề tài vẫn còn tồn tại một số hạn chế:
+P|648||Chưa áp dụng kiểm thử tự động (Automation Testing):Việc kiểm thử chủ yếu thực hiện thủ công trên Postman, chưa tận dụng các tính năng viết script hoặc tích hợp CI/CD. 
+P|649||Chưa khai thác nhiều công cụ kiểm thử khác:Mặc dù có tìm hiểu các công cụ như Katalon Studio, SoapUI, JMeter nhưng chưa áp dụng thực tế để so sánh và đánh giá. 
+P|650||Chưa kiểm thử hiệu năng và tải hệ thống:Chưa đánh giá khả năng xử lý của API khi có nhiều request đồng thời. 
+P|651||Chưa kiểm thử các tình huống nâng cao:Ví dụ như: 
+P|652||Concurrent request (nhiều request cùng lúc) 
+P|653||Transaction rollback 
+P|654||Data consistency giữa các module
+P|655||3. Hướng phát triển
+P|656||Từ những hạn chế trên, trong tương lai đề tài có thể được phát triển theo các hướng sau:
+P|657||Mở rộng sử dụng các công cụ kiểm thử khác:Nghiên cứu và áp dụng các công cụ như: 
+P|658||Katalon Studio 
+P|659||SoapUI 
+P|660||Jmeter
+P|661||Nhằm so sánh và lựa chọn giải pháp phù hợp cho từng loại kiểm thử. 
+P|662||Phát triển kiểm thử tự động (Automation Testing): 
+P|663||Sử dụng Postman Script để tự động hóa test 
+P|664||Tích hợp với CI/CD (GitHub Actions, Jenkins) 
+P|665||Kết hợp với các framework như JUnit, RestAssured 
+P|666||Kiểm thử hiệu năng hệ thống:Đánh giá các chỉ số như response time, throughput và khả năng chịu tải của API. 
+P|667||Nâng cao chất lượng hệ thống backend: 
+P|668||Cải thiện xử lý đồng thời (concurrency) 
+P|669||Áp dụng transaction management 
+P|670||Tăng cường validate và xử lý lỗi
+P|671|Heading1|TÀI LIỆU THAM KHẢO
+P|672||https://viblo.asia/p/postman-cong-cu-danh-cho-nguoi-moi-bat-dau-kiem-thu-api-gAm5ya0w5db
+P|673||https://topdev.vn/blog/postman-la-gi/
+P|674||Postman – Postman Learning Center: https://learning.postman.com/
+P|675||Spring Boot – Spring Boot Reference Documentation: https://docs.spring.io/spring-boot/docs/current/reference/html/
+P|676||OpenAPI Initiative – OpenAPI Specification: https://swagger.io/specification/
+P|677||Swagger – Swagger Documentation: https://swagger.io/docs/

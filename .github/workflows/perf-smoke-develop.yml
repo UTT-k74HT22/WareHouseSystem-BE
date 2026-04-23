@@ -1,0 +1,53 @@
+name: WHS Performance Smoke Test
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  perf-smoke:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build backend
+        run: mvn clean package -DskipTests
+
+      - name: Start backend
+        run: |
+          start /B java -jar target/*.jar
+        shell: cmd
+
+      - name: Wait for backend to be ready
+        run: |
+          powershell -Command "
+            $maxAttempts = 30
+            $attempt = 0
+            do {
+              Start-Sleep -Seconds 10
+              $attempt++
+              try {
+                $response = Invoke-WebRequest -Uri 'http://localhost:8080/actuator/health' -UseBasicParsing
+                if ($response.StatusCode -eq 200) { exit 0 }
+              } catch {}
+            } while ($attempt -lt $maxAttempts)
+            Write-Error 'Backend did not become ready in time'
+            exit 1
+          "
+
+      - name: Run Postman performance smoke collection
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+          command: >
+            collection run "42377058-f659a908-b8e9-41df-83c9-763c628527a6"
+            --environment "42377058-061a8e5f-0b3e-4fbb-8cd6-c382ccd63c69"
