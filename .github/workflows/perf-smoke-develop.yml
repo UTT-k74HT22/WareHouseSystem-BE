@@ -22,22 +22,40 @@ jobs:
       - name: Build backend
         run: mvn clean package -DskipTests
 
+      - name: List target files
+        run: dir target
+        shell: cmd
+
       - name: Start backend
         run: |
-          start /B java -jar target/*.jar
+          start /B java -jar target/whs-0.0.1-SNAPSHOT.jar > app.log 2>&1
         shell: cmd
+
+      - name: Wait 20 seconds before checking
+        run: timeout /t 20
+        shell: cmd
+
+      - name: Show app log
+        run: |
+          powershell -Command "
+            if (Test-Path 'app.log') {
+              Get-Content app.log -Tail 200
+            } else {
+              Write-Host 'app.log not found'
+            }
+          "
 
       - name: Wait for backend to be ready
         run: |
           powershell -Command "
-            $maxAttempts = 30
+            $maxAttempts = 18
             $attempt = 0
             do {
               Start-Sleep -Seconds 10
               $attempt++
               try {
-                $response = Invoke-WebRequest -Uri 'http://localhost:8080/actuator/health' -UseBasicParsing
-                if ($response.StatusCode -eq 200) { exit 0 }
+                $response = Invoke-WebRequest -Uri 'http://localhost:8080/api/v1/categories?page=0&size=1' -UseBasicParsing
+                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) { exit 0 }
               } catch {}
             } while ($attempt -lt $maxAttempts)
             Write-Error 'Backend did not become ready in time'
