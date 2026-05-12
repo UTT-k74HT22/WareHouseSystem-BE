@@ -193,7 +193,7 @@ public class ProductMapper {
             entity.setDimensions(request.getDimensions());
         }
         if (request.getStatus() != null) {
-            entity.setStatus(request.getStatus());
+            entity.setStatus(request.  getStatus());
         }
         if (request.getMinStockLevel() != null) {
             entity.setMinStockLevel(request.getMinStockLevel());

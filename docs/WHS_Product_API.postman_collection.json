@@ -1,0 +1,599 @@
+{
+  "info": {
+    "name": "WHS Product API",
+    "description": "Warehouse Management System - Product Module API Test Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Product",
+      "item": [
+        {
+          "name": "TC01 - Tạo sản phẩm thành công",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Laptop Dell XPS 15\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\",\n  \"uom_id\": \"91000000-0000-0000-0000-000000000001\",\n  \"selling_price\": 25000000.00\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC02 - Tạo sản phẩm thiếu trường bắt buộc",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"category_id\": \"\",\n  \"uom_id\": \"\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC03 - Tạo sản phẩm định dạng giá không hợp lệ",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Product\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\",\n  \"uom_id\": \"91000000-0000-0000-0000-000000000001\",\n  \"selling_price\": \"abc\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC04 - Tạo sản phẩm trùng SKU",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Product\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\",\n  \"uom_id\": \"91000000-0000-0000-0000-000000000001\",\n  \"sku\": \"SKU-DEV-001\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC21 - Tạo sản phẩm với tất cả trường tùy chọn",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iPhone 15 Pro Max\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000002\",\n  \"uom_id\": \"91000000-0000-0000-0000-000000000002\",\n  \"description\": \"Điện thoại smartphone cao cấp\",\n  \"weight\": 0.5,\n  \"dimensions\": \"16x8x1\",\n  \"barcode\": \"1234567890123\",\n  \"image_url\": \"/products/iphone15.jpg\",\n  \"requires_batch_tracking\": true,\n  \"cost_price\": 20000000.00,\n  \"selling_price\": 28000000.00\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC25 - Tạo sản phẩm định dạng kích thước không hợp lệ",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Product\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\",\n  \"uom_id\": \"91000000-0000-0000-0000-000000000001\",\n  \"dimensions\": \"invalid\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Get Product By ID",
+      "item": [
+        {
+          "name": "TC05 - Lấy sản phẩm theo ID thành công",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/95000000-0000-0000-0000-000000000001",
+              "host": ["{{baseUrl}}", "products", "95000000-0000-0000-0000-000000000001"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "TC06 - Lấy sản phẩm theo ID không tồn tại",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/99999999-9999-9999-9999-999999999999",
+              "host": ["{{baseUrl}}", "products", "99999999-9999-9999-9999-999999999999"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Get Product By SKU",
+      "item": [
+        {
+          "name": "TC07 - Lấy sản phẩm theo SKU thành công",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/sku/SKU-DEV-001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "TC08 - Lấy sản phẩm theo SKU không tồn tại",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/sku/NONEXISTENT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Get All Products",
+      "item": [
+        {
+          "name": "TC09 - Lấy danh sách sản phẩm có phân trang",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?page=0&size=10",
+              "host": ["{{baseUrl}}", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "TC20 - Lấy danh sách sản phẩm phân trang không hợp lệ",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?page=-1&size=0",
+              "host": ["{{baseUrl}}", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-1"
+                },
+                {
+                  "key": "size",
+                  "value": "0"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Update Product",
+      "item": [
+        {
+          "name": "TC10 - Cập nhật sản phẩm thành công",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/products/95000000-0000-0000-0000-000000000001",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dev Product 1 Updated\",\n  \"selling_price\": 15000.00\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC11 - Cập nhật sản phẩm không tồn tại",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/products/99999999-9999-9999-9999-999999999999",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Update\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC12 - Cập nhật sản phẩm lỗi validation",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/products/95000000-0000-0000-0000-000000000001",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"selling_price\": -10\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC22 - Cập nhật sản phẩm thay đổi trạng thái",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/products/95000000-0000-0000-0000-000000000001",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INACTIVE\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Delete Product",
+      "item": [
+        {
+          "name": "TC13 - Xóa sản phẩm thành công",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/products/95000000-0000-0000-0000-000000000005",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "TC14 - Xóa sản phẩm không tồn tại",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/products/99999999-9999-9999-9999-999999999999",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Search Products",
+      "item": [
+        {
+          "name": "TC15 - Tìm kiếm sản phẩm với bộ lọc",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products/search?page=0&size=10",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"search_text\": \"Dev\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\",\n  \"status\": \"ACTIVE\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC16 - Tìm kiếm sản phẩm không có kết quả",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products/search?page=0&size=10",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"search_text\": \"nonexistent123\",\n  \"category_id\": \"92000000-0000-0000-0000-000000000001\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC23 - Tìm kiếm sản phẩm theo SKU chính xác",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products/search?page=0&size=10",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"SKU-DEV-001\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC24 - Tìm kiếm sản phẩm theo trạng thái",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products/search?page=0&size=10",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Get Products By Category",
+      "item": [
+        {
+          "name": "TC17 - Lấy sản phẩm theo danh mục",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/category/92000000-0000-0000-0000-000000000001?page=0&size=10",
+              "host": ["{{baseUrl}}", "products", "category", "92000000-0000-0000-0000-000000000001"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "TC18 - Lấy sản phẩm theo danh mục không có",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/category/92000000-0000-0000-0000-000000000099?page=0&size=10",
+              "host": ["{{baseUrl}}", "products", "category", "92000000-0000-0000-0000-000000000099"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9. Get Batch Tracking Products",
+      "item": [
+        {
+          "name": "TC19 - Lấy sản phẩm theo dõi lô",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products/batch-tracking?page=0&size=10",
+              "host": ["{{baseUrl}}", "products", "batch-tracking"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
