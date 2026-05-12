@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "WMS - Category Management",
+    "description": "API Quản lý Danh mục Sản phẩm",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Tạo Danh Mục",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/categories",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ELEC\",\n  \"name\": \"Điện tử\",\n  \"description\": \"Các sản phẩm điện tử\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code() === 201) {",
+              "    pm.collectionVariables.set('categoryId', pm.response.json().data.id);",
+              "    pm.test('Tạo thành công', () => { pm.expect(pm.response.status).to.equal(201); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1a. Tạo Danh Mục - Mã tự động viết hoa",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/categories",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"appl\",\n  \"name\": \"Gia dụng\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1b. Tạo Danh Mục - Trùng mã",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/categories",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ELEC\",\n  \"name\": \"Điện tử mới\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1c. Tạo Danh Mục - Thiếu tên",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/categories",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"TEST\",\n  \"name\": \"\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Lấy Danh Sách",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/categories?page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["categories"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2a. Lấy Danh Sách - Lọc theo status",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/categories?status=ACTIVE&page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["categories"],
+          "query": [
+            {
+              "key": "status",
+              "value": "ACTIVE"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Lấy Chi Tiết theo ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/categories/{{categoryId}}"
+      }
+    },
+    {
+      "name": "3a. Lấy Chi Tiết - Không tồn tại",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/categories/99999999-9999-9999-9999-999999999999"
+      }
+    },
+    {
+      "name": "4. Cập Nhật Danh Mục",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/categories/{{categoryId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Thiết bị điện tử\",\n  \"description\": \"Các loại máy tính, điện thoại\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4a. Cập Nhật - Đổi mã code",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/categories/{{categoryId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"NEW_CODE\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Cập Nhật Trạng Thái",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/categories/{{categoryId}}/status",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"INACTIVE\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5a. Cập Nhật Trạng Thái - INACTIVE khi có sản phẩm",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/categories/{{categoryId}}/status",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"INACTIVE\"\n}"
+        }
+      }
+    }
+  ]
+}

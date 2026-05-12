@@ -1,4 +1,4 @@
-# Thiết kế Test Case - Module Nhập Kho (Inbound)
+_# Thiết kế Test Case - Module Nhập Kho (Inbound)
 
 ---
 
@@ -38,6 +38,8 @@
 | TC09 | Xác nhận nhập kho - Tăng tồn kho | actualQty=100, locationId="LOC-01" | 1. PUT http://localhost:8080/api/v1/inbound-receipts/{id}/confirm<br>2. Body: JSON with actualQuantity and locationId<br>3. Send request | 200 OK, Stock Increased | Pass |
 | TC10 | Xác nhận nhập kho thiếu Location | locationId=null | 1. PUT http://localhost:8080/api/v1/inbound-receipts/{id}/confirm<br>2. Body: JSON missing locationId<br>3. Send request | 400 Bad Request | Fail |
 | TC11 | Nhập kho SP cần quản lý Lô (Batch) | batchNumber="LOT01" | 1. PUT http://localhost:8080/api/v1/inbound-receipts/{id}/confirm<br>2. Body: JSON with batchNumber and expiryDate<br>3. Send request | 200 OK, Batch inventory created | Pass |
+| TC17 | Xác nhận Receipt không tồn tại | id="NON-EXISTENT-ID" | 1. PUT /api/v1/inbound-receipts/NON-EXISTENT-ID/confirm<br>2. Send request | 404 Not Found | Fail |
+| TC18 | Xác nhận Receipt sai trạng thái (Đã COMPLETED) | id="COMPLETED-ID" | 1. Lấy 1 Receipt đã nhập xong<br>2. Gửi request confirm lại | 400 Bad Request, "Receipt already completed" | Fail |
 
 ---
 
@@ -45,15 +47,19 @@
 
 | Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result |
 |--------------|-------------|-----------|------------|-------------------|-------------|
-| TC12 | Nhân viên không có quyền tạo PO | Role: STAFF | 1. POST http://localhost:8080/api/v1/purchase-orders with STAFF token<br>2. Body: Valid JSON<br>3. Send request | 403 Forbidden | Fail |
-| TC13 | Nhập kho vượt quá số lượng PO | poQty=100, actualQty=150 | 1. PUT http://localhost:8080/api/v1/inbound-receipts/{id}/confirm<br>2. Body: JSON with actualQty > poQty<br>3. Send request | 400 Bad Request (tùy config) | Fail |
-| TC14 | Tranh chấp khi 2 người cùng Confirm | ReceiptID: 100 | 1. Gửi đồng thời 2 request PUT tới /confirm của cùng 1 Receipt<br>2. Body: Valid JSON<br>3. So sánh kết quả | 1 Pass, 1 Fail (Optimistic Lock) | Fail |
+| TC12 | Nhân viên không có quyền tạo PO | Role: STAFF | 1. POST .../purchase-orders với STAFF token<br>2. Send request | 403 Forbidden | Fail |
+| TC13 | Nhập kho vượt quá số lượng PO | poQty=100, actualQty=150 | 1. Confirm Receipt với thực nhập > đặt hàng | 400 Bad Request (tùy cấu hình) | Fail |
+| TC14 | Tranh chấp khi 2 người cùng Confirm | ReceiptID: 100 | 1. Gửi đồng thời 2 request PUT tới /confirm<br>2. Kiểm tra kết quả | 1 Pass, 1 Fail (Optimistic Lock) | Fail |
+| TC19 | Sản phẩm trong Receipt không thuộc PO gốc | Product: "PROD-999" (không có trong PO) | 1. Thêm SP lạ vào Receipt<br>2. Gửi request Confirm | 400 Bad Request, "Product mismatch" | Fail |
+| TC20 | Xác nhận Receipt không có dòng sản phẩm | lines=[] | 1. Gửi request Confirm với danh sách SP trống | 400 Bad Request, "Receipt lines required" | Fail |
+| TC21 | Hệ thống đang xử lý confirm (Inventory Lock) | ReceiptID: 100 | 1. Gửi request 1 (đang xử lý)<br>2. Gửi request 2 ngay lập tức | Request 2 bị reject hoặc đợi (theo cơ chế lock) | Fail |
 
 ---
 
-## 6. Tích hợp & Nhật ký Biến động (Integration & Audit Trail)
+## 6. Luồng Phục hồi & Tích hợp (Recovery Flow & Integration)
 
 | Test Case ID | Description | Test Data | Test Steps | Expected Response | Test Result |
 |--------------|-------------|-----------|------------|-------------------|-------------|
-| TC15 | Kiểm tra Nhật ký biến động kho (Stock Movement) | ReceiptID: "RC01" | 1. Thực hiện TC09 thành công<br>2. Gọi API hoặc check DB bảng stock_movements<br>3. Kiểm tra record | Có record type 'INBOUND' | Pass |
-| TC16 | Kiểm tra Tồn kho khả dụng (Available Stock) | Product A | 1. Lấy tồn kho trước và sau khi thực hiện TC09<br>2. Gọi API /api/v1/inventory/summary<br>3. So sánh chênh lệch | OnHand tăng đúng bằng số lượng nhập | Pass |
+| TC22 | Luồng thử lại (Retry Flow) sau khi sửa lỗi | Data lỗi -> Fix -> OK | 1. Confirm với Location sai (Fail TC10)<br>2. Sửa lại Location đúng<br>3. Gửi lại request Confirm | 200 OK, Tồn kho tăng chính xác | Pass |
+| TC15 | Kiểm tra Nhật ký biến động kho (Stock Movement) | ReceiptID: "RC01" | 1. Thực hiện TC09 thành công<br>2. Check DB bảng stock_movements | Có record type 'INBOUND' | Pass |
+| TC16 | Kiểm tra Tồn kho khả dụng (Available Stock) | Product A | 1. So sánh tồn kho trước/sau TC09 | OnHand tăng đúng số lượng thực nhập | Pass |_
