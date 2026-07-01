@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+.codex
+.gemini
+.opencode
+target
+tmp
+logs
+documents
+docs
+.env
+*.log

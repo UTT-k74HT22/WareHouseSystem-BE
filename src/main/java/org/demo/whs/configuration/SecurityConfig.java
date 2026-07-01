@@ -108,7 +108,7 @@ public class SecurityConfig {
                                 "/favicon.ico"
                         ).permitAll()
                         // ==================== ACTUATOR ====================
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
 
                         // ==================== ADMIN ONLY ====================
