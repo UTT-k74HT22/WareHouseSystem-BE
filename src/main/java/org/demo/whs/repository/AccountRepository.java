@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -39,4 +40,22 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         WHERE ar.id.roleId = :roleId
     """)
     Page<Account> findUsersByRoleId(String roleId, Pageable pageable);
+
+    /**
+     * Lấy danh sách users có phân trang và tìm kiếm
+     */
+    @Query("""
+        SELECT DISTINCT a FROM Account a
+        LEFT JOIN UserProfile up ON a.id = up.accountId
+        WHERE (:search IS NULL OR :search = '' 
+            OR LOWER(a.username) LIKE LOWER(CONCAT('%', :search, '%')) 
+            OR LOWER(up.email) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(CONCAT(up.firstName, ' ', up.lastName)) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (a.status = :status OR :status IS NULL OR :status = '')
+    """)
+    Page<Account> findAllWithSearch(
+        @Param("search") String search,
+        @Param("status") String status,
+        Pageable pageable
+    );
 }

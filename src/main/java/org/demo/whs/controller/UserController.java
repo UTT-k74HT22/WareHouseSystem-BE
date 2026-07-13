@@ -3,14 +3,19 @@ package org.demo.whs.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.response.BaseResponse;
+import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.service.UserService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -25,6 +30,21 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
+    /**
+     * Get all users with pagination and search.
+     */
+    @GetMapping
+    @PreAuthorize("hasAuthority('PERM_USER_READ')")
+    public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getAllUsers(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        log.info("Received request to get all users with search: {}, status: {}", search, status);
+        PageResponse<AccountResponse> response = userService.getAll(search, status, pageable);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
 
     /**
      * Get all users with the role of Manager.

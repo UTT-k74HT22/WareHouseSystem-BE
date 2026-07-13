@@ -1,6 +1,7 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.enums.ActionType;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.PermissionCacheService;
@@ -52,10 +53,22 @@ class AuthCheckPermissionServiceImplTest {
             when(permissionCacheService.getPermissions("account-1"))
                     .thenReturn(Set.of("PERM_USER_READ", "PERM_USER_CREATE"));
 
-            boolean allowed = authService.checkPermission("user", ActionType.READ);
+            boolean allowed = authService.checkPermission("USER", ActionType.READ);
 
             assertThat(allowed).isTrue();
             verify(permissionCacheService).getPermissions("account-1");
+        }
+    }
+
+    @Test
+    @DisplayName("Should reject non canonical resource format")
+    void should_RejectNonCanonicalResourceFormat() {
+        try (var mockedSecurityUtils = mockStatic(SecurityUtils.class)) {
+            mockedSecurityUtils.when(SecurityUtils::getCurrentAccountId).thenReturn("account-1");
+
+            assertThatThrownBy(() -> authService.checkPermission("stock-adjustment", ActionType.READ))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "PERM_009");
         }
     }
 

@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.AccountHasRole;
-import org.demo.whs.entity.AccountRoleId;
 import org.demo.whs.entity.Role;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -59,11 +58,11 @@ public class UserRoleServiceImpl implements UserRoleService {
             throw new NotFoundException(ErrorCode.USER_ROLE_001);
         }
 
-        Set<String> uniqueRoleIds = new HashSet<>(request.getRoleIds());
+        Set<String> requestedRoleIds = new HashSet<>(request.getRoleIds());
 
-        List<Role> roles = roleRepository.findAllById(uniqueRoleIds);
+        List<Role> roles = roleRepository.findAllById(requestedRoleIds);
 
-        if (roles.size() != uniqueRoleIds.size()) {
+        if (roles.size() != requestedRoleIds.size()) {
             throw new NotFoundException(ErrorCode.USER_ROLE_002);
         }
 
@@ -73,27 +72,43 @@ public class UserRoleServiceImpl implements UserRoleService {
                 .map(r -> r.getId().getRoleId())
                 .collect(Collectors.toSet());
 
-        List<AccountHasRole> toSave = new ArrayList<>();
+        // Find roles to remove (exist but not in request)
+        Set<String> rolesToRemove = new HashSet<>(existingRoleIds);
+        rolesToRemove.removeAll(requestedRoleIds);
 
-        for (Role role : roles) {
+        // Find roles to add (in request but not exist yet)
+        Set<String> rolesToAdd = new HashSet<>(requestedRoleIds);
+        rolesToAdd.removeAll(existingRoleIds);
 
-            if (existingRoleIds.contains(role.getId())) {
-                log.warn("Role {} already assigned to user {}", role.getId(), userId);
-                continue;
+        // Remove old roles
+        if (!rolesToRemove.isEmpty()) {
+            for (String roleId : rolesToRemove) {
+                accountHasRoleRepository.deleteByIdAccountIdAndIdRoleId(userId, roleId);
+                log.info("Removed role {} from user {}", roleId, userId);
             }
+        }
 
-            toSave.add(userRoleMapper.createEntity(userId, role.getId()));
+        // Add new roles
+        List<AccountHasRole> toSave = new ArrayList<>();
+        for (Role role : roles) {
+            if (rolesToAdd.contains(role.getId())) {
+                toSave.add(userRoleMapper.createEntity(userId, role.getId()));
+            }
         }
 
         if (!toSave.isEmpty()) {
             accountHasRoleRepository.saveAll(toSave);
-            permissionCacheService.evictPermissions(userId);
-            log.info("Evicted permission cache after assigning roles to user {}", userId);
+            log.info("Added {} new roles to user {}", toSave.size(), userId);
         }
 
-        existing.addAll(toSave);
+        // Evict cache if any changes
+        if (!rolesToRemove.isEmpty() || !toSave.isEmpty()) {
+            permissionCacheService.evictPermissions(userId);
+        }
 
-        List<String> roleIds = existing.stream()
+        // Return updated roles
+        List<AccountHasRole> updated = accountHasRoleRepository.findByIdAccountId(userId);
+        List<String> roleIds = updated.stream()
                 .map(r -> r.getId().getRoleId())
                 .toList();
 
@@ -145,18 +160,19 @@ public class UserRoleServiceImpl implements UserRoleService {
 
         log.info("Get roles for user {} with page={}", userId, pageable);
 
-        long roleCount = accountHasRoleRepository.countByIdAccountId(userId);
-        if (roleCount == 0) {
-            log.warn("User {} not found or has no roles", userId);
+        if (!accountRepository.existsById(userId)) {
+            log.warn("User {} not found", userId);
             throw new NotFoundException(ErrorCode.USER_ROLE_001);
         }
 
-        Page<Role> page = roleRepository.findRolesByUserId(userId, pageable);
-        if (page.isEmpty()) {
-            log.warn("No roles found for user {}", userId);
-            throw new NotFoundException(ErrorCode.USER_ROLE_002);
+        long roleCount = accountHasRoleRepository.countByIdAccountId(userId);
+        if (roleCount == 0) {
+            log.warn("User {} has no roles", userId);
+            return PageResponse.of(pageable.getPageNumber(), pageable.getPageSize(), List.of());
         }
 
+        Page<Role> page = roleRepository.findRolesByUserId(userId, pageable);
+        
         List<RoleResponse> roleResponses = page.stream()
                 .map(roleMapper::toResponse)
                 .toList();

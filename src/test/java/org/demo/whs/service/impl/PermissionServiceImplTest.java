@@ -54,14 +54,14 @@ class PermissionServiceImplTest {
 
         CreatePermissionRequest request = new CreatePermissionRequest();
         request.setName("Inventory Read");
-        request.setResource("INV");
+        request.setResource("INVENTORY");
         request.setAction(ActionType.READ);
         request.setDescription("Read inventory");
 
         Permission entity = new Permission();
 
         Permission saved = Permission.builder()
-                .code("PERM_INV_READ")
+                .code("PERM_INVENTORY_READ")
                 .name(request.getName())
                 .resource(request.getResource())
                 .action(request.getAction())
@@ -69,14 +69,14 @@ class PermissionServiceImplTest {
                 .build();
 
         PermissionResponse response = PermissionResponse.builder()
-                .code("PERM_INV_READ")
+                .code("PERM_INVENTORY_READ")
                 .name("Inventory Read")
-                .resource("INV")
+                .resource("INVENTORY")
                 .action(ActionType.READ)
                 .description("Read inventory")
                 .build();
 
-        when(permissionRepository.existsByResourceAndAction("INV", ActionType.READ))
+        when(permissionRepository.existsByResourceAndAction("INVENTORY", ActionType.READ))
                 .thenReturn(false);
         when(permissionMapper.createEntity(request)).thenReturn(entity);
         when(permissionRepository.save(any())).thenReturn(saved);
@@ -85,7 +85,7 @@ class PermissionServiceImplTest {
         PermissionResponse result = permissionService.createPermission(request);
 
         assertThat(result).isNotNull();
-        assertThat(result.getCode()).isEqualTo("PERM_INV_READ");
+        assertThat(result.getCode()).isEqualTo("PERM_INVENTORY_READ");
 
         verify(permissionRepository).save(any());
     }
@@ -95,10 +95,10 @@ class PermissionServiceImplTest {
     void createPermission_shouldThrow_WhenDuplicate() {
 
         CreatePermissionRequest request = new CreatePermissionRequest();
-        request.setResource("INV");
+        request.setResource("INVENTORY");
         request.setAction(ActionType.READ);
 
-        when(permissionRepository.existsByResourceAndAction("INV", ActionType.READ))
+        when(permissionRepository.existsByResourceAndAction("INVENTORY", ActionType.READ))
                 .thenReturn(true);
 
         assertThatThrownBy(() -> permissionService.createPermission(request))
@@ -146,7 +146,7 @@ class PermissionServiceImplTest {
 
         CreatePermissionRequest request = new CreatePermissionRequest();
         request.setName("Order Create");
-        request.setResource(" order ");
+        request.setResource("ORDER");
         request.setAction(ActionType.CREATE);
 
         Permission entity = new Permission();
@@ -269,6 +269,18 @@ class PermissionServiceImplTest {
                 permissionService.getPermissions(null, null, "inventory", pageable);
 
         assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("getPermissionResources_shouldReturnDistinctSortedResources")
+    void getPermissionResources_shouldReturnDistinctSortedResources() {
+        when(permissionRepository.findDistinctResources())
+                .thenReturn(List.of("BATCH", "INVENTORY", "USER"));
+
+        List<String> result = permissionService.getPermissionResources();
+
+        assertThat(result).containsExactly("BATCH", "INVENTORY", "USER");
+        verify(permissionRepository).findDistinctResources();
     }
 
     @Test
