@@ -19,6 +19,7 @@ public class InventorySummaryResponse {
     private String productName;
 
     private BigDecimal totalOnHandQuantity;
+    private BigDecimal totalQuarantineQuantity;
     private BigDecimal totalReservedQuantity;
 
     private Long warehouseCount;
@@ -26,7 +27,8 @@ public class InventorySummaryResponse {
 
     public BigDecimal getTotalAvailableQuantity() {
         if (totalOnHandQuantity == null) return BigDecimal.ZERO;
-        if (totalReservedQuantity == null) return totalOnHandQuantity;
-        return totalOnHandQuantity.subtract(totalReservedQuantity);
+        BigDecimal quarantine = totalQuarantineQuantity == null ? BigDecimal.ZERO : totalQuarantineQuantity;
+        BigDecimal reserved = totalReservedQuantity == null ? BigDecimal.ZERO : totalReservedQuantity;
+        return totalOnHandQuantity.subtract(quarantine).subtract(reserved);
     }
 }

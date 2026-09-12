@@ -35,6 +35,7 @@ import java.time.LocalDateTime;
                                 @ColumnResult(name = "productSku", type = String.class),
                                 @ColumnResult(name = "productName", type = String.class),
                                 @ColumnResult(name = "totalOnHandQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "totalQuarantineQuantity", type = BigDecimal.class),
                                 @ColumnResult(name = "totalReservedQuantity", type = BigDecimal.class),
                                 @ColumnResult(name = "warehouseCount", type = Long.class),
                                 @ColumnResult(name = "locationCount", type = Long.class)

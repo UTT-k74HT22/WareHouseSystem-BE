@@ -53,7 +53,6 @@ opencode.json
 
 .mvn/
 
-.github/
 
 /bin/.env.example
 /bin/.gitignore

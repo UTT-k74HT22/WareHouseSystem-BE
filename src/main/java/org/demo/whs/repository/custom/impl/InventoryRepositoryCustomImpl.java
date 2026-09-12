@@ -35,6 +35,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                     p.sku AS productSku,
                     p.name AS productName,
                     COALESCE(SUM(i.on_hand_quantity),0) AS totalOnHandQuantity,
+                    COALESCE(SUM(i.quarantine_quantity),0) AS totalQuarantineQuantity,
                     COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity,
                     COUNT(DISTINCT i.warehouse_id) AS warehouseCount,
                     COUNT(DISTINCT i.location_id) AS locationCount
@@ -66,6 +67,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                     p.sku AS productSku,
                     p.name AS productName,
                     COALESCE(SUM(i.on_hand_quantity),0) AS totalOnHandQuantity,
+                    COALESCE(SUM(i.quarantine_quantity),0) AS totalQuarantineQuantity,
                     COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity,
                     COUNT(DISTINCT i.warehouse_id) AS warehouseCount,
                     COUNT(DISTINCT i.location_id) AS locationCount
@@ -157,6 +159,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
                 WHERE (:productId IS NULL OR p.id = :productId)
                 AND (:warehouseId IS NULL OR w.id = :warehouseId)
                 AND (:locationId IS NULL OR l.id = :locationId)
+                AND (:batchId IS NULL OR b.id = :batchId)
                 """,
                 "InventoryByLocationResponseMapping"
         );
@@ -164,6 +167,7 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
         query.setParameter("productId", filter.getProductId());
         query.setParameter("warehouseId", filter.getWarehouseId());
         query.setParameter("locationId", filter.getLocationId());
+        query.setParameter("batchId", filter.getBatchId());
 
         return query.getResultList();
     }

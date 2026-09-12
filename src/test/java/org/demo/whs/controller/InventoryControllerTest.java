@@ -170,6 +170,7 @@ class InventoryControllerTest {
                 .productSku("SKU001")
                 .productName("Product 001")
                 .totalOnHandQuantity(new BigDecimal("100.00"))
+                .totalQuarantineQuantity(new BigDecimal("10.00"))
                 .totalReservedQuantity(new BigDecimal("20.00"))
                 .warehouseCount(2L)
                 .locationCount(5L)
@@ -183,6 +184,7 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.product_id").value(productId))
                 .andExpect(jsonPath("$.data.total_on_hand_quantity").value(100.00))
+                .andExpect(jsonPath("$.data.total_available_quantity").value(70.00))
                 .andExpect(jsonPath("$.data.warehouse_count").value(2));
     }
 

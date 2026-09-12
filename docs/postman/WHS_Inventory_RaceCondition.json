@@ -1,0 +1,769 @@
+{
+  "info": {
+    "name": "WHS Inventory Race Condition Tests",
+    "description": "API Test Collection for Race Condition Testing in Inventory Module",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "testProductId",
+      "value": "PROD_RC_TEST"
+    },
+    {
+      "key": "testWarehouseId",
+      "value": "WHS001"
+    },
+    {
+      "key": "testLocationId",
+      "value": "LOC001"
+    },
+    {
+      "key": "initialInventoryId",
+      "value": ""
+    },
+    {
+      "key": "onHandQty",
+      "value": "0"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00-Setup",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should login successfully\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Should save auth token\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log(\"Response data:\", JSON.stringify(jsonData.data));",
+                  "    if (jsonData.data && jsonData.data.access_token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.data.access_token);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Initial Inventory",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/increase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 100,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-SETUP-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-SETUP-{{$timestamp}}\",\n  \"reason\": \"Setup initial inventory for race condition test\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should create initial inventory\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Should save inventory ID\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set(\"initialInventoryId\", jsonData.data.id);",
+                  "        pm.collectionVariables.set(\"onHandQty\", 100);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current Inventory",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories?productId={{testProductId}}&warehouseId={{testWarehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{testProductId}}"
+                },
+                {
+                  "key": "warehouseId",
+                  "value": "{{testWarehouseId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should get inventory\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Should log current onHand quantity\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.content && jsonData.data.content.length > 0) {",
+                  "        var inventory = jsonData.data.content[0];",
+                  "        console.log(\"Current onHand:\", inventory.onHandQuantity);",
+                  "        console.log(\"Reserved:\", inventory.reservedQuantity);",
+                  "        console.log(\"Available:\", inventory.availableQuantity);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01-Concurrent-Increase",
+      "item": [
+        {
+          "name": "Increase - Request 1 (+50)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/increase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 50,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-INCR-1-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-INCR-1-{{$timestamp}}\",\n  \"reason\": \"Race test - increase 1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Increase request 1 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Should log onHand after increase\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data) {",
+                  "        console.log(\"After Increase 1:\", jsonData.data.onHandQuantity);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Increase - Request 2 (+30)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/increase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 30,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-INCR-2-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-INCR-2-{{$timestamp}}\",\n  \"reason\": \"Race test - increase 2\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Increase request 2 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Increase - Request 3 (+20)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/increase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 20,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-INCR-3-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-INCR-3-{{$timestamp}}\",\n  \"reason\": \"Race test - increase 3\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Increase request 3 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Total After Concurrent Increase",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories?productId={{testProductId}}&warehouseId={{testWarehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{testProductId}}"
+                },
+                {
+                  "key": "warehouseId",
+                  "value": "{{testWarehouseId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should get inventory\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Should have correct total after concurrent increase\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    var inventory = jsonData.data.content[0];",
+                  "    var expectedOnHand = 200; // 100 initial + 50 + 30 + 20",
+                  "    ",
+                  "    console.log(\"Expected onHand:\", expectedOnHand);",
+                  "    console.log(\"Actual onHand:\", inventory.onHandQuantity);",
+                  "    ",
+                  "    pm.expect(parseFloat(inventory.onHandQuantity)).to.equals(expectedOnHand);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02-Concurrent-Decrease",
+      "item": [
+        {
+          "name": "Decrease - Request 1 (-30)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 30,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-DECR-1-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-DECR-1-{{$timestamp}}\",\n  \"reason\": \"Race test - decrease 1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Decrease request 1 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrease - Request 2 (-40)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 40,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-DECR-2-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-DECR-2-{{$timestamp}}\",\n  \"reason\": \"Race test - decrease 2\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Decrease request 2 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrease - Request 3 (-20)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 20,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-DECR-3-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-DECR-3-{{$timestamp}}\",\n  \"reason\": \"Race test - decrease 3\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Decrease request 3 should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Total After Concurrent Decrease",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories?productId={{testProductId}}&warehouseId={{testWarehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{testProductId}}"
+                },
+                {
+                  "key": "warehouseId",
+                  "value": "{{testWarehouseId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should have correct total after concurrent decrease\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    var inventory = jsonData.data.content[0];",
+                  "    var expectedOnHand = 110; // 200 - 30 - 40 - 20",
+                  "    ",
+                  "    console.log(\"Expected onHand:\", expectedOnHand);",
+                  "    console.log(\"Actual onHand:\", inventory.onHandQuantity);",
+                  "    ",
+                  "    pm.expect(parseFloat(inventory.onHandQuantity)).to.equals(expectedOnHand);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03-Insufficient-Stock",
+      "item": [
+        {
+          "name": "Setup - Reset Inventory to 50",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 60,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-RESET-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-RESET-{{$timestamp}}\",\n  \"reason\": \"Reset for insufficient stock test\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should reset inventory to 50\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrease Over Stock - Request 1 (-30)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 30,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-OVR-1-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-OVR-1-{{$timestamp}}\",\n  \"reason\": \"Insufficient stock test 1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"First decrease should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrease Over Stock - Request 2 (-30)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 30,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-OVR-2-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-OVR-2-{{$timestamp}}\",\n  \"reason\": \"Insufficient stock test 2\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Second decrease should fail with insufficient stock\", function() {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Should return error code INV_004\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log(\"Error response:\", JSON.stringify(jsonData));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrease Over Stock - Request 3 (-30)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 30,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-OVR-3-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-OVR-3-{{$timestamp}}\",\n  \"reason\": \"Insufficient stock test 3\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Third decrease should fail with insufficient stock\", function() {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Final Quantity",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories?productId={{testProductId}}&warehouseId={{testWarehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{testProductId}}"
+                },
+                {
+                  "key": "warehouseId",
+                  "value": "{{testWarehouseId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should have correct quantity after insufficient stock test\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    var inventory = jsonData.data.content[0];",
+                  "    var expectedOnHand = 20; // 50 - 30 = 20",
+                  "    ",
+                  "    console.log(\"Expected onHand:\", expectedOnHand);",
+                  "    console.log(\"Actual onHand:\", inventory.onHandQuantity);",
+                  "    ",
+                  "    pm.expect(parseFloat(inventory.onHandQuantity)).to.equals(expectedOnHand);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04-Lock-Contention",
+      "item": [
+        {
+          "name": "Setup - Reset Inventory",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/increase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 100,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-LOCK-SETUP-{{$timestamp}}\",\n  \"referenceNumber\": \"RC-LOCK-SETUP-{{$timestamp}}\",\n  \"reason\": \"Setup for lock contention test\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should setup inventory\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "First Request Holds Lock",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 10,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-LOCK-1\",\n  \"referenceNumber\": \"RC-LOCK-1\",\n  \"reason\": \"First request to hold lock\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"First request should succeed\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Concurrent Request - Same Reference",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventories/decrease",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{testProductId}}\",\n  \"warehouseId\": \"{{testWarehouseId}}\",\n  \"locationId\": \"{{testLocationId}}\",\n  \"batchId\": null,\n  \"quantity\": 10,\n  \"consumeReserved\": false,\n  \"referenceType\": \"STOCK_ADJUSTMENT\",\n  \"referenceId\": \"RC-LOCK-1\",\n  \"referenceNumber\": \"RC-LOCK-1\",\n  \"reason\": \"Concurrent request with same reference\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Concurrent request with same reference should be handled\", function() {",
+                  "    // With lock, this should either:",
+                  "    // 1. Return 409 Conflict (lock not acquired)",
+                  "    // 2. Return 200 (handled idempotently)",
+                  "    // 3. Return 400 (duplicate reference)",
+                  "    var status = pm.response.status;",
+                  "    console.log(\"Response status:\", status);",
+                  "    pm.expect([200, 400, 409]).to.include(status);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,778 @@
+{
+  "info": {
+    "name": "WHS - 04 RBAC & Security Tests",
+    "description": "Test RBAC permission enforcement, JWT security boundaries và permission cache.\n\nTest Areas:\n- No token → 401\n- Invalid/expired token → 401\n- Wrong permission → 403\n- Correct permission → 200\n- Permission cache consistency (TTL 15 phút)\n- SQL Injection prevention\n- Missing required fields → 400\n\nPREREQUISITE:\n1. Admin account tồn tại\n2. Tạo một user limited qua:\n   POST /api/v1/auth/register với username=test_readonly\n   Sau đó admin assign role chỉ có PERM_SALES_ORDER_READ",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Setup Tokens",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin login OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('access_token', json.data.access_token);",
+                  "pm.environment.set('refresh_token', json.data.refresh_token);",
+                  "console.log('Admin token obtained');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Limited User (if exists)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "if (status === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('limited_access_token', json.data.access_token);",
+                  "    console.log('Limited user token obtained');",
+                  "} else {",
+                  "    console.warn('Limited user not found (status:', status, '). RBAC tests may be limited.');",
+                  "    pm.environment.set('limited_access_token', '');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{limited_user_username}}\",\n    \"password\": \"{{limited_user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login với user chỉ có PERM_SALES_ORDER_READ để test RBAC"
+          }
+        },
+        {
+          "name": "Get Admin Permissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has permissions', () => {",
+                  "    pm.expect(json.data.permissions).to.be.an('array');",
+                  "    pm.expect(json.data.permissions.length).to.be.greaterThan(0);",
+                  "});",
+                  "const perms = json.data.permissions;",
+                  "console.log(`Admin has ${perms.length} permissions`);",
+                  "",
+                  "// Verify critical permissions exist",
+                  "const required = ['PERM_INVENTORY_READ', 'PERM_SALES_ORDER_CREATE', 'PERM_SALES_ORDER_UPDATE'];",
+                  "required.forEach(p => {",
+                  "    pm.test(`Admin has ${p}`, () => pm.expect(perms).to.include(p));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/my-permissions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "my-permissions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - No Authentication Tests (→ 401)",
+      "description": "Tất cả protected endpoints không có token phải trả về 401",
+      "item": [
+        {
+          "name": "GET /inventories without token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('No token returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));",
+                  "pm.test('Response is JSON', () => pm.response.to.be.json);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "POST /inventories/reserve without token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('No token returns 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            }
+          }
+        },
+        {
+          "name": "GET /sales-orders without token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('No token returns 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Public endpoints work without token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health check public (200)', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Status UP', () => pm.expect(json.status).to.equal('UP'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Invalid Token Tests (→ 401)",
+      "item": [
+        {
+          "name": "Completely Invalid Token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid token → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer this.is.not.a.valid.jwt.token" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "Valid Structure Wrong Signature → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Wrong signature → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjo5OTk5OTk5OTk5fQ.WRONG_SIGNATURE_HERE"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token Used as Access Token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Refresh token rejected as access token', () => {",
+                  "    pm.expect(status).to.be.oneOf([401, 403]);",
+                  "});",
+                  "pm.test('Not 200', () => pm.response.to.not.have.status(200));",
+                  "console.log('Using refresh token as access token returned:', status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{refresh_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Wrong Permission Tests (→ 403)",
+      "description": "User với limited permissions cố gắng truy cập endpoints không được phép → 403",
+      "item": [
+        {
+          "name": "[Limited User] POST /inventories/reserve → 403",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const limitedToken = pm.environment.get('limited_access_token');",
+                  "if (!limitedToken) {",
+                  "    console.warn('SKIP: limited_access_token not set. Create test_readonly user first.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const limitedToken = pm.environment.get('limited_access_token');",
+                  "if (!limitedToken) {",
+                  "    pm.test('SKIPPED - no limited token', () => pm.expect(true).to.be.true);",
+                  "    return;",
+                  "}",
+                  "pm.test('Limited user cannot reserve inventory (403)', () => {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Not 200 or 500', () => {",
+                  "    pm.expect(pm.response.code).to.not.be.oneOf([200, 500]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{limited_access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"product_id\": \"{{test_product_id}}\",\n    \"quantity\": 1,\n    \"order_line_id\": \"fake-order-line-id\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            },
+            "description": "User với PERM_SALES_ORDER_READ cố gắng reserve inventory → phải trả về 403"
+          }
+        },
+        {
+          "name": "[Limited User] POST /inventories/increase → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const limitedToken = pm.environment.get('limited_access_token');",
+                  "if (!limitedToken) { pm.test('SKIPPED', () => pm.expect(true).to.be.true); return; }",
+                  "pm.test('Limited user cannot increase inventory (403)', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{limited_access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": 100,\n    \"reference_type\": \"STOCK_ADJUSTMENT\",\n    \"reference_number\": \"UNAUTH-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/increase",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            }
+          }
+        },
+        {
+          "name": "[Limited User] GET /sales-orders → 200 (has permission)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const limitedToken = pm.environment.get('limited_access_token');",
+                  "if (!limitedToken) { pm.test('SKIPPED', () => pm.expect(true).to.be.true); return; }",
+                  "pm.test('Limited user CAN read sales orders (200)', () => pm.response.to.have.status(200));",
+                  "pm.test('Not 403', () => pm.response.to.not.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{limited_access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders?page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Correct Permission Tests (→ 200)",
+      "description": "Admin với đủ permissions có thể truy cập tất cả endpoints",
+      "item": [
+        {
+          "name": "[Admin] GET /inventories → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can read inventories (200)', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has data', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories?page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "[Admin] GET /sales-orders → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can read sales orders (200)', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders?page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "[Admin] Check Permission - Inventory Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Admin has INVENTORY READ permission', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.allowed).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resource\": \"INVENTORY\",\n    \"action\": \"READ\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/check-permission",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "check-permission"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Input Validation Tests (→ 400)",
+      "description": "Test server-side validation của request body",
+      "item": [
+        {
+          "name": "Reserve with missing product_id → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Missing required field → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Not 500 (no NPE)', () => pm.response.to.not.have.status(500));",
+                  "pm.test('Error message present', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": 1,\n    \"order_line_id\": \"some-line-id\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            },
+            "description": "product_id is required. Missing it should return 400 not 500."
+          }
+        },
+        {
+          "name": "Reserve with negative quantity → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Negative quantity → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"product_id\": \"{{test_product_id}}\",\n    \"quantity\": -10,\n    \"order_line_id\": \"some-line-id\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            }
+          }
+        },
+        {
+          "name": "Create SO with empty lines → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Empty lines → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customer_id\": \"{{test_customer_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"order_date\": \"2026-04-09\",\n    \"requested_delivery_date\": \"2026-04-20\",\n    \"currency\": \"VND\",\n    \"lines\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Create SO with invalid currency → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid currency → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customer_id\": \"{{test_customer_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"order_date\": \"2026-04-09\",\n    \"requested_delivery_date\": \"2026-04-20\",\n    \"currency\": \"INVALID_CURRENCY\",\n    \"lines\": [\n        {\"product_id\": \"{{test_product_id}}\", \"quantity_ordered\": 1, \"unit_price\": 1000}\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Non-existent resource → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Non-existent resource → 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code present', () => pm.expect(json).to.have.property('message'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/non-existent-id-12345",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "non-existent-id-12345"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Actuator Security Test",
+      "item": [
+        {
+          "name": "/actuator/health (public) → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health is public', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "/actuator/metrics without admin token → 401 or 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Metrics endpoint protected', () => {",
+                  "    pm.expect(status).to.be.oneOf([401, 403]);",
+                  "});",
+                  "pm.test('Not public (not 200)', () => pm.response.to.not.have.status(200));",
+                  "console.log('Actuator metrics security status:', status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "metrics"]
+            }
+          }
+        },
+        {
+          "name": "/actuator/metrics with admin token → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can access actuator metrics', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has names array', () => pm.expect(json).to.have.property('names'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/actuator/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "metrics"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

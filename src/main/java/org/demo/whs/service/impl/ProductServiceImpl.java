@@ -268,7 +268,7 @@ public class ProductServiceImpl implements ProductService {
                 });
 
         // Soft delete by changing status
-        product.setStatus(ProductStatus.DISCONTINUED);
+        product.setStatus(ProductStatus.INACTIVE);
 
         Account currentUser = getCurrentUser();
         product.setUpdatedBy(currentUser.getId());

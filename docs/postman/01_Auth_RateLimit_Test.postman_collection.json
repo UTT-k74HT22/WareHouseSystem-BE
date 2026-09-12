@@ -1,0 +1,478 @@
+{
+  "info": {
+    "name": "WHS - 01 Auth & Rate Limit Tests",
+    "description": "Test authentication endpoints, JWT validation và rate limiting enforcement.\n\nTest Areas:\n- Login rate limit (5 req / 5 phút / IP)\n- Token refresh rate limit (10 req / phút / user)\n- JWT validation (invalid, expired, missing)\n- Register rate limit (3 req / giờ / IP)\n- Password reset flow rate limit\n\nCách chạy:\n1. Import WHS_Performance_Env.postman_environment.json\n2. Chạy folder 00-Setup trước\n3. Chạy từng folder test",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "Login Admin (Get Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has access_token', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('access_token');",
+                  "    pm.expect(json.data).to.have.property('refresh_token');",
+                  "    pm.environment.set('access_token', json.data.access_token);",
+                  "    pm.environment.set('refresh_token', json.data.refresh_token);",
+                  "});",
+                  "pm.test('Token is non-empty string', () => {",
+                  "    const token = pm.environment.get('access_token');",
+                  "    pm.expect(token).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login admin để lấy token. Phải chạy trước tất cả tests khác."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Login Rate Limit Test",
+      "description": "Giới hạn: 5 request / 5 phút / IP\nTest: Gửi 7 requests liên tiếp\nExpected: req 1-5 → 200, req 6-7 → 429\n\nCách chạy trong Collection Runner:\n- Folder: 01 - Login Rate Limit Test\n- Iterations: 7\n- Delay: 0ms",
+      "item": [
+        {
+          "name": "[Loop] Login Attempt",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Đếm số lần đã gọi trong session này",
+                  "let counter = pm.environment.get('login_attempt_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('login_attempt_counter', counter);",
+                  "console.log('Login attempt #' + counter);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('login_attempt_counter') || 0);",
+                  "const status = pm.response.code;",
+                  "",
+                  "console.log(`Attempt #${counter}: HTTP ${status}`);",
+                  "",
+                  "if (counter <= 5) {",
+                  "    pm.test(`Attempt #${counter}: Expect HTTP 200 (within limit)`, () => {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "} else {",
+                  "    pm.test(`Attempt #${counter}: Expect HTTP 429 (rate limited)`, () => {",
+                  "        pm.response.to.have.status(429);",
+                  "    });",
+                  "    pm.test('Rate limit response body contains message', () => {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json).to.have.property('message');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Chạy request này 7 lần bằng Collection Runner (Iterations=7, Delay=0ms).\nExpected: lần 1-5 → 200, lần 6-7 → 429"
+          }
+        },
+        {
+          "name": "Reset Counter (Manual)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.environment.set('login_attempt_counter', 0);",
+                  "console.log('Login attempt counter reset to 0');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Counter reset', () => {",
+                  "    pm.expect(parseInt(pm.environment.get('login_attempt_counter'))).to.equal(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Chạy request này để reset counter sau khi đã test rate limit (chờ 5 phút để bucket refill)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Token Refresh Rate Limit Test",
+      "description": "Giới hạn: 10 request / phút / user\nTest: Gửi 12 requests\nExpected: req 1-10 → 200, req 11-12 → 429\n\nChạy trong Collection Runner với Iterations=12, Delay=0ms",
+      "item": [
+        {
+          "name": "Login Fresh (get new tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('access_token', json.data.access_token);",
+                  "pm.environment.set('refresh_token', json.data.refresh_token);",
+                  "pm.environment.set('refresh_attempt_counter', 0);",
+                  "console.log('Fresh tokens obtained, refresh counter reset');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "[Loop] Refresh Token Attempt",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "let counter = pm.environment.get('refresh_attempt_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('refresh_attempt_counter', counter);",
+                  "console.log('Refresh attempt #' + counter);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('refresh_attempt_counter') || 0);",
+                  "const status = pm.response.code;",
+                  "console.log(`Refresh #${counter}: HTTP ${status}`);",
+                  "",
+                  "if (counter <= 10) {",
+                  "    pm.test(`Refresh #${counter}: HTTP 200 (within limit)`, () => {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.environment.set('access_token', json.data.access_token);",
+                  "    }",
+                  "} else {",
+                  "    pm.test(`Refresh #${counter}: HTTP 429 (rate limited)`, () => {",
+                  "        pm.response.to.have.status(429);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh-token"]
+            },
+            "description": "Chạy với Collection Runner: Iterations=12, Delay=0ms"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - JWT Validation Tests",
+      "description": "Kiểm tra xử lý các trường hợp token không hợp lệ",
+      "item": [
+        {
+          "name": "No Token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('No token returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Response body has error info', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid token returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Not 500 (no NPE/parse error)', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzUxMiJ9.invalid.payload.signature" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "Malformed Authorization Header → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Malformed header returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Not 500', () => pm.response.to.not.have.status(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "NotBearer some_value" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"]
+            }
+          }
+        },
+        {
+          "name": "Valid Token → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Valid token returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has data', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories?page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Register Rate Limit Test",
+      "description": "Giới hạn: 3 request / giờ / IP\nTest: 4 requests\nExpected: req 1-3 → 200, req 4 → 429",
+      "item": [
+        {
+          "name": "[Loop] Register New User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "let counter = pm.environment.get('register_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('register_counter', counter);",
+                  "// Unique username mỗi iteration",
+                  "const ts = Date.now();",
+                  "pm.environment.set('new_username', `testuser_rc_${ts}_${counter}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('register_counter') || 0);",
+                  "const status = pm.response.code;",
+                  "console.log(`Register #${counter}: HTTP ${status}`);",
+                  "",
+                  "if (counter <= 3) {",
+                  "    pm.test(`Register #${counter}: HTTP 200 OK`, () => {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "} else {",
+                  "    pm.test(`Register #${counter}: HTTP 429 Rate Limited`, () => {",
+                  "        pm.response.to.have.status(429);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{new_username}}\",\n    \"password\": \"Test@1234\",\n    \"confirm_password\": \"Test@1234\",\n    \"full_name\": \"Test User RC {{register_counter}}\",\n    \"email\": \"testrc{{register_counter}}@whs-test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Chạy 4 lần (Collection Runner Iterations=4, Delay=0ms)\nExpected: lần 1-3 → 200, lần 4 → 429"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - My Permissions",
+      "item": [
+        {
+          "name": "Get My Permissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has permissions list', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('permissions');",
+                  "    pm.expect(json.data.permissions).to.be.an('array');",
+                  "    console.log('My permissions:', json.data.permissions.join(', '));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/my-permissions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "my-permissions"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

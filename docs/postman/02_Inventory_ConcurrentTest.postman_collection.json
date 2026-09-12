@@ -1,0 +1,788 @@
+{
+  "info": {
+    "name": "WHS - 02 Inventory Concurrent & Race Condition Tests",
+    "description": "Test tính đúng đắn của inventory operations dưới tải đồng thời.\n\nTest Areas:\n- Race condition khi reserve inventory (Redisson lock + Pessimistic write)\n- Atomicity của stock increase/decrease\n- Tính chính xác số học tổng kho\n- Idempotency của reserve operation\n- Verify StockMovements audit trail\n\nPREREQUISITE:\n1. Chạy '00-Setup' trước để lấy token\n2. Điền test_product_id, test_warehouse_id trong environment\n3. Đảm bảo product tồn tại và warehouse active\n\nCách test race condition:\n- Chạy folder '03-Reserve-Race-Condition' với Iterations=1\n- Hoặc dùng script newman/run-concurrent-inventory.sh",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}" }]
+  },
+  "item": [
+    {
+      "name": "00 - Setup & Auth",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('access_token', json.data.access_token);",
+                  "pm.environment.set('refresh_token', json.data.refresh_token);",
+                  "console.log('Admin token obtained successfully');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Validate Environment Variables",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('test_product_id is set', () => {",
+                  "    const id = pm.environment.get('test_product_id');",
+                  "    pm.expect(id).to.be.a('string').and.not.equal('FILL_ME_IN').and.not.be.empty;",
+                  "});",
+                  "pm.test('test_warehouse_id is set', () => {",
+                  "    const id = pm.environment.get('test_warehouse_id');",
+                  "    pm.expect(id).to.be.a('string').and.not.equal('FILL_ME_IN').and.not.be.empty;",
+                  "});",
+                  "pm.test('test_customer_id is set', () => {",
+                  "    const id = pm.environment.get('test_customer_id');",
+                  "    pm.expect(id).to.be.a('string').and.not.equal('FILL_ME_IN').and.not.be.empty;",
+                  "});",
+                  "console.log('Environment OK. Product:', pm.environment.get('test_product_id'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Validate rằng environment variables đã được điền đúng"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Setup Initial Stock",
+      "description": "Khởi tạo stock cho sản phẩm test trước khi chạy các race condition tests",
+      "item": [
+        {
+          "name": "Check Current Inventory Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "if (status === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const onHand = json.data ? json.data.on_hand_quantity : 0;",
+                  "    pm.environment.set('current_stock', onHand || 0);",
+                  "    console.log('Current stock:', onHand);",
+                  "} else {",
+                  "    pm.environment.set('current_stock', 0);",
+                  "    console.log('No inventory found, will create fresh');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Increase Stock to 20 Units (Setup)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique reference number với timestamp",
+                  "const ts = Date.now();",
+                  "const refNum = `TEST-SETUP-RC-${ts}`;",
+                  "pm.environment.set('setup_ref_number', refNum);",
+                  "console.log('Setup ref number:', refNum);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Stock increased', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has inventory data', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.data) {",
+                  "    console.log('After increase - onHand:', json.data.on_hand_quantity);",
+                  "    pm.environment.set('stock_after_setup', json.data.on_hand_quantity);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": {{initial_stock_quantity}},\n    \"reference_type\": \"STOCK_ADJUSTMENT\",\n    \"reference_number\": \"{{setup_ref_number}}\",\n    \"notes\": \"Race condition test setup - add 20 units\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/increase",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "description": "Thêm 20 units vào stock để chuẩn bị cho race condition test"
+          }
+        },
+        {
+          "name": "Verify Stock After Setup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('on_hand_quantity > 0', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.on_hand_quantity).to.be.greaterThan(0);",
+                  "    pm.environment.set('verified_stock', json.data.on_hand_quantity);",
+                  "    console.log('Verified stock:', json.data.on_hand_quantity);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Create Sales Orders for Race Condition",
+      "description": "Tạo nhiều sales orders (mỗi order 1 unit) để dùng cho reserve test.\n\nChạy folder này với Iterations=15 trong Collection Runner để tạo 15 orders.\nCác order_line_id sẽ được lưu vào environment và dùng cho Step 03.",
+      "item": [
+        {
+          "name": "[Loop] Create Draft Sales Order (1 unit)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Tính toán ngày",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today);",
+                  "tomorrow.setDate(tomorrow.getDate() + 7);",
+                  "",
+                  "const formatDate = (d) => d.toISOString().split('T')[0];",
+                  "pm.environment.set('order_date', formatDate(today));",
+                  "pm.environment.set('delivery_date', formatDate(tomorrow));",
+                  "",
+                  "// Counter",
+                  "let counter = pm.environment.get('order_create_counter') || 0;",
+                  "counter = parseInt(counter) + 1;",
+                  "pm.environment.set('order_create_counter', counter);",
+                  "console.log('Creating order #' + counter);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const counter = parseInt(pm.environment.get('order_create_counter') || 0);",
+                  "",
+                  "pm.test(`Order #${counter}: HTTP 201`, () => pm.response.to.have.status(201));",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test(`Order #${counter}: Has ID`, () => {",
+                  "    pm.expect(json.data).to.have.property('id');",
+                  "    pm.expect(json.data).to.have.property('so_number');",
+                  "});",
+                  "",
+                  "// Lưu order IDs vào environment (index-based key)",
+                  "if (json.data && json.data.id) {",
+                  "    pm.environment.set(`so_id_${counter}`, json.data.id);",
+                  "    pm.environment.set('current_sales_order_id', json.data.id);",
+                  "    console.log(`Order #${counter} ID: ${json.data.id}, SO: ${json.data.so_number}`);",
+                  "}",
+                  "",
+                  "// Lưu order_line_id nếu có",
+                  "if (json.data && json.data.lines && json.data.lines.length > 0) {",
+                  "    const lineId = json.data.lines[0].id;",
+                  "    pm.environment.set(`sol_id_${counter}`, lineId);",
+                  "    pm.environment.set('current_order_line_id', lineId);",
+                  "    console.log(`Order #${counter} Line ID: ${lineId}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customer_id\": \"{{test_customer_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"order_date\": \"{{order_date}}\",\n    \"requested_delivery_date\": \"{{delivery_date}}\",\n    \"currency\": \"VND\",\n    \"notes\": \"Race condition test order - iteration {{order_create_counter}}\",\n    \"lines\": [\n        {\n            \"product_id\": \"{{test_product_id}}\",\n            \"quantity_ordered\": 1,\n            \"unit_price\": 100000\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders"]
+            },
+            "description": "Tạo 1 draft order. Chạy 15 lần với Collection Runner Iterations=15."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Confirm Single Order (Reserve Test)",
+      "description": "Confirm 1 sales order → trigger inventory reserve\n\nĐể test race condition:\n1. Lấy order_id từ environment (current_sales_order_id)\n2. Gửi 2 request confirm cùng lúc từ 2 terminal khác nhau:\n   newman run ... --folder '03-Confirm' --env-var 'order_id=<id>' &\n   newman run ... --folder '03-Confirm' --env-var 'order_id=<id>' &\n   wait",
+      "item": [
+        {
+          "name": "Confirm Sales Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Dùng order ID từ environment hoặc từ step 02",
+                  "const orderId = pm.environment.get('order_id') || pm.environment.get('current_sales_order_id');",
+                  "if (!orderId) {",
+                  "    console.error('ERROR: order_id not set in environment!');",
+                  "    console.error('Run Step 02 first or set order_id manually');",
+                  "}",
+                  "pm.environment.set('order_to_confirm', orderId);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log(`Confirm order response: HTTP ${status}`);",
+                  "",
+                  "if (status === 200) {",
+                  "    pm.test('Order confirmed successfully', () => {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.data.status).to.equal('CONFIRMED');",
+                  "    });",
+                  "    console.log('SUCCESS: Order confirmed and inventory reserved');",
+                  "} else if (status === 409) {",
+                  "    pm.test('Conflict - insufficient inventory (expected in race condition)', () => {",
+                  "        pm.response.to.have.status(409);",
+                  "    });",
+                  "    console.log('CONFLICT: Insufficient inventory (expected for race condition)');",
+                  "} else {",
+                  "    pm.test('Unexpected status', () => {",
+                  "        pm.expect(status).to.be.oneOf([200, 409]);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sales-orders/{{order_to_confirm}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sales-orders", "{{order_to_confirm}}", "confirm"]
+            },
+            "description": "Confirm sales order → trigger inventory reservation.\nDùng environment variable 'order_to_confirm' hoặc 'current_sales_order_id'"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Direct Reserve Test (Manual orderLineId)",
+      "description": "Test trực tiếp POST /inventories/reserve\nCần điền current_order_line_id vào environment từ Step 02",
+      "item": [
+        {
+          "name": "Check Availability Before Reserve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Availability checked', () => {",
+                  "    pm.expect(json.data).to.have.property('available_quantity');",
+                  "    pm.expect(json.data).to.have.property('is_available');",
+                  "    pm.environment.set('pre_reserve_available', json.data.available_quantity);",
+                  "    console.log('Available before reserve:', json.data.available_quantity, '| Is available:', json.data.is_available);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"quantity\": 1,\n    \"warehouse_id\": \"{{test_warehouse_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/check-availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "check-availability"]
+            }
+          }
+        },
+        {
+          "name": "Reserve Inventory (Needs valid orderLineId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Reserve response:', status, pm.response.text().substring(0, 200));",
+                  "",
+                  "if (status === 200) {",
+                  "    pm.test('Reserve succeeded', () => pm.response.to.have.status(200));",
+                  "    const json = pm.response.json();",
+                  "    pm.test('Has reservation data', () => {",
+                  "        pm.expect(json.data).to.have.property('inventory_id');",
+                  "        pm.expect(json.data).to.have.property('reserved_quantity');",
+                  "    });",
+                  "    console.log('Reserved quantity:', json.data.reserved_quantity);",
+                  "} else if (status === 409) {",
+                  "    pm.test('Conflict - insufficient inventory', () => pm.response.to.have.status(409));",
+                  "    console.log('INFO: Insufficient inventory (expected if stock = 0)');",
+                  "} else {",
+                  "    pm.test('Unexpected status', () => pm.expect(status).to.be.oneOf([200, 409]));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"product_id\": \"{{test_product_id}}\",\n    \"quantity\": 1,\n    \"order_line_id\": \"{{current_order_line_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            },
+            "description": "Gọi reserve trực tiếp. Cần order_line_id hợp lệ trong environment.\norder_line_id phải là ID của một SalesOrderLine thực tế trong DB.\nLấy từ Step 02 sau khi tạo Sales Order."
+          }
+        },
+        {
+          "name": "Verify Idempotency - Reserve Same Order Line Again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Idempotent reserve returns 200 (not duplicate)', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns existing reservation (not new one)', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('reserved_quantity');",
+                  "});",
+                  "console.log('IDEMPOTENCY: Second reserve call for same orderLineId returned:', status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"product_id\": \"{{test_product_id}}\",\n    \"quantity\": 1,\n    \"order_line_id\": \"{{current_order_line_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "reserve"]
+            },
+            "description": "Gọi lại reserve với cùng order_line_id - phải trả về reservation cũ (idempotent)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Concurrent Stock Operations",
+      "description": "Test concurrent increase và decrease operations.\nChạy folder này nhiều lần đồng thời từ nhiều terminal Newman.",
+      "item": [
+        {
+          "name": "[Loop] Increase Stock (1 unit, unique ref)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = Date.now();",
+                  "const random = Math.floor(Math.random() * 100000);",
+                  "pm.environment.set('increase_ref', `INC-${ts}-${random}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stock increase returns 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data) {",
+                  "    console.log('After increase - onHand:', json.data.on_hand_quantity);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": 1,\n    \"reference_type\": \"STOCK_ADJUSTMENT\",\n    \"reference_number\": \"{{increase_ref}}\",\n    \"notes\": \"Concurrent increase test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/increase",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "increase"]
+            },
+            "description": "Chạy đồng thời từ nhiều Newman instance để test concurrent increase.\nMỗi lần chạy có reference_number khác nhau (timestamp + random)."
+          }
+        },
+        {
+          "name": "[Loop] Decrease Stock (1 unit, unique ref)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = Date.now();",
+                  "const random = Math.floor(Math.random() * 100000);",
+                  "pm.environment.set('decrease_ref', `DEC-${ts}-${random}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "if (status === 200) {",
+                  "    pm.test('Stock decrease returns 200', () => pm.response.to.have.status(200));",
+                  "    const json = pm.response.json();",
+                  "    if (json.data) {",
+                  "        pm.test('onHand not negative after decrease', () => {",
+                  "            pm.expect(parseFloat(json.data.on_hand_quantity)).to.be.at.least(0);",
+                  "        });",
+                  "        console.log('After decrease - onHand:', json.data.on_hand_quantity);",
+                  "    }",
+                  "} else if (status === 409) {",
+                  "    console.log('INFO: Insufficient stock for decrease (expected)');",
+                  "    pm.test('Conflict is acceptable when stock is insufficient', () => {",
+                  "        pm.response.to.have.status(409);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{test_product_id}}\",\n    \"warehouse_id\": \"{{test_warehouse_id}}\",\n    \"quantity\": 1,\n    \"reference_type\": \"STOCK_ADJUSTMENT\",\n    \"reference_number\": \"{{decrease_ref}}\",\n    \"consume_reserved\": false,\n    \"notes\": \"Concurrent decrease test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/decrease",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "decrease"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Verify Consistency",
+      "description": "Kiểm tra tính nhất quán của inventory sau khi chạy các concurrent tests",
+      "item": [
+        {
+          "name": "Get Inventory Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test('Summary data present', () => {",
+                  "    pm.expect(json.data).to.have.property('on_hand_quantity');",
+                  "    pm.expect(json.data).to.have.property('reserved_quantity');",
+                  "    pm.expect(json.data).to.have.property('available_quantity');",
+                  "});",
+                  "",
+                  "const onHand = parseFloat(json.data.on_hand_quantity || 0);",
+                  "const reserved = parseFloat(json.data.reserved_quantity || 0);",
+                  "const available = parseFloat(json.data.available_quantity || 0);",
+                  "const quarantine = parseFloat(json.data.quarantine_quantity || 0);",
+                  "",
+                  "pm.test('onHand >= 0 (no negative stock)', () => {",
+                  "    pm.expect(onHand).to.be.at.least(0);",
+                  "});",
+                  "",
+                  "pm.test('reserved >= 0', () => {",
+                  "    pm.expect(reserved).to.be.at.least(0);",
+                  "});",
+                  "",
+                  "pm.test('available = onHand - quarantine - reserved', () => {",
+                  "    const expectedAvailable = onHand - quarantine - reserved;",
+                  "    pm.expect(Math.abs(available - expectedAvailable)).to.be.lessThan(0.01);",
+                  "});",
+                  "",
+                  "console.log(`=== INVENTORY CONSISTENCY CHECK ===`);",
+                  "console.log(`On Hand: ${onHand}`);",
+                  "console.log(`Reserved: ${reserved}`);",
+                  "console.log(`Quarantine: ${quarantine}`);",
+                  "console.log(`Available: ${available}`);",
+                  "console.log(`Formula check: onHand(${onHand}) - quarantine(${quarantine}) - reserved(${reserved}) = ${onHand-quarantine-reserved} | reported available: ${available}`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/summary/{{test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "summary", "{{test_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory By Location (Detailed View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has location data', () => {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "console.log('Location data:', JSON.stringify(json.data, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories/by-location?product_id={{test_product_id}}&warehouse_id={{test_warehouse_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories", "by-location"],
+              "query": [
+                { "key": "product_id", "value": "{{test_product_id}}" },
+                { "key": "warehouse_id", "value": "{{test_warehouse_id}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Movements Audit Trail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Movements data present', () => {",
+                  "    pm.expect(json.data).to.have.property('content');",
+                  "});",
+                  "",
+                  "const movements = json.data.content || [];",
+                  "console.log(`=== STOCK MOVEMENTS (last 20) ===`);",
+                  "movements.forEach((m, i) => {",
+                  "    console.log(`[${i+1}] Type: ${m.movement_type} | Qty: ${m.quantity_change} | Before: ${m.quantity_before} | After: ${m.quantity_after}`);",
+                  "});",
+                  "",
+                  "// Verify audit: quantity_after = quantity_before + quantity_change",
+                  "const badMovements = movements.filter(m => {",
+                  "    const before = parseFloat(m.quantity_before || 0);",
+                  "    const change = parseFloat(m.quantity_change || 0);",
+                  "    const after = parseFloat(m.quantity_after || 0);",
+                  "    return Math.abs((before + change) - after) > 0.01;",
+                  "});",
+                  "",
+                  "pm.test('All movements satisfy: quantity_after = quantity_before + quantity_change', () => {",
+                  "    pm.expect(badMovements.length).to.equal(0);",
+                  "    if (badMovements.length > 0) {",
+                  "        console.error('BAD MOVEMENTS:', JSON.stringify(badMovements));",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stock-movements?product_id={{test_product_id}}&warehouse_id={{test_warehouse_id}}&page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "stock-movements"],
+              "query": [
+                { "key": "product_id", "value": "{{test_product_id}}" },
+                { "key": "warehouse_id", "value": "{{test_warehouse_id}}" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Performance Load Test",
+      "description": "Test GET inventory endpoints dưới tải cao.\nChạy với Collection Runner: Iterations=50, Delay=0ms",
+      "item": [
+        {
+          "name": "[Loop] GET Inventories (Read Load)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response time < 1000ms', () => {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "console.log(`Response time: ${pm.response.responseTime}ms`);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventories?page=0&size=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "inventories"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Chạy 50 lần. P95 < 300ms = PASS, > 1000ms = FAIL"
+          }
+        },
+        {
+          "name": "Check HikariCP Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "console.log('HikariCP metrics:', JSON.stringify(json, null, 2));",
+                  "",
+                  "// Parse active connections",
+                  "if (json.measurements) {",
+                  "    const active = json.measurements.find(m => m.statistic === 'VALUE');",
+                  "    if (active) {",
+                  "        console.log('Active connections:', active.value);",
+                  "        pm.test('Active connections < 10 (pool not exhausted)', () => {",
+                  "            pm.expect(active.value).to.be.lessThan(10);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/metrics/hikaricp.connections.active",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "metrics", "hikaricp.connections.active"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

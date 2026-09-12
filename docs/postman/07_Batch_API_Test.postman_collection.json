@@ -1,0 +1,1079 @@
+{
+  "info": {
+    "name": "WHS Batch API Test",
+    "description": "Postman test collection for Batch module. Covers create, validation, filters, detail, update, blocked generic status patch, quarantine/release workflows, traceability, expiring and FIFO queries.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": "92000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "uomId",
+      "value": "91000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "seedProductId",
+      "value": "95000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "warehouseId",
+      "value": "93000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "batchProductId",
+      "value": ""
+    },
+    {
+      "key": "createdBatchId",
+      "value": ""
+    },
+    {
+      "key": "missingProductId",
+      "value": "99999999-9999-4999-8999-999999999991"
+    },
+    {
+      "key": "missingBatchId",
+      "value": "99999999-9999-4999-8999-999999999992"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "BAT-TC-01 Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Save access token', function () {",
+                  "  const json = pm.response.json();",
+                  "  const token = json.data && (json.data.access_token || json.data.accessToken);",
+                  "  pm.expect(token, 'access token').to.be.a('string').and.not.empty;",
+                  "  pm.environment.set('authToken', token);",
+                  "  pm.collectionVariables.set('authToken', token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-SETUP Create Batch-Tracked Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Setup product returns 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Save setup product id', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.requires_batch_tracking).to.eql(true);",
+                  "  pm.environment.set('batchProductId', json.data.id);",
+                  "  pm.collectionVariables.set('batchProductId', json.data.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Batch Setup Product {{$guid}}\",\n  \"description\": \"Product dependency for batch API tests\",\n  \"category_id\": \"{{categoryId}}\",\n  \"uom_id\": \"{{uomId}}\",\n  \"min_stock_level\": 1,\n  \"max_stock_level\": 100,\n  \"reorder_point\": 10,\n  \"cost_price\": 10,\n  \"selling_price\": 15,\n  \"requires_batch_tracking\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Create Batch",
+      "item": [
+        {
+          "name": "BAT-TC-02 Create Batch - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create batch returns 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Batch is AVAILABLE and generated number exists', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.id).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.data.batch_number).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.data.status).to.eql('AVAILABLE');",
+                  "  pm.environment.set('createdBatchId', json.data.id);",
+                  "  pm.environment.set('batchId', json.data.id);",
+                  "  pm.collectionVariables.set('createdBatchId', json.data.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{batchProductId}}\",\n  \"manufacturing_date\": \"2026-04-01\",\n  \"expiry_date\": \"2027-04-01\",\n  \"supplier_batch_number\": \"SUP-PM-{{$timestamp}}\",\n  \"notes\": \"Batch created by Postman automated test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-03 Create Batch - Reject Client Batch Number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Client-provided batch number returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch_number\": \"BATCH-MANUAL\",\n  \"product_id\": \"{{batchProductId}}\",\n  \"manufacturing_date\": \"2026-04-01\",\n  \"expiry_date\": \"2027-04-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-04 Create Batch - Missing Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing product returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manufacturing_date\": \"2026-04-01\",\n  \"expiry_date\": \"2027-04-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-05 Create Batch - Product Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing product id returns 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{missingProductId}}\",\n  \"manufacturing_date\": \"2026-04-01\",\n  \"expiry_date\": \"2027-04-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-06 Create Batch - Future Manufacturing Date",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Future manufacturing date returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{batchProductId}}\",\n  \"manufacturing_date\": \"2099-01-01\",\n  \"expiry_date\": \"2100-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-07 Create Batch - Expiry Before Manufacturing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expiry before manufacturing returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{batchProductId}}\",\n  \"manufacturing_date\": \"2026-04-01\",\n  \"expiry_date\": \"2026-03-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Query Batch",
+      "item": [
+        {
+          "name": "BAT-TC-08 List Batches - Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List batches returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Page response has content array', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.content).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches?product_id={{batchProductId}}&status=AVAILABLE&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "{{batchProductId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "AVAILABLE"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-09 List Batches - Invalid Date Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid date range returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches?manufacturing_date_from=2026-05-01&manufacturing_date_to=2026-04-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches"
+              ],
+              "query": [
+                {
+                  "key": "manufacturing_date_from",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "manufacturing_date_to",
+                  "value": "2026-04-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-10 Get Batch By ID - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get batch returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Batch id matches', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.id).to.eql(pm.environment.get('createdBatchId') || pm.collectionVariables.get('createdBatchId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-10B Get Batch - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing batch returns 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{missingBatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{missingBatchId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Update and Workflow",
+      "item": [
+        {
+          "name": "BAT-TC-11 Update Batch - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update batch returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Supplier batch number is updated', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.supplier_batch_number).to.include('SUP-PM-UPD');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_batch_number\": \"SUP-PM-UPD-{{$timestamp}}\",\n  \"notes\": \"Updated by Postman\",\n  \"expiry_date\": \"2027-05-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-11B Update Batch - Reject Client Batch Number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Client-provided batch number on update returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch_number\": \"BATCH-NEW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-12 Generic Status Patch - Blocked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Generic status patch returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response wrapper is error', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"QUARANTINE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-13 Quarantine Batch - Missing Reason",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing quarantine reason returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/quarantine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "quarantine"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-14 Quarantine Batch - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Quarantine batch returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Batch status is QUARANTINE', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.status).to.eql('QUARANTINE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Postman quality hold\",\n  \"expected_resolution_date\": \"2026-05-01\",\n  \"notify_manager\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/quarantine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "quarantine"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-15 Release Batch - Missing Notes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing release notes returns 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "release"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-16 Release Batch - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Release batch returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Batch status is AVAILABLE', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.status).to.eql('AVAILABLE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"release_notes\": \"Quality issue resolved by Postman test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "release"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Batch Business Queries",
+      "item": [
+        {
+          "name": "BAT-TC-17 Expiring Batches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expiring batches returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is array', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/expiring?threshold_days=365&warehouse_id={{warehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "expiring"
+              ],
+              "query": [
+                {
+                  "key": "threshold_days",
+                  "value": "365"
+                },
+                {
+                  "key": "warehouse_id",
+                  "value": "{{warehouseId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-18 FIFO Recommendations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('FIFO recommendation returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is array', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/fifo-recommendations?product_id={{seedProductId}}&warehouse_id={{warehouseId}}&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "fifo-recommendations"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "{{seedProductId}}"
+                },
+                {
+                  "key": "warehouse_id",
+                  "value": "{{warehouseId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-19 Batches By Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Batches by product returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is array', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/by-product/{{batchProductId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "by-product",
+                "{{batchProductId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "BAT-TC-20 Batch Traceability",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Batch traceability returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response wrapper is success', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/batches/{{createdBatchId}}/traceability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batches",
+                "{{createdBatchId}}",
+                "traceability"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

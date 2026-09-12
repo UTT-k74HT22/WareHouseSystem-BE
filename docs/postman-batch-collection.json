@@ -1,0 +1,335 @@
+{
+  "info": {
+    "name": "WMS - Batch Management",
+    "description": "API Quản lý Lô hàng",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "batchId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "warehouseId",
+      "value": ""
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Tạo Lô Hàng",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/batches",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"batchNumber\": \"LOT20260418\",\n  \"manufacturingDate\": \"2026-04-18\",\n  \"expiryDate\": \"2027-01-01\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code() === 201) {",
+              "    pm.collectionVariables.set('batchId', pm.response.json().data.id);",
+              "    pm.test('Tạo thành công', () => { pm.expect(pm.response.status).to.equal(201); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1a. Tạo Lô - Trùng số lô",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/batches",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"batchNumber\": \"LOT20260418\",\n  \"manufacturingDate\": \"2026-04-18\",\n  \"expiryDate\": \"2027-01-01\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1b. Tạo Lô - Ngày hết hạn < ngày sản xuất",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/batches",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"batchNumber\": \"LOT20260419\",\n  \"manufacturingDate\": \"2026-04-18\",\n  \"expiryDate\": \"2026-01-01\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1c. Tạo Lô - Mã lô có ký tự đặc biệt",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/batches",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"batchNumber\": \"LOT#@!123\",\n  \"manufacturingDate\": \"2026-04-18\",\n  \"expiryDate\": \"2027-01-01\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Lấy Danh Sách Lô",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches?page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2a. Tìm kiếm theo mã lô",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches?keyword=LOT01",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches"],
+          "query": [
+            {
+              "key": "keyword",
+              "value": "LOT01"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2b. Lọc theo sản phẩm",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches?product_id={{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "{{productId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2c. Lọc theo kho",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches?warehouse_id={{warehouseId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches"],
+          "query": [
+            {
+              "key": "warehouse_id",
+              "value": "{{warehouseId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Lấy Chi Tiết Lô",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/batches/{{batchId}}"
+      }
+    },
+    {
+      "name": "3a. Lấy Chi Tiết - Không tồn tại",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/batches/999-NOT-FOUND"
+      }
+    },
+    {
+      "name": "4. Cập Nhật Lô",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/batches/{{batchId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expiryDate\": \"2028-12-31\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Cập Nhật Trạng Thái",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/batches/{{batchId}}/status",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"QUARANTINE\"\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Chuyển sang QUARANTINE",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/batches/{{batchId}}/quarantine",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Phát hiện lỗi chất lượng\"\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Phát hành từ QUARANTINE",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/batches/{{batchId}}/release",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"releaseNotes\": \"Đã kiểm tra chất lượng OK\"\n}"
+        }
+      }
+    },
+    {
+      "name": "8. Lấy Lô Theo Sản Phẩm",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches/by-product/{{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches", "by-product", "{{productId}}"]
+        }
+      }
+    },
+    {
+      "name": "9. Lấy Lô Sắp Hết Hạn",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches/expiring?threshold_days=30",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches", "expiring"],
+          "query": [
+            {
+              "key": "threshold_days",
+              "value": "30"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Gợi Ý FIFO",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/batches/fifo-recommendations?product_id={{productId}}&warehouse_id={{warehouseId}}&limit=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["batches", "fifo-recommendations"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "{{productId}}"
+            },
+            {
+              "key": "warehouse_id",
+              "value": "{{warehouseId}}"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "11. Truy Xuất Nguồn Gốc Lô",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/batches/{{batchId}}/traceability"
+      }
+    }
+  ]
+}

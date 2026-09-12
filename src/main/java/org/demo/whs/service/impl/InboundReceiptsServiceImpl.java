@@ -552,7 +552,9 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
 
         inventory.setUpdatedBy(actorId);
         inventory.setLastMovementAt(now);
-        Inventory savedInventory = inventoryRepository.save(inventory);
+
+        // Flush inventory before the location bulk update clears the persistence context.
+        Inventory savedInventory = inventoryRepository.saveAndFlush(inventory);
 
         if (!isQuarantine) {
             locationService.increaseUsedCapacity(receiptLine.getLocationId(), receiptLine.getQuantityReceived());
