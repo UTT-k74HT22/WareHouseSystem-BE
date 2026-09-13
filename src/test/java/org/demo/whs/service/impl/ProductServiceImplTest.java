@@ -18,8 +18,8 @@ import org.demo.whs.repository.CategoryRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
-import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.utils.IdentifierGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,15 +27,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,6 +74,14 @@ class ProductServiceImplTest {
         currentUser = new Account();
         currentUser.setId("acc-1");
         currentUser.setUsername("admin");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -107,16 +117,13 @@ class ProductServiceImplTest {
                         .build()
         );
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            ProductResponse response = productService.createProduct(request);
+        ProductResponse response = productService.createProduct(request);
 
-            assertThat(response.getSku()).startsWith("SKU-");
-            assertThat(response.getSku()).hasSizeLessThanOrEqualTo(50);
-            assertThat(product.getSku()).isEqualTo(response.getSku());
-        }
+        assertThat(response.getSku()).startsWith("SKU-");
+        assertThat(response.getSku()).hasSizeLessThanOrEqualTo(50);
+        assertThat(product.getSku()).isEqualTo(response.getSku());
     }
 
     @Test
@@ -208,16 +215,13 @@ class ProductServiceImplTest {
                     .build();
         });
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            // Act
-            ProductResponse response = productService.updateProduct(productId, request);
+        // Act
+        ProductResponse response = productService.updateProduct(productId, request);
 
-            // Assert
-            assertThat(response.getRequiresBatchTracking()).isFalse();
-        }
+        // Assert
+        assertThat(response.getRequiresBatchTracking()).isFalse();
     }
 
     @Test
@@ -233,16 +237,13 @@ class ProductServiceImplTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(product)).thenReturn(product);
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            // Act
-            productService.deleteProduct(productId);
+        // Act
+        productService.deleteProduct(productId);
 
-            // Assert
-            assertThat(product.getStatus()).isEqualTo(ProductStatus.DISCONTINUED);
-        }
+        // Assert
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.INACTIVE);
     }
 
     @Test

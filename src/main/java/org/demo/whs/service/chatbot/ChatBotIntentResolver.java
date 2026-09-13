@@ -287,6 +287,7 @@ public class ChatBotIntentResolver {
         return normalized
                 .replaceAll("\\p{M}+", "")
                 .replace('\u0111', 'd')
-                .replace('\u0110', 'D');
+                .replace('\u0110', 'D')
+                .replaceAll("[^a-zA-Z0-9\\s-_]", " ");
     }
 }

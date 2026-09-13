@@ -19,6 +19,7 @@ import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.WareHouseRepository;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.utils.IdentifierGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,14 +27,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.Optional;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
@@ -69,6 +72,14 @@ class LocationServiceImplTest {
         currentUser = new Account();
         currentUser.setId("acc-1");
         currentUser.setUsername("admin");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -81,6 +92,7 @@ class LocationServiceImplTest {
         warehouse.setStatus(WareHouseStatus.ACTIVE);
 
         Locations location = new Locations();
+        location.setId("loc-1");
         location.setWarehouseId("wh-1");
         location.setName("A1");
 
@@ -100,16 +112,13 @@ class LocationServiceImplTest {
                         .build()
         );
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            LocationResponse response = locationService.createLocation(request);
+        LocationResponse response = locationService.createLocation(request);
 
-            assertThat(response.getCode()).startsWith("LOC-");
-            assertThat(response.getCode()).hasSizeLessThanOrEqualTo(50);
-            assertThat(location.getCode()).isEqualTo(response.getCode());
-        }
+        assertThat(response.getCode()).startsWith("LOC-");
+        assertThat(response.getCode()).hasSizeLessThanOrEqualTo(50);
+        assertThat(location.getCode()).isEqualTo(response.getCode());
     }
 
     @Test
@@ -127,6 +136,34 @@ class LocationServiceImplTest {
         assertThatThrownBy(() -> locationService.createLocation(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "COM_001");
+    }
+
+    @Test
+    void createLocation_shouldReject_When_WarehouseInactive() {
+        CreateLocationRequest request = mock(CreateLocationRequest.class);
+        when(request.getWarehouseId()).thenReturn("wh-1");
+
+        Warehouses warehouse = new Warehouses();
+        warehouse.setId("wh-1");
+        warehouse.setStatus(WareHouseStatus.INACTIVE);
+
+        when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
+
+        assertThatThrownBy(() -> locationService.createLocation(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOC_004.getCode());
+    }
+
+    @Test
+    void createLocation_shouldThrowException_When_WarehouseNotFound() {
+        CreateLocationRequest request = mock(CreateLocationRequest.class);
+        when(request.getWarehouseId()).thenReturn("wh-not-found");
+
+        when(wareHouseRepository.findById("wh-not-found")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> locationService.createLocation(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WHS_001.getCode());
     }
 
     @Test
@@ -180,17 +217,14 @@ class LocationServiceImplTest {
                         .build()
         );
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            // Act
-            LocationResponse response = locationService.changeLocationStatus(locationId, request);
+        // Act
+        LocationResponse response = locationService.changeLocationStatus(locationId, request);
 
-            // Assert
-            assertThat(response.getStatus()).isEqualTo(newStatus);
-            assertThat(location.getStatus()).isEqualTo(newStatus);
-        }
+        // Assert
+        assertThat(response.getStatus()).isEqualTo(newStatus);
+        assertThat(location.getStatus()).isEqualTo(newStatus);
     }
 
     @Test
@@ -226,16 +260,13 @@ class LocationServiceImplTest {
         when(inventoryRepository.existsActiveInventoryByLocationId(locationId)).thenReturn(false);
         when(locationRepository.save(location)).thenReturn(location);
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(currentUser));
 
-            // Act
-            locationService.deleteLocation(locationId);
+        // Act
+        locationService.deleteLocation(locationId);
 
-            // Assert
-            assertThat(location.getStatus()).isEqualTo(LocationStatus.INACTIVE);
-        }
+        // Assert
+        assertThat(location.getStatus()).isEqualTo(LocationStatus.INACTIVE);
     }
 
     @Test

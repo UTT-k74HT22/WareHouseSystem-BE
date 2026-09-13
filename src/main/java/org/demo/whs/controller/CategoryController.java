@@ -65,7 +65,8 @@ public class CategoryController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_CATEGORY_READ')")
     public ResponseEntity<BaseResponse<CategoryResponse>> getCategoryById(
-            @PathVariable String id
+            @PathVariable
+            @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id
     ) {
         CategoryResponse response = categoryService.getCategoryById(id);
         return ResponseEntity.ok(BaseResponse.success(response));

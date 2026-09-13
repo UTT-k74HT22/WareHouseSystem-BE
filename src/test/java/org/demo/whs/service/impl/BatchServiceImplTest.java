@@ -21,14 +21,17 @@ import org.demo.whs.repository.AccountRepository;
 import org.demo.whs.repository.BatchRepository;
 import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.ProductRepository;
-import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.utils.IdentifierGenerator;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -45,7 +48,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -72,6 +74,18 @@ class BatchServiceImplTest {
 
     @Spy
     private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
+    @BeforeEach
+    void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void createBatch_success() {
@@ -108,25 +122,22 @@ class BatchServiceImplTest {
                         .build()
         );
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
 
-            BatchResponse result = batchService.createBatch(request);
+        BatchResponse result = batchService.createBatch(request);
 
-            assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo("BATCH_1");
-            assertThat(result.getBatchNumber()).startsWith("BAT-");
-            assertThat(result.getBatchNumber()).hasSizeLessThanOrEqualTo(50);
-            assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
-            assertThat(batch.getBatchNumber()).isEqualTo(result.getBatchNumber());
-            assertThat(batch.getCreatedBy()).isEqualTo("A1");
-            assertThat(batch.getUpdatedBy()).isEqualTo("A1");
-            assertThat(result.getTotalOnHandQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.getTotalAvailableQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo("BATCH_1");
+        assertThat(result.getBatchNumber()).startsWith("BAT-");
+        assertThat(result.getBatchNumber()).hasSizeLessThanOrEqualTo(50);
+        assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+        assertThat(batch.getBatchNumber()).isEqualTo(result.getBatchNumber());
+        assertThat(batch.getCreatedBy()).isEqualTo("A1");
+        assertThat(batch.getUpdatedBy()).isEqualTo("A1");
+        assertThat(result.getTotalOnHandQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result.getTotalAvailableQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
 
-            verify(batchRepository).save(batch);
-        }
+        verify(batchRepository).save(batch);
     }
 
     @Test
@@ -287,19 +298,16 @@ class BatchServiceImplTest {
         when(batchRepository.save(batch)).thenReturn(batch);
         when(batchMapper.toResponse(batch)).thenReturn(response);
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
 
-            BatchResponse result = batchService.updateBatch("B1", request);
+        BatchResponse result = batchService.updateBatch("B1", request);
 
-            assertThat(result).isNotNull();
-            assertThat(batch.getBatchNumber()).isEqualTo("B001");
-            assertThat(batch.getSupplierBatchNumber()).isEqualTo("SUP-01");
-            assertThat(batch.getNotes()).isEqualTo("Updated notes");
-            assertThat(batch.getUpdatedBy()).isEqualTo("A1");
-            assertThat(batch.getUpdatedAt()).isNotNull();
-        }
+        assertThat(result).isNotNull();
+        assertThat(batch.getBatchNumber()).isEqualTo("B001");
+        assertThat(batch.getSupplierBatchNumber()).isEqualTo("SUP-01");
+        assertThat(batch.getNotes()).isEqualTo("Updated notes");
+        assertThat(batch.getUpdatedBy()).isEqualTo("A1");
+        assertThat(batch.getUpdatedAt()).isNotNull();
     }
 
     @Test
@@ -342,21 +350,18 @@ class BatchServiceImplTest {
         when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
         when(inventoryRepository.existsReservedStockByBatchId("B1")).thenReturn(false);
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
-            when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
-            when(batchRepository.save(batch)).thenReturn(batch);
-            when(batchMapper.toResponse(batch)).thenReturn(response);
+        when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account));
+        when(batchRepository.save(batch)).thenReturn(batch);
+        when(batchMapper.toResponse(batch)).thenReturn(response);
 
-            BatchResponse result = batchService.quarantineBatch("B1", request);
+        BatchResponse result = batchService.quarantineBatch("B1", request);
 
-            assertThat(result).isNotNull();
-            assertThat(batch.getStatus()).isEqualTo(BatchStatus.QUARANTINE);
-            assertThat(batch.getNotes()).contains("[QUARANTINE] reason=Quality issue");
-            assertThat(batch.getNotes()).contains("notify_manager=true");
+        assertThat(result).isNotNull();
+        assertThat(batch.getStatus()).isEqualTo(BatchStatus.QUARANTINE);
+        assertThat(batch.getNotes()).contains("[QUARANTINE] reason=Quality issue");
+        assertThat(batch.getNotes()).contains("notify_manager=true");
 
-            verify(batchRepository).save(batch);
-        }
+        verify(batchRepository).save(batch);
     }
 
     @Test
@@ -440,20 +445,16 @@ class BatchServiceImplTest {
 
         when(batchRepository.findById("B1")).thenReturn(Optional.of(batch));
 
-        try (var mocked = mockStatic(SecurityUtils.class)) {
-            mocked.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+        when(accountRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(account));
+        when(batchRepository.save(batch)).thenReturn(batch);
+        when(batchMapper.toResponse(batch)).thenReturn(response);
 
-            when(accountRepository.findByUsername("admin"))
-                    .thenReturn(Optional.of(account));
-            when(batchRepository.save(batch)).thenReturn(batch);
-            when(batchMapper.toResponse(batch)).thenReturn(response);
+        BatchResponse result = batchService.releaseBatch("B1", request);
 
-            BatchResponse result = batchService.releaseBatch("B1", request);
-
-            assertThat(result).isNotNull();
-            assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
-            assertThat(batch.getNotes()).contains("[RELEASE] release_notes=Lab result passed");
-        }
+        assertThat(result).isNotNull();
+        assertThat(batch.getStatus()).isEqualTo(BatchStatus.AVAILABLE);
+        assertThat(batch.getNotes()).contains("[RELEASE] release_notes=Lab result passed");
     }
 
     @Test

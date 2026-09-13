@@ -53,7 +53,6 @@ class EmailServiceImplTest {
     @Mock
     private EmailProperties emailProperties;
 
-    @Mock
     private SpringTemplateEngine templateEngine;
 
     @Mock
@@ -72,6 +71,11 @@ class EmailServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        templateEngine = new SpringTemplateEngine();
+        org.thymeleaf.templateresolver.StringTemplateResolver resolver = new org.thymeleaf.templateresolver.StringTemplateResolver();
+        resolver.setTemplateMode(org.thymeleaf.templatemode.TemplateMode.HTML);
+        templateEngine.setTemplateResolver(resolver);
+
         // Initialize service with Optional<EmailProducerService>
         emailService = new EmailServiceImpl(
                 mailSender,
@@ -420,7 +424,6 @@ class EmailServiceImplTest {
 
         when(emailLogRepository.save(any(EmailLog.class))).thenReturn(emailLog);
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        when(templateEngine.process(anyString(), any())).thenReturn("<h1>Processed Template</h1>");
 
         // Act
         emailService.sendTemplateEmail(

@@ -14,17 +14,18 @@ import org.demo.whs.repository.InventoryRepository;
 import org.demo.whs.repository.LocationRepository;
 import org.demo.whs.repository.UserProfileRepository;
 import org.demo.whs.repository.WareHouseRepository;
-import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.utils.IdentifierGenerator;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -58,6 +59,18 @@ class WareHouseServiceImplTest {
 
     @Spy
     private IdentifierGenerator identifierGenerator = new IdentifierGenerator();
+
+    @BeforeEach
+    void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void deleteWarehouse_shouldThrowException_whenWarehouseNotFound() {
@@ -145,17 +158,11 @@ class WareHouseServiceImplTest {
         when(accountRepository.findByUsername("admin"))
                 .thenReturn(Optional.of(account));
 
-        try (MockedStatic<SecurityUtils> utilities = mockStatic(SecurityUtils.class)) {
+        wareHouseService.deleteWarehouse("WH1");
 
-            utilities.when(SecurityUtils::getCurrentUsername)
-                    .thenReturn("admin");
+        assertEquals(WareHouseStatus.INACTIVE, warehouse.getStatus());
 
-            wareHouseService.deleteWarehouse("WH1");
-
-            assertEquals(WareHouseStatus.INACTIVE, warehouse.getStatus());
-
-            verify(wareHouseRepository).save(warehouse);
-        }
+        verify(wareHouseRepository).save(warehouse);
     }
 
     @Test
@@ -179,16 +186,12 @@ class WareHouseServiceImplTest {
                 .name("Main Warehouse")
                 .build());
 
-        try (MockedStatic<SecurityUtils> utilities = mockStatic(SecurityUtils.class)) {
-            utilities.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+        WareHouseResponse response = wareHouseService.createWH(request);
 
-            WareHouseResponse response = wareHouseService.createWH(request);
-
-            assertNotNull(response);
-            assertTrue(response.getCode().startsWith("WH-"));
-            assertTrue(response.getCode().length() <= 20);
-            verify(wareHouseRepository).save(warehouse);
-        }
+        assertNotNull(response);
+        assertTrue(response.getCode().startsWith("WH-"));
+        assertTrue(response.getCode().length() <= 20);
+        verify(wareHouseRepository).save(warehouse);
     }
 
     @Test
@@ -247,15 +250,11 @@ class WareHouseServiceImplTest {
                 .managerId(warehouse.getManagerId())
                 .build());
 
-        try (MockedStatic<SecurityUtils> utilities = mockStatic(SecurityUtils.class)) {
-            utilities.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
+        WareHouseResponse response = wareHouseService.updateWareHouse("WH1", request);
 
-            WareHouseResponse response = wareHouseService.updateWareHouse("WH1", request);
-
-            assertNotNull(response);
-            assertEquals("M2", warehouse.getManagerId());
-            assertEquals("M2", response.getManagerId());
-            verify(wareHouseRepository).save(warehouse);
-        }
+        assertNotNull(response);
+        assertEquals("M2", warehouse.getManagerId());
+        assertEquals("M2", response.getManagerId());
+        verify(wareHouseRepository).save(warehouse);
     }
 }

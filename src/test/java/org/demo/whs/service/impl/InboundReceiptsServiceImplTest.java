@@ -38,7 +38,6 @@ import org.demo.whs.repository.PurchaseOrderLinesRepository;
 import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
-import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
@@ -48,13 +47,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -70,7 +70,6 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -116,16 +115,16 @@ class InboundReceiptsServiceImplTest {
     @InjectMocks
     private InboundReceiptsServiceImpl inboundReceiptsService;
 
-    private MockedStatic<SecurityUtils> mockedSecurityUtils;
-
     @BeforeEach
     void setUp() {
-        mockedSecurityUtils = mockStatic(SecurityUtils.class);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of())
+        );
     }
 
     @AfterEach
     void tearDown() {
-        mockedSecurityUtils.close();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -159,7 +158,6 @@ class InboundReceiptsServiceImplTest {
 
         when(purchaseOrdersRepository.findByIdForUpdate("po-123")).thenReturn(Optional.of(po));
         when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(wh));
-        when(SecurityUtils.getCurrentUsername()).thenReturn("admin");
         when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(actor));
         when(inboundReceiptsMapper.toEntity(any())).thenReturn(entity);
         when(inboundReceiptsRepository.existsByReceiptNumber(any())).thenReturn(false);
@@ -248,7 +246,7 @@ class InboundReceiptsServiceImplTest {
         when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
         when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(locationService.increaseUsedCapacity("loc-1", new BigDecimal("10.00"))).thenReturn(1);
         when(stockMovementsMapper.toEntity(
                 eq(StockMovementsType.INBOUND),
@@ -313,7 +311,7 @@ class InboundReceiptsServiceImplTest {
         when(batchRepository.save(any(Batch.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(stockMovementsMapper.toEntity(
                 eq(StockMovementsType.INBOUND),
                 eq("prod-1"),
@@ -375,7 +373,7 @@ class InboundReceiptsServiceImplTest {
         when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch));
         when(inventoryRepository.findByDimensionForUpdate("prod-1", "wh-1", "loc-1", "batch-1"))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(stockMovementsMapper.toEntity(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new StockMovements());
         when(purchaseOrderLinesRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -655,7 +653,6 @@ class InboundReceiptsServiceImplTest {
     }
 
     private void mockActor() {
-        mockedSecurityUtils.when(SecurityUtils::getCurrentUsername).thenReturn("admin");
         when(accountRepository.findByUsername("admin")).thenReturn(Optional.of(account("user-1", "admin")));
     }
 

@@ -191,6 +191,7 @@ class StockTransfersServiceImplTest {
     void should_ThrowBadRequest_When_SubmitTransferInInvalidStatus() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.PENDING)
+                .warehouseId("wh-1")
                 .build();
         transfer.setId("trf-submit-2");
 
@@ -242,7 +243,6 @@ class StockTransfersServiceImplTest {
     @Test
     void should_AllowAdminToCompleteTransfer_WithoutEmployeeWarehouseBinding() {
         when(roleRepository.findRoleNamesByAccountId("acc-1")).thenReturn(List.of("ADMIN"));
-        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
 
         StockTransfers transfer = buildPendingTransfer("trf-admin-complete", "loc-1", "loc-2", "12.00");
         mockActiveTransferDimensions(transfer);
@@ -326,6 +326,7 @@ class StockTransfersServiceImplTest {
     void should_CancelDraftTransfer_When_StatusIsDraft() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.DRAFT)
+                .warehouseId("wh-1")
                 .build();
         transfer.setId("trf-4");
 
@@ -342,6 +343,7 @@ class StockTransfersServiceImplTest {
     void should_CancelPendingTransfer_When_StatusIsPending() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.PENDING)
+                .warehouseId("wh-1")
                 .build();
         transfer.setId("trf-cancel-pending");
 
@@ -358,6 +360,7 @@ class StockTransfersServiceImplTest {
     void should_ThrowBadRequest_When_CancelTransferInInvalidStatus() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.COMPLETED)
+                .warehouseId("wh-1")
                 .build();
         transfer.setId("trf-cancel-invalid");
 
@@ -372,6 +375,7 @@ class StockTransfersServiceImplTest {
     void should_ThrowBadRequest_When_CompleteTransferInInvalidStatus() {
         StockTransfers transfer = StockTransfers.builder()
                 .status(StockTransfersStatus.COMPLETED)
+                .warehouseId("wh-1")
                 .build();
         transfer.setId("trf-5");
 
@@ -499,7 +503,6 @@ class StockTransfersServiceImplTest {
     @Test
     void should_AllowAdminToCreateTransfer_WithoutEmployeeWarehouseBinding() {
         when(roleRepository.findRoleNamesByAccountId("acc-1")).thenReturn(List.of("ADMIN"));
-        when(employeeRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
 
         StockTransfersRequest request = buildTransferRequest("5.00");
 

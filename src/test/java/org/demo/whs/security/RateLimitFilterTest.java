@@ -17,7 +17,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -35,7 +35,7 @@ class RateLimitFilterTest {
     private RateLimitService rateLimitService;
 
     @Mock
-    private RequestMappingHandlerMapping handlerMapping;
+    private HandlerMapping handlerMapping;
 
     private RateLimitFilter rateLimitFilter;
     private HandlerExecutionChain refreshTokenExecutionChain;

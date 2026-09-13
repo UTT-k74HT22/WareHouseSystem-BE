@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -52,12 +52,12 @@ import java.util.Set;
 public class RateLimitFilter extends OncePerRequestFilter {
     
     private final RateLimitService rateLimitService;
-    private final RequestMappingHandlerMapping handlerMapping;
+    private final HandlerMapping handlerMapping;
     private final ObjectMapper objectMapper;
     
     public RateLimitFilter(
             RateLimitService rateLimitService,
-            @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping,
+            @Qualifier("requestMappingHandlerMapping") HandlerMapping handlerMapping,
             ObjectMapper objectMapper) {
         this.rateLimitService = rateLimitService;
         this.handlerMapping = handlerMapping;
