@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
+import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
@@ -15,6 +16,7 @@ import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.EmployeeMapper;
 import org.demo.whs.repository.*;
 import org.demo.whs.service.EmployeeService;
+import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -53,6 +55,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeMapper employeeMapper;
     private final PasswordEncoder passwordEncoder;
     private final IdentifierGenerator identifierGenerator;
+    private final PermissionCacheService permissionCacheService;
 
     /**
      * Create and onboard a new warehouse employee.
@@ -164,6 +167,20 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         employeeRepository.save(employee);
+
+        // RBAC fix: terminated employee must not be able to login anymore.
+        if (employee.getAccountId() != null) {
+            accountRepository.findById(employee.getAccountId()).ifPresent(account -> {
+                account.setStatus(AccountStatus.SUSPENDED);
+                accountRepository.save(account);
+            });
+            try {
+                permissionCacheService.evictPermissions(employee.getAccountId());
+            } catch (Exception e) {
+                log.warn("Failed to evict permission cache for terminated employee accountId={}",
+                        employee.getAccountId(), e);
+            }
+        }
         log.info("Employee soft deleted successfully: id={}", employee.getId());
     }
 
@@ -188,6 +205,10 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private void validateRequest(CreateEmployeeRequest request, String employeeCode) {
         if (accountRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException(ErrorCode.COM_005);
+        }
+
+        if (request.getEmail() != null && userProfileRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException(ErrorCode.COM_005);
         }
 

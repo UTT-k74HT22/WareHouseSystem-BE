@@ -57,6 +57,12 @@ public class PermissionController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    @GetMapping("/resources")
+    @PreAuthorize("hasAuthority('PERM_PERMISSION_READ')")
+    public ResponseEntity<BaseResponse<java.util.List<String>>> getPermissionResources() {
+        return ResponseEntity.ok(BaseResponse.success(permissionService.getPermissionResources()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PermissionResponse>> getPermissionById(
