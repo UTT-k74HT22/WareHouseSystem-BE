@@ -1,6 +1,5 @@
 package org.demo.whs.service.impl;
 
-import jdk.jfr.Timestamp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Role;
@@ -133,6 +132,7 @@ public class RoleServiceImpl implements RoleService {
      * @throws NotFoundException if no role exists with the given ID
      */
     @Override
+    @Transactional(readOnly = true)
     public RoleResponse getRoleById(String roleId) {
 
         Role role = roleRepository.findById(roleId)
@@ -205,7 +205,7 @@ public class RoleServiceImpl implements RoleService {
 
         long userCount = accountHasRoleRepository.countByIdRoleId(id);
         if (userCount > 0) {
-            log.warn("ROle is being used Id={}, userCount{}", id, userCount);
+            log.warn("Role is being used id={}, userCount={}", id, userCount);
             throw new BadRequestException(ErrorCode.ROLE_006);
         }
 

@@ -30,6 +30,7 @@ import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.AuthService;
 import org.demo.whs.service.OtpService;
 import org.demo.whs.service.PermissionCacheService;
+import org.demo.whs.utils.PermissionCodeUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,6 +63,7 @@ public class AuthServiceImpl implements AuthService {
      * Authenticates a user based on the provided login request.
      */
     @Override
+    @Transactional(readOnly = true)
     public AuthResponse authenticate(LoginRequest request, String clientIp) {
         log.debug("Authentication attempt for username: {} from IP: {}",
                 request.getUsername(), clientIp);
@@ -92,6 +94,7 @@ public class AuthServiceImpl implements AuthService {
      * Refreshes the access token using a valid refresh token.
      */
     @Override
+    @Transactional(readOnly = true)
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
         log.debug("Attempting to refresh token");
@@ -257,6 +260,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean checkPermission(String resource, ActionType action) {
 
         // 🔥 1. Lấy accountId từ SecurityContext
@@ -268,7 +272,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 🔥 2. Build permission code theo chuẩn hệ thống
-        String permissionCode = generatePermissionCode(resource, action);
+        String permissionCode = PermissionCodeUtils.generateCode(resource, action);
 
         // 🔥 3. Lấy permission từ cache
         Set<String> permissions = permissionCacheService.getPermissions(accountId);
@@ -287,6 +291,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MyPermissionsResponse getMyPermissions() {
         String accountId = SecurityUtils.getCurrentAccountId();
 
@@ -325,12 +330,8 @@ public class AuthServiceImpl implements AuthService {
         Role userRole = roleRepository.findByName(String.valueOf(RoleType.USER))
                 .orElseThrow(() -> new BadRequestException(ROLE_001));
 
-        AccountRoleId accountRoleId = AccountRoleId.builder()
-                .accountId(account.getId())
-                .roleId(userRole.getId())
-                .build();
-
-        accountHasRoleRepository.save(new AccountHasRole(accountRoleId));
+        accountHasRoleRepository.save(
+                org.demo.whs.mapper.AccountHasRoleMapper.getAccountHasRole(account, userRole));
     }
 
     private void createUserProfile(RegisterRequest request, Account account) {
@@ -377,35 +378,5 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Invalid refresh token");
             throw new UnauthorizedException(AUTH_006);
         }
-    }
-
-    /**
-     * Generate permission code theo chuẩn hệ thống.
-     *
-     * Format:
-     * PERM_<RESOURCE>_<ACTION>
-     *
-     * Ví dụ:
-     * PERM_USER_CREATE
-     */
-    private String generatePermissionCode(String resource, ActionType action) {
-        if (action == null) {
-            throw new BadRequestException(ErrorCode.PERM_010);
-        }
-
-        return "PERM_" + normalizeResource(resource) + "_" + action.name();
-    }
-
-    private String normalizeResource(String resource) {
-        if (resource == null || resource.isBlank()) {
-            throw new BadRequestException(ErrorCode.PERM_009);
-        }
-
-        String normalized = resource.trim();
-        if (!normalized.matches("^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$")) {
-            throw new BadRequestException(ErrorCode.PERM_009);
-        }
-
-        return normalized;
     }
 }

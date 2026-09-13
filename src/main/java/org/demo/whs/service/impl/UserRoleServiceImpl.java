@@ -148,14 +148,10 @@ public class UserRoleServiceImpl implements UserRoleService {
         permissionCacheService.evictPermissions(userId);
 
         log.info("Deleted role {} from user {}", roleId, userId);
-
-        long actualCount = accountHasRoleRepository.countByIdAccountId(userId);
-        if (actualCount == 0) {
-            throw new IllegalStateException("User must have at least one role");
-        }
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<RoleResponse> getUserRoles(String userId, Pageable pageable) {
 
         log.info("Get roles for user {} with page={}", userId, pageable);
@@ -181,6 +177,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<AccountResponse> getRoleUsers(String roleId, Pageable pageable) {
         log.info("Fetching users for roleId={} with pageable: page={}, size={}",
                 roleId, pageable.getPageNumber(), pageable.getPageSize());
