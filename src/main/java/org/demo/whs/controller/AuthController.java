@@ -49,7 +49,7 @@ public class AuthController {
         limit = 5,
         duration = 300, // 5 phút
         type = RateLimitType.IP,
-        message = "Bạn đăng nhập quá nhiều lần, vui lòng thử lại sau.",
+        message = "Too many login attempts. Please try again.",
         failClosed = true  // CRITICAL: Block requests nếu Redis down
     )
     public ResponseEntity<BaseResponse<AuthResponse>> login(@RequestBody @Valid LoginRequest request, HttpServletRequest httpRequest) {
@@ -77,7 +77,7 @@ public class AuthController {
         limit = 10,
         duration = 60,
         type = RateLimitType.USER,
-        message = "Bạn làm mới phiên đăng nhập quá nhiều lần, vui lòng thử lại sau.",
+        message = "Too many token refresh requests. Please try again later.",
         failClosed = true  // Security-sensitive endpoint: block when Redis is unavailable
     )
     public ResponseEntity<BaseResponse<RefreshTokenResponse>> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
@@ -125,7 +125,7 @@ public class AuthController {
     public ResponseEntity<BaseResponse<String>> register(@RequestBody @Valid RegisterRequest request) {
         log.debug("Register attempt for username: {}", request.getUsername());
         authService.register(request);
-        return ResponseEntity.ok(BaseResponse.success("Đăng ký tài khoản thành công"));
+        return ResponseEntity.ok(BaseResponse.success("User registered successfully"));
     }
 
     /**
@@ -138,12 +138,12 @@ public class AuthController {
             limit = 3,
             duration = 900,
             type = RateLimitType.IP,
-            message = "Bạn yêu cầu quên mật khẩu quá nhiều lần, vui lòng thử lại sau 15 phút."
+            message = "Too many forgot password requests. Please try again after 15 minutes."
     )
     public ResponseEntity<BaseResponse<String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
         log.debug("Forgot password request for email: {}", request.getEmail());
         authService.forgotPassword(request.getEmail());
-        return ResponseEntity.ok(BaseResponse.success("OTP đã được gửi đến email của bạn"));
+        return ResponseEntity.ok(BaseResponse.success("OTP sent to your email"));
     }
 
     /**
@@ -156,7 +156,7 @@ public class AuthController {
             limit = 5,
             duration = 900,
             type = RateLimitType.IP,
-            message = "Bạn xác minh quá nhiều lần, vui lòng thử lại sau 15 phút."
+            message = "Too many verification attempts. Please try again after 15 minutes."
     )
     public ResponseEntity<BaseResponse<ForgotPasswordResponse>> verifyForgotPasswordOtp(@RequestBody @Valid VerifyForgotPasswordRequest request) {
         log.debug("Verifying forgot password OTP for email: {}", request.getEmail());
@@ -174,14 +174,14 @@ public class AuthController {
             limit = 3,
             duration = 900,
             type = RateLimitType.IP,
-            message = "Bạn đặt lại mật khẩu quá nhiều lần, vui lòng thử lại sau 15 phút."
+            message = "Too many password reset attempts. Please try again after 15 minutes."
     )
     public ResponseEntity<BaseResponse<String>> resetPassword(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody @Valid ResetPasswordRequest request) {
         log.debug("Resetting password using token session");
         authService.resetPassword(authHeader, request.getNewPassword());
-        return ResponseEntity.ok(BaseResponse.success("Đặt lại mật khẩu thành công"));
+        return ResponseEntity.ok(BaseResponse.success("Password reset successfully"));
     }
     /**
      * Endpoint for changing password using the current authenticated session.

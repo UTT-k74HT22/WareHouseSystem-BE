@@ -15,9 +15,6 @@ nul
 
 # IDE
 .idea/
-.settings/
-.classpath
-.factorypath
 *.iml
 *.iws
 *.ipr
