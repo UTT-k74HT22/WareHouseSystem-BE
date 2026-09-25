@@ -433,7 +433,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         
         RateLimitErrorResponse errorResponse = new RateLimitErrorResponse(
             ErrorCode.RATE_LIMIT_EXCEEDED.getCode(),
-            message,
+            publicRateLimitMessage(message),
             rateLimitDTO.getRetryAfter(),
             rateLimitDTO.getLimit(),
             rateLimitDTO.getRemaining(),
@@ -441,5 +441,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         );
         
         objectMapper.writeValue(response.getOutputStream(), errorResponse);
+    }
+
+    private String publicRateLimitMessage(String message) {
+        if (message != null && message.matches(".*[À-ỹ].*")) {
+            return message;
+        }
+        return ErrorCode.RATE_LIMIT_EXCEEDED.getMessage();
     }
 }
