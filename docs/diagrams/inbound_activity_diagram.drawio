@@ -1,0 +1,259 @@
+<mxfile host="Electron" modified="2026-09-14T08:25:00.000Z" agent="Antigravity" version="21.0.0" type="device">
+  <diagram id="inbound_activity" name="Activity Diagram - Inbound Receipt">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="BIỂU ĐỒ HOẠT ĐỘNG: QUY TRÌNH NHẬP KHO (INBOUND RECEIPT ACTIVITY DIAGRAM)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=15;fontStyle=1;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="820" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Swimlane 1: Nhân viên kho -->
+        <mxCell id="lane_actor" value="Nhân viên kho (Warehouse Operator)" style="swimlane;startSize=30;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontStyle=1;fontSize=13;align=center;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="55" width="390" height="1320" as="geometry" />
+        </mxCell>
+
+        <!-- Swimlane 2: Hệ thống WHS -->
+        <mxCell id="lane_system" value="Hệ thống WHS (WHS System)" style="swimlane;startSize=30;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontStyle=1;fontSize=13;align=center;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="55" width="430" height="1320" as="geometry" />
+        </mxCell>
+
+        <!-- Start Node -->
+        <mxCell id="start_node" value="" style="ellipse;html=1;shape=startState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="220" y="110" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Action 1: Select PO -->
+        <mxCell id="act_select_po" value="&lt;b&gt;1. Chọn Đơn mua hàng (PO)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;(Status: CONFIRMED hoặc PARTIALLY_RECEIVED)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="125" y="170" width="220" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Action 2: Request Create Receipt -->
+        <mxCell id="act_create_receipt" value="&lt;b&gt;2. Yêu cầu Tạo phiếu nhập kho&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;(POST /api/v1/inbound-receipts)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="135" y="260" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- System 1: Verify PO -->
+        <mxCell id="sys_verify_po" value="&lt;b&gt;Kiểm tra dữ liệu PO&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- PO có tồn tại trong hệ thống?&lt;br/&gt;- Status = CONFIRMED / PARTIALLY?&lt;br/&gt;- Kho đích (Warehouse) hợp lệ?&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="535" y="250" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Decision 1: PO Valid? -->
+        <mxCell id="dec_po_valid" value="" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="630" y="345" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- End Node: PO Invalid -->
+        <mxCell id="end_po_invalid" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="780" y="350" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl_po_invalid" value="Báo lỗi: Đơn không hợp lệ" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="735" y="385" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- System 2: Create Draft GR -->
+        <mxCell id="sys_create_draft_gr" value="&lt;b&gt;Khởi tạo Phiếu nhập kho (DRAFT)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- Sinh mã receipt_number (GR...)&lt;br/&gt;- Thừa hưởng warehouseId từ PO&lt;br/&gt;- Gắn status = DRAFT&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="535" y="415" width="230" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Action 3: Input Receipt Lines -->
+        <mxCell id="act_input_lines" value="&lt;b&gt;3. Khai báo Dòng hàng nhận (Lines)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;(Chọn PO Line, Sản phẩm, Số lượng nhận,&lt;br/&gt;Vị trí Location, Lô Batch, QC: PASS/QUARANTINE)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="505" width="230" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- System 3: Validate Line -->
+        <mxCell id="sys_validate_line" value="&lt;b&gt;Validate chi tiết Dòng hàng&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- Vị trí thuộc kho, ACTIVE/chưa đầy&lt;br/&gt;- Lô (Batch) hợp lệ theo sản phẩm &amp;amp; QC&lt;br/&gt;- SL nhận &amp;le; SL còn lại của PO line&lt;br/&gt;- Chống trùng dimension (Location, Batch, QC)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="500" width="250" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Decision 2: Line Valid? -->
+        <mxCell id="dec_line_valid" value="" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="630" y="605" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- System 4: Save Draft Line -->
+        <mxCell id="sys_save_draft_line" value="&lt;b&gt;Lưu Dòng hàng nháp (IRL)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- Gán lineNumber tăng dần&lt;br/&gt;- Lưu bản ghi InboundReceiptLines&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="535" y="675" width="230" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Decision 3: More Lines? -->
+        <mxCell id="dec_more_lines" value="&lt;b&gt;Còn dòng&lt;br/&gt;hàng khác?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="185" y="670" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Action 4: Confirm Receipt -->
+        <mxCell id="act_confirm_receipt" value="&lt;b&gt;4. Xác nhận Nhập kho&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;(PUT /api/v1/inbound-receipts/{id}/confirm)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="135" y="765" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- System 5: Lock & Aggregate Validate -->
+        <mxCell id="sys_lock_validate" value="&lt;b&gt;Khóa giao dịch &amp;amp; Đối chiếu lần cuối&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- Pessimistic Lock (Receipt, PO, POLines, Inv)&lt;br/&gt;- Check tổng số lượng các dòng &amp;le; SL đặt&lt;br/&gt;- Double-check trạng thái DRAFT&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="755" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- System 6: Increase Inventory -->
+        <mxCell id="sys_update_inventory" value="&lt;b&gt;Tăng tồn kho thực tế (Inventory)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- onHandQuantity += quantityReceived&lt;br/&gt;- Nếu QUARANTINE: quarantineQuantity += qty&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="850" width="250" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- System 7: Update Location Capacity -->
+        <mxCell id="sys_update_capacity" value="&lt;b&gt;Cập nhật sức chứa vị trí (Location)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- used_capacity += quantityReceived&lt;br/&gt;(chỉ áp dụng cho hàng PASS)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="925" width="250" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- System 8: Write Stock Movements -->
+        <mxCell id="sys_write_movement" value="&lt;b&gt;Ghi Sổ nhật ký kho (Stock Movements)&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- MovementType: INBOUND&lt;br/&gt;- Reference: INBOUND_RECEIPT&lt;br/&gt;- Ghi quantityBefore, quantityChange, quantityAfter&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="995" width="250" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- System 9: Update PO & Finalize Receipt -->
+        <mxCell id="sys_update_po_receipt" value="&lt;b&gt;Cập nhật PO &amp;amp; Chốt Phiếu nhập&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;- POLine.quantityReceived += lineQty&lt;br/&gt;- PO status: PARTIALLY_RECEIVED / COMPLETED&lt;br/&gt;- Receipt status: CONFIRMED (confirmedAt, By)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="1075" width="250" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Action 5: Receive Completed Notification -->
+        <mxCell id="act_notify_done" value="&lt;b&gt;Nhận thông báo: Nhập kho hoàn tất&lt;/b&gt;&lt;br/&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;(200 OK - Phiếu nhập đã CONFIRMED&lt;br/&gt;&amp;amp; Tồn kho khả dụng đã cập nhật)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1170" width="230" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- End Node: Success -->
+        <mxCell id="end_success" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="220" y="1260" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- EDGES / TRANSITIONS -->
+        <!-- Start -> Act 1 -->
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="start_node" target="act_select_po">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Act 1 -> Act 2 -->
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="act_select_po" target="act_create_receipt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Act 2 -> Sys 1 -->
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="act_create_receipt" target="sys_verify_po">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 1 -> Dec 1 -->
+        <mxCell id="edge4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_verify_po" target="dec_po_valid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Dec 1 -> End Invalid -->
+        <mxCell id="edge5" value="[Không hợp lệ]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_po_valid" target="end_po_invalid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Dec 1 -> Sys 2 (Valid) -->
+        <mxCell id="edge6" value="[Hợp lệ]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_po_valid" target="sys_create_draft_gr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 2 -> Act 3 (Feed back draft created) -->
+        <mxCell id="edge7" value="Trả về Phiếu DRAFT (GR...)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="sys_create_draft_gr" target="act_input_lines">
+          <mxGeometry x="-0.2" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="448" />
+              <mxPoint x="430" y="538" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Act 3 -> Sys 3 -->
+        <mxCell id="edge8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="act_input_lines" target="sys_validate_line">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 3 -> Dec 2 -->
+        <mxCell id="edge9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_validate_line" target="dec_line_valid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Dec 2 -> Act 3 (Loop back if Line Invalid) -->
+        <mxCell id="edge10" value="[Không hợp lệ: Báo lỗi]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.75;entryY=1;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_line_valid" target="act_input_lines">
+          <mxGeometry x="-0.3" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="625" />
+              <mxPoint x="650" y="615" />
+              <mxPoint x="293" y="615" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Dec 2 -> Sys 4 (Line Valid) -->
+        <mxCell id="edge11" value="[Hợp lệ]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_line_valid" target="sys_save_draft_line">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 4 -> Dec 3 (Saved -> check more lines) -->
+        <mxCell id="edge12" value="Đã lưu dòng nháp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="sys_save_draft_line" target="dec_more_lines">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Dec 3 -> Act 3 (Loop back if more lines) -->
+        <mxCell id="edge13" value="[Còn dòng khác]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=1;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_more_lines" target="act_input_lines">
+          <mxGeometry x="0.2" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="178" y="700" />
+              <mxPoint x="178" y="570" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Dec 3 -> Act 4 (Enough lines) -->
+        <mxCell id="edge14" value="[Đã khai báo đủ]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="dec_more_lines" target="act_confirm_receipt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Act 4 -> Sys 5 -->
+        <mxCell id="edge15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="act_confirm_receipt" target="sys_lock_validate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 5 -> Sys 6 -->
+        <mxCell id="edge16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_lock_validate" target="sys_update_inventory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 6 -> Sys 7 -->
+        <mxCell id="edge17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_update_inventory" target="sys_update_capacity">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 7 -> Sys 8 -->
+        <mxCell id="edge18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_update_capacity" target="sys_write_movement">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 8 -> Sys 9 -->
+        <mxCell id="edge19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="sys_write_movement" target="sys_update_po_receipt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sys 9 -> Act Notify -->
+        <mxCell id="edge20" value="Trả về 200 OK (CONFIRMED)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#000000;fontColor=#000000;fontSize=11;" edge="1" parent="1" source="sys_update_po_receipt" target="act_notify_done">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="1108" />
+              <mxPoint x="430" y="1198" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Act Notify -> End Success -->
+        <mxCell id="edge21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#000000;" edge="1" parent="1" source="act_notify_done" target="end_success">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -392,7 +392,7 @@ public class InventoryServiceImpl implements InventoryService {
                     BigDecimal onHandBefore = inventory.getOnHandQuantity();
                     inventory.setOnHandQuantity(onHandBefore.add(request.getQuantity()));
                     inventory.setLastMovementAt(LocalDateTime.now());
-                    inventory = inventoryRepository.save(inventory);
+                    inventory = inventoryRepository.saveAndFlush(inventory);
 
                     // 5. Record Stock Movement with Atomic Idempotency (Catch DB Unique Constraint)
                     try {
@@ -512,7 +512,7 @@ public class InventoryServiceImpl implements InventoryService {
 
                     // 4. Update
                     inventory.setLastMovementAt(LocalDateTime.now());
-                    inventory = inventoryRepository.save(inventory);
+                    inventory = inventoryRepository.saveAndFlush(inventory);
 
                     // 5. Record Stock Movement with Atomic Idempotency (Catch DB Unique Constraint)
                     try {

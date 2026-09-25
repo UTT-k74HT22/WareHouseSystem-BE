@@ -139,7 +139,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @param quantity   the quantity to add
      * @return number of rows updated (0 if failed)
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
         UPDATE Locations l
         SET l.usedCapacity = l.usedCapacity + :quantity
@@ -158,7 +158,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      * @param quantity   the quantity to subtract
      * @return number of rows updated (0 if failed)
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
         UPDATE Locations l
         SET l.usedCapacity = l.usedCapacity - :quantity
@@ -168,7 +168,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
         """)
     int decreaseUsedCapacity(@Param("locationId") String locationId,
                              @Param("quantity") BigDecimal quantity);
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
     UPDATE Locations l
     SET l.usedCapacity = :newUsed

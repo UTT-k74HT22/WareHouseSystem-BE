@@ -1,0 +1,22 @@
+package org.demo.whs.configuration;
+
+import io.minio.MinioClient;
+import org.mockito.Mockito;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
+
+/**
+ * Mock MinioClient for test profile to prevent connection timeouts to localhost:9000
+ */
+@Configuration
+@Profile("test")
+public class TestMinioConfig {
+
+    @Bean
+    @Primary
+    public MinioClient minioClient() {
+        return Mockito.mock(MinioClient.class);
+    }
+}
