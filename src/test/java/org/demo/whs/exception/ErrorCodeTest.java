@@ -39,4 +39,19 @@ class ErrorCodeTest {
     void should_MapAuth010ToUniqueValue_When_ReadingAuth010() {
         assertThat(ErrorCode.AUTH_010.getCode()).isEqualTo("AUTH_010");
     }
+
+    @Test
+    @DisplayName("All public error messages should be Vietnamese")
+    void should_ReturnVietnameseMessage_When_ReadingAnyErrorCode() {
+        assertThat(Arrays.stream(ErrorCode.values()).map(ErrorCode::getMessage))
+                .allMatch(message -> message.matches(".*[À-ỹ].*"));
+    }
+
+    @Test
+    @DisplayName("Error code lookup should resolve known values")
+    void should_ResolveErrorCode_When_CodeExists() {
+        assertThat(ErrorCode.fromCode("AUTH_001")).isEqualTo(ErrorCode.AUTH_001);
+        assertThat(ErrorCode.fromCode("UNKNOWN")).isNull();
+        assertThat(ErrorCode.fromCode(null)).isNull();
+    }
 }

@@ -31,7 +31,7 @@ public class BaseResponse<T> {
         return BaseResponse.<T>builder()
                 .success(true)
                 .errorCode(null)
-                .message("Success")
+                .message("Thành công")
                 .data(data)
                 .fieldErrors(null)
                 .timestamp(LocalDateTime.now())

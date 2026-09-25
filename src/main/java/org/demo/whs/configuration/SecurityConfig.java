@@ -128,7 +128,7 @@ public class SecurityConfig {
 
         // Parse allowed origins from config
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        config.setAllowedOrigins(origins.stream().map(String::trim).toList());
+        config.setAllowedOriginPatterns(origins.stream().map(String::trim).toList());
 
         // Parse allowed methods from config
         List<String> methods = Arrays.asList(allowedMethods.split(","));

@@ -49,9 +49,9 @@ public @interface RateLimit {
     
     /**
      * Message hiển thị khi rate limit exceeded
-     * Default: "Rate limit exceeded. Please try again later."
+     * Default: thông báo giới hạn tần suất bằng tiếng Việt.
      */
-    String message() default "Rate limit exceeded. Please try again later.";
+    String message() default "Bạn thao tác quá nhanh, vui lòng thử lại sau.";
     
     /**
      * Fallback mode khi Redis unavailable
