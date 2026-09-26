@@ -95,7 +95,6 @@ public class BackgroundJobMapper {
                 .currentStep(job.getCurrentStep())
                 .requestedBy(job.getRequestedBy())
                 .requestPayload(job.getRequestPayload())
-                .requestHash(job.getRequestHash())
                 .progressPercent(job.getProgressPercent())
                 .processedRows(job.getProcessedRows())
                 .totalRows(job.getTotalRows())
@@ -137,7 +136,6 @@ public class BackgroundJobMapper {
 
         return BackgroundJobFileResponse.builder()
                 .fileName(job.getResultFileName())
-                .storageObjectKey(job.getStorageObjectKey())
                 .mimeType(job.getResultMimeType())
                 .fileSize(job.getResultFileSize())
                 .downloadUrl(downloadUrl)

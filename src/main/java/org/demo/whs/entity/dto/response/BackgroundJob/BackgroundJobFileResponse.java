@@ -22,7 +22,6 @@ import java.time.Instant;
 public class BackgroundJobFileResponse {
 
     private String fileName;
-    private String storageObjectKey;
     private String mimeType;
     private Long fileSize;
     private String downloadUrl;

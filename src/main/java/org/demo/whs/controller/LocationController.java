@@ -3,9 +3,7 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
-import org.demo.whs.entity.dto.request.Location.SearchLocationRequest;
 import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
@@ -16,6 +14,8 @@ import org.demo.whs.service.LocationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /**
  * Controller for managing warehouse locations.
@@ -49,23 +49,44 @@ public class LocationController {
     }
 
     /**
-     * Endpoint to retrieve all locations with pagination.
+     * Endpoint to retrieve locations with pagination and optional filters.
+     * No filter params = all locations; with filters = filtered search.
      *
      * @param page the page number to retrieve (default: 0)
      * @param size the number of items per page (default: 10)
+     * @param warehouseId the warehouse ID (optional)
+     * @param keyword optional keyword matched against code, name and zone
+     * @param type the location type (optional)
+     * @param status the location status (optional)
      * @return a paginated response containing location information
      */
     @GetMapping
     @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
     public ResponseEntity<BaseResponse<PageResponse<LocationResponse>>> getAllLocations(
             @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size) {
-        log.info("Fetching all locations - page: {}, size: {}", page, size);
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(required = false) String warehouseId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) LocationType type,
+            @RequestParam(required = false) LocationStatus status) {
+        log.info("Fetching locations - page: {}, size: {}, warehouse={}, keyword={}, type={}, status={}",
+                page, size, warehouseId, keyword, type, status);
 
-        PageResponse<LocationResponse> response = locationService.getAllLocations(page, size);
-        BaseResponse<PageResponse<LocationResponse>> baseResponse = BaseResponse.success(response);
+        PageResponse<LocationResponse> response =
+                locationService.getLocations(page, size, warehouseId, keyword, type, status);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
 
-        return ResponseEntity.ok(baseResponse);
+    /**
+     * Endpoint to retrieve location statistics by status.
+     *
+     * @return location statistics
+     */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
+    public ResponseEntity<BaseResponse<Map<String, Long>>> getStats() {
+        log.info("Fetching location statistics");
+        return ResponseEntity.ok(BaseResponse.success(locationService.getStats()));
     }
 
     /**
@@ -111,64 +132,6 @@ public class LocationController {
     }
 
     /**
-     * Endpoint to search locations with multiple filters.
-     *
-     * @param warehouseId the warehouse ID (optional)
-     * @param code        the location code (optional, partial match)
-     * @param name        the location name (optional, partial match)
-     * @param zone        the zone (optional, partial match)
-     * @param type        the location type (optional)
-     * @param status      the location status (optional)
-     * @param page        the page number to retrieve (default: 0)
-     * @param size        the number of items per page (default: 10)
-     * @return a paginated response containing matching locations
-     */
-    @GetMapping("/search")
-    @PreAuthorize("hasAuthority('PERM_LOCATION_READ')")
-    public ResponseEntity<BaseResponse<PageResponse<LocationResponse>>> searchLocations(
-            @RequestParam(required = false) String warehouseId,
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String zone,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size) {
-        log.info("Searching locations with filters: warehouse={}, code={}, name={}, zone={}, type={}, status={}",
-                warehouseId, code, name, zone, type, status);
-
-        SearchLocationRequest request = new SearchLocationRequest();
-        request.setWarehouseId(warehouseId);
-        request.setCode(code);
-        request.setName(name);
-        request.setZone(zone);
-
-        // Parse type and status safely
-        if (type != null && !type.trim().isEmpty()) {
-            try {
-                request.setType(LocationType.valueOf(type.toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid location type: {}", type);
-                // Will be null and ignored in search
-            }
-        }
-
-        if (status != null && !status.trim().isEmpty()) {
-            try {
-                request.setStatus(LocationStatus.valueOf(status.toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid location status: {}", status);
-                // Will be null and ignored in search
-            }
-        }
-
-        PageResponse<LocationResponse> response = locationService.searchLocations(request, page, size);
-        BaseResponse<PageResponse<LocationResponse>> baseResponse = BaseResponse.success(response);
-
-        return ResponseEntity.ok(baseResponse);
-    }
-
-    /**
      * Endpoint to update an existing location.
      *
      * @param id      the unique identifier of the location to update
@@ -199,7 +162,7 @@ public class LocationController {
     @PreAuthorize("hasAuthority('PERM_LOCATION_UPDATE')")
     public ResponseEntity<BaseResponse<LocationResponse>> changeLocationStatus(
             @PathVariable String id,
-            @RequestBody @Valid ChangeLocationStatusRequest request) {
+            @RequestBody @Valid UpdateLocationRequest request) {
         log.info("Received request to change location status: id={}, newStatus={}",
                 id, request.getStatus());
 

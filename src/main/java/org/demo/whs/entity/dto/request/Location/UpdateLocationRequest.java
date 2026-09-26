@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
+import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
  * Request DTO for updating an existing location.
  * All fields are optional - user can update or leave blank.
  * Warehouse ID and code cannot be changed after creation.
+ * {@code status}/{@code reason} are only honored by PATCH /{id}/status and ignored by PUT.
  */
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -31,4 +33,9 @@ public class UpdateLocationRequest {
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    private LocationStatus status;
+
+    @Size(max = 500, message = "Reason must not exceed 500 characters")
+    private String reason;
 }
