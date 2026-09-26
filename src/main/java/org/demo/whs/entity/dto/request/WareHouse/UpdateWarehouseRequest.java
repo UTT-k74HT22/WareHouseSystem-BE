@@ -2,9 +2,12 @@ package org.demo.whs.entity.dto.request.WareHouse;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.entity.enums.WareHouseType;
 
 import java.math.BigDecimal;
@@ -12,32 +15,44 @@ import java.math.BigDecimal;
 /**
  * Request DTO for updating warehouse information.
  * All fields are optional - user can update or leave blank.
+ * {@code status} is only honored by PATCH /{id}/status and ignored by PUT.
  */
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateWarehouseRequest {
 
+    @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
+    @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
+    @Size(max = 50, message = "City must not exceed 50 characters")
     private String city;
 
+    @Size(max = 50, message = "State must not exceed 50 characters")
     private String state;
 
+    @Size(max = 50, message = "Country must not exceed 50 characters")
     private String country;
 
+    @Size(max = 20, message = "Postal code must not exceed 20 characters")
     private String postalCode;
 
-    @Pattern(regexp = "^\\d{10}$", message = "Phone must be exactly 10 digits")
+    @Pattern(regexp = "^(0\\d{9}|\\+84\\d{9})$", message = "Phone must be 10 digits starting with 0 or +84 followed by 9 digits")
     private String phone;
 
     @Email(message = "Email must be valid format")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;
 
     private WareHouseType wareHouseType;
 
+    private WareHouseStatus status;
+
+    @DecimalMin(value = "0.0", message = "Capacity must not be negative")
     private BigDecimal capacity;
 
+    @Size(max = 36, message = "Manager ID must not exceed 36 characters")
     private String managerId;
 }

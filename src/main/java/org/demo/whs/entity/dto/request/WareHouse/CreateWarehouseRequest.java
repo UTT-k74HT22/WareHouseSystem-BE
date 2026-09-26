@@ -2,14 +2,18 @@ package org.demo.whs.entity.dto.request.WareHouse;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import org.demo.whs.entity.enums.WareHouseStatus;
 import org.demo.whs.entity.enums.WareHouseType;
+
+import java.math.BigDecimal;
 
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -19,14 +23,29 @@ public class CreateWarehouseRequest {
     private String code;
 
     @NotBlank(message = "Name is required")
+    @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
+    @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
-    @Pattern(regexp = "^\\d{10}$", message = "Phone invalid format")
+    @Size(max = 50, message = "City must not exceed 50 characters")
+    private String city;
+
+    @Size(max = 50, message = "State must not exceed 50 characters")
+    private String state;
+
+    @Size(max = 50, message = "Country must not exceed 50 characters")
+    private String country;
+
+    @Size(max = 20, message = "Postal code must not exceed 20 characters")
+    private String postalCode;
+
+    @Pattern(regexp = "^(0\\d{9}|\\+84\\d{9})$", message = "Phone must be 10 digits starting with 0 or +84 followed by 9 digits")
     private String phone;
 
     @Email(message = "Email invalid format")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;
 
     @NotNull(message = "Status is required")
@@ -35,6 +54,10 @@ public class CreateWarehouseRequest {
     @NotNull(message = "Type is required")
     private WareHouseType wareHouseType;
 
+    @DecimalMin(value = "0.0", message = "Capacity must not be negative")
+    private BigDecimal capacity;
+
     @NotBlank(message = "Manager ID is required")
+    @Size(max = 36, message = "Manager ID must not exceed 36 characters")
     private String managerId;
 }

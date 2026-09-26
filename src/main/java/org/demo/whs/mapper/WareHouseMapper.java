@@ -26,10 +26,15 @@ public class WareHouseMapper {
         return Warehouses.builder()
                 .name(request.getName())
                 .address(request.getAddress())
+                .city(request.getCity())
+                .state(request.getState())
+                .country(request.getCountry())
+                .postalCode(request.getPostalCode())
                 .phone(request.getPhone())
                 .email(request.getEmail())
                 .type(request.getWareHouseType())
                 .status(request.getStatus())
+                .capacity(request.getCapacity())
                 .managerId(request.getManagerId())
                 .build();
     }
@@ -46,8 +51,8 @@ public class WareHouseMapper {
                 .address(warehouses.getAddress())
                 .phone(warehouses.getPhone())
                 .email(warehouses.getEmail())
-                .status(warehouses.getStatus().name())
-                .wareHouseType(warehouses.getType().name())
+                .status(warehouses.getStatus())
+                .wareHouseType(warehouses.getType())
                 .managerId(warehouses.getManagerId())
                 .manager(accountResponse)
                 .build();
@@ -65,36 +70,36 @@ public class WareHouseMapper {
             return;
         }
 
-        if (request.getName() != null) {
-            warehouse.setName(request.getName());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            warehouse.setName(request.getName().trim());
         }
 
-        if (request.getAddress() != null) {
-            warehouse.setAddress(request.getAddress());
+        if (request.getAddress() != null && !request.getAddress().isBlank()) {
+            warehouse.setAddress(request.getAddress().trim());
         }
 
-        if (request.getCity() != null) {
-            warehouse.setCity(request.getCity());
+        if (request.getCity() != null && !request.getCity().isBlank()) {
+            warehouse.setCity(request.getCity().trim());
         }
 
-        if (request.getState() != null) {
-            warehouse.setState(request.getState());
+        if (request.getState() != null && !request.getState().isBlank()) {
+            warehouse.setState(request.getState().trim());
         }
 
-        if (request.getCountry() != null) {
-            warehouse.setCountry(request.getCountry());
+        if (request.getCountry() != null && !request.getCountry().isBlank()) {
+            warehouse.setCountry(request.getCountry().trim());
         }
 
-        if (request.getPostalCode() != null) {
-            warehouse.setPostalCode(request.getPostalCode());
+        if (request.getPostalCode() != null && !request.getPostalCode().isBlank()) {
+            warehouse.setPostalCode(request.getPostalCode().trim());
         }
 
-        if (request.getPhone() != null) {
-            warehouse.setPhone(request.getPhone());
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            warehouse.setPhone(request.getPhone().trim());
         }
 
-        if (request.getEmail() != null) {
-            warehouse.setEmail(request.getEmail());
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            warehouse.setEmail(request.getEmail().trim());
         }
 
         if (request.getWareHouseType() != null) {

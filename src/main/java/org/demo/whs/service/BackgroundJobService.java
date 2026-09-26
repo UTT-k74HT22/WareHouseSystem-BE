@@ -1,8 +1,7 @@
 package org.demo.whs.service;
 
+import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobActionRequest;
 import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobFilterRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.CancelBackgroundJobRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.RetryBackgroundJobRequest;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobDetailResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobFileResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobStatusResponse;
@@ -49,7 +48,7 @@ public interface BackgroundJobService {
      * @param request     the retry background job request containing any necessary parameters for retrying
      * @return the background job status after retrying
      */
-    BackgroundJobStatusResponse retryJob(String jobId, String requestedBy, RetryBackgroundJobRequest request);
+    BackgroundJobStatusResponse retryJob(String jobId, String requestedBy, BackgroundJobActionRequest request);
 
     /**
      * Cancel a background job by job ID.
@@ -59,7 +58,7 @@ public interface BackgroundJobService {
      * @param request     the cancel background job request containing any necessary parameters for cancellation
      * @return the background job status after cancellation
      */
-    BackgroundJobStatusResponse cancelJob(String jobId, String requestedBy, CancelBackgroundJobRequest request);
+    BackgroundJobStatusResponse cancelJob(String jobId, String requestedBy, BackgroundJobActionRequest request);
 
     /**
      * Get background job result file download link by job ID.

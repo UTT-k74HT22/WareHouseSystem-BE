@@ -21,9 +21,6 @@ import java.util.Set;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class BackgroundJobFilterRequest {
 
-    @Size(max = 36, message = "Requested by must not exceed 36 characters")
-    private String requestedBy;
-
     private Set<BackgroundJobType> jobTypes;
 
     private Set<BackgroundJobStatus> statuses;

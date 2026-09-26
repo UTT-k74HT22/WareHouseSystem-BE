@@ -177,9 +177,15 @@ public class ChatBotServiceImpl implements ChatBotService {
         String conversationId = resolveConversationId(request.getConversationId());
         ChatBotConversationContext conversationContext = loadConversationContext(conversationId);
 
+        // Body rỗng (không message, không intent) -> trả hướng dẫn thay vì tạo context rác.
+        if (!StringUtils.hasText(request.getMessage()) && request.getIntent() == null) {
+            return buildResponse(conversationId, responseFormatter.help(), ChatBotIntent.UNKNOWN, null, null);
+        }
+
         ChatBotIntent intent = request.getIntent();
         Map<String, Object> payload = request.getPayload();
-        String sku = payload != null ? (String) payload.get("sku") : null;
+        Object skuValue = payload != null ? payload.get("sku") : null;
+        String sku = skuValue instanceof String s && StringUtils.hasText(s) ? s.trim() : null;
         ChatBotCommand command;
 
         if (intent != null && StringUtils.hasText(sku)) {
@@ -268,7 +274,7 @@ public class ChatBotServiceImpl implements ChatBotService {
 
         if (!StringUtils.hasText(warehouseKeyword)) {
             if (currentUser.isAdmin()) {
-                PageResponse<LocationResponse> page = locationService.getAllLocations(0, 20);
+                PageResponse<LocationResponse> page = locationService.getLocations(0, 20, null, null, null, null);
                 List<LocationResponse> locations = page.getContent() != null ? page.getContent() : List.of();
                 return buildResponse(
                         conversationId,

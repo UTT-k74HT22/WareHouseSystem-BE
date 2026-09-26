@@ -1,11 +1,13 @@
 package org.demo.whs.service;
 
-import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
+import org.demo.whs.entity.enums.WareHouseStatus;
+import org.demo.whs.entity.enums.WareHouseType;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service interface for warehouse operations.
@@ -21,13 +23,27 @@ public interface WareHouseService {
     WareHouseResponse createWH(CreateWarehouseRequest request);
 
     /**
-     * Retrieves a paginated list of all warehouses.
+     * Retrieves a paginated list of all warehouses (legacy path, no filters).
      *
      * @param page the page number to retrieve
      * @param size the number of items per page
      * @return a paginated response containing warehouse information
      */
     PageResponse<WareHouseResponse> getAll(Integer page, Integer size);
+
+    /**
+     * Retrieves warehouses with pagination and optional filters.
+     * No filter -> delegates to {@link #getAll(Integer, Integer)} to keep legacy behavior.
+     * Filter values are raw query strings: blank = ignored, invalid enum -> COM_003.
+     *
+     * @param page the page number to retrieve
+     * @param size the number of items per page
+     * @param keyword optional keyword matched against code, name and address
+     * @param status optional warehouse status
+     * @param type optional warehouse type
+     * @return a paginated response containing warehouse information
+     */
+    PageResponse<WareHouseResponse> getWarehouses(Integer page, Integer size, String keyword, WareHouseStatus status, WareHouseType type);
 
     /**
      * Retrieves a warehouse by its unique identifier.
@@ -60,7 +76,12 @@ public interface WareHouseService {
      * @param request the request containing the new status
      * @return the response containing updated warehouse information
      */
-    WareHouseResponse changeStatus(String id, ChangeStatusRequest request);
+    WareHouseResponse changeStatus(String id, UpdateWarehouseRequest request);
+
+    /**
+     * Counts warehouses by status for dashboard statistics.
+     */
+    Map<String, Long> getStats();
 
     /**
      *

@@ -5,9 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Warehouses;
-import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
-import org.demo.whs.entity.dto.request.Location.SearchLocationRequest;
 import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -35,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,7 +114,7 @@ public class LocationServiceImpl implements LocationService {
     }
 
     /**
-     * Retrieves all locations with pagination.
+     * Retrieves all locations with pagination (legacy path, no filters).
      *
      * @param page the page number
      * @param size the page size
@@ -148,6 +147,59 @@ public class LocationServiceImpl implements LocationService {
                 .collect(Collectors.toList());
 
         return PageResponse.from(locationPage, responses);
+    }
+
+    /**
+     * Retrieves locations with pagination and optional filters.
+     * No filter -> uses the legacy path to keep original behavior.
+     *
+     * @param page the page number
+     * @param size the page size
+     * @param warehouseId optional warehouse ID
+     * @param keyword optional keyword matched against code, name and zone
+     * @param type optional location type
+     * @param status optional location status
+     * @return paginated location response
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<LocationResponse> getLocations(Integer page, Integer size, String warehouseId,
+                                                       String keyword, LocationType type, LocationStatus status) {
+        String safeWarehouseId = normalize(warehouseId);
+        String safeKeyword = normalize(keyword);
+        // Không có filter mở rộng -> dùng đường cũ để giữ nguyên hành vi.
+        if (safeWarehouseId == null && safeKeyword == null && type == null && status == null) {
+            return getAllLocations(page, size);
+        }
+        int safePage = (page == null || page < 0) ? 0 : page;
+        int safeSize = size == null ? 10 : Math.min(Math.max(size, 1), 100);
+        log.info("Searching locations - page: {}, size: {}, warehouse={}, keyword={}, type={}, status={}",
+                safePage, safeSize, safeWarehouseId, safeKeyword, type, status);
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("code").ascending());
+        Page<Locations> locationPage = locationRepository.searchLocations(
+                safeWarehouseId, null, null, null, safeKeyword, type, status, pageable);
+
+        Set<String> wareHouseIds = locationPage.getContent().stream()
+                .map(Locations::getWarehouseId)
+                .collect(Collectors.toSet());
+
+        List<Warehouses> warehouses = wareHouseRepository.findByIdIn(wareHouseIds);
+        Map<String, Warehouses> warehouseMap = warehouses.stream()
+                .collect(Collectors.toMap(Warehouses::getId, wh -> wh));
+
+        List<LocationResponse> responses = locationPage.getContent().stream()
+                .map(location -> {
+                    Warehouses warehouse = warehouseMap.get(location.getWarehouseId());
+                    return locationMapper.toResponseWithWarehouse(location, warehouse);
+                })
+                .collect(Collectors.toList());
+
+        return PageResponse.from(locationPage, responses);
+    }
+
+    private static String normalize(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     /**
@@ -211,51 +263,6 @@ public class LocationServiceImpl implements LocationService {
     }
 
     /**
-     * Searches locations with multiple filters.
-     *
-     * @param request the search criteria
-     * @param page    the page number
-     * @param size    the page size
-     * @return paginated location response
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<LocationResponse> searchLocations(
-            SearchLocationRequest request, Integer page, Integer size) {
-        log.info("Searching locations with filters: warehouse={}, code={}, zone={}, type={}, status={}",
-                request.getWarehouseId(), request.getCode(), request.getZone(),
-                request.getType(), request.getStatus());
-
-        // Validate pagination parameters
-        validatePaginationParams(page, size);
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("code").ascending());
-        Page<Locations> locationPage = locationRepository.searchLocations(
-                request.getWarehouseId(),
-                request.getCode(),
-                request.getName(),
-                request.getZone(),
-                request.getType(),
-                request.getStatus(),
-                pageable
-        );
-
-        List<LocationResponse> responses = locationPage.getContent().stream()
-                .map(locationMapper::toResponse)
-                .collect(Collectors.toList());
-
-        return PageResponse.<LocationResponse>builder()
-                .page(page)
-                .size(size)
-                .totalPages(locationPage.getTotalPages())
-                .totalElements(locationPage.getTotalElements())
-                .content(responses)
-                .isFirst(locationPage.isFirst())
-                .isLast(locationPage.isLast())
-                .build();
-    }
-
-    /**
      * Updates an existing location.
      *
      * @param id      the location ID
@@ -269,6 +276,13 @@ public class LocationServiceImpl implements LocationService {
 
         // Find existing location
         Locations location = findLocationById(id);
+
+        if (request.getCapacity() != null && location.getUsedCapacity() != null
+                && request.getCapacity().compareTo(location.getUsedCapacity()) < 0) {
+            log.warn("New capacity {} is less than used capacity {}: id={}",
+                    request.getCapacity(), location.getUsedCapacity(), id);
+            throw new BadRequestException(ErrorCode.LOC_002);
+        }
 
         // Update fields from request
         locationMapper.updateEntity(location, request);
@@ -298,9 +312,13 @@ public class LocationServiceImpl implements LocationService {
      */
     @Override
     @Transactional
-    public LocationResponse changeLocationStatus(String id, ChangeLocationStatusRequest request) {
+    public LocationResponse changeLocationStatus(String id, UpdateLocationRequest request) {
         log.info("Changing location status: id={}, newStatus={}, reason={}",
                 id, request.getStatus(), request.getReason());
+
+        if (request.getStatus() == null) {
+            throw new BadRequestException(ErrorCode.COM_003);
+        }
 
         // Find existing location
         Locations location = findLocationById(id);
@@ -348,6 +366,11 @@ public class LocationServiceImpl implements LocationService {
         // Find existing location
         Locations location = findLocationById(id);
 
+        if (location.getStatus() == LocationStatus.INACTIVE) {
+            log.warn("Location already INACTIVE: id={}", id);
+            throw new BadRequestException(ErrorCode.LOC_005);
+        }
+
         // Check if location has inventory before deletion
         validateNoActiveInventory(id);
 
@@ -361,6 +384,22 @@ public class LocationServiceImpl implements LocationService {
 
         log.info("Location soft deleted successfully: id={}, code={}",
                 location.getId(), location.getCode());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getStats() {
+        long active = locationRepository.countByStatus(LocationStatus.ACTIVE);
+        long inactive = locationRepository.countByStatus(LocationStatus.INACTIVE);
+        long full = locationRepository.countByStatus(LocationStatus.FULL);
+        long maintenance = locationRepository.countByStatus(LocationStatus.MAINTENANCE);
+        Map<String, Long> stats = new LinkedHashMap<>();
+        stats.put("total", active + inactive + full + maintenance);
+        stats.put("active", active);
+        stats.put("inactive", inactive);
+        stats.put("full", full);
+        stats.put("maintenance", maintenance);
+        return stats;
     }
 
     @Override
