@@ -1,25 +1,22 @@
 package org.demo.whs.service.impl;
 
-import org.demo.whs.entity.Account;
 import org.demo.whs.entity.enums.ActionType;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.UnauthorizedException;
-import org.demo.whs.security.CustomUserDetails;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.PermissionCacheService;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,55 +45,55 @@ class AuthCheckPermissionServiceImplTest {
         );
     }
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
-
-    private void setAuthenticatedAccount(String accountId) {
-        if (accountId == null) {
-            SecurityContextHolder.clearContext();
-            return;
-        }
-        Account account = Account.builder().build();
-        account.setId(accountId);
-        CustomUserDetails userDetails = new CustomUserDetails(account, List.of(), Set.of());
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities())
-        );
-    }
-
     @Test
     @DisplayName("Should return true when current user has requested permission")
     void should_ReturnTrue_When_CurrentUserHasRequestedPermission() {
-        setAuthenticatedAccount("account-1");
-        when(permissionCacheService.getPermissions("account-1"))
-                .thenReturn(Set.of("PERM_USER_READ", "PERM_USER_CREATE"));
+        try (var mockedSecurityUtils = mockStatic(SecurityUtils.class)) {
+            mockedSecurityUtils.when(SecurityUtils::getCurrentAccountId).thenReturn("account-1");
+            when(permissionCacheService.getPermissions("account-1"))
+                    .thenReturn(Set.of("PERM_USER_READ", "PERM_USER_CREATE"));
 
-        boolean allowed = authService.checkPermission("user", ActionType.READ);
+            boolean allowed = authService.checkPermission("USER", ActionType.READ);
 
-        assertThat(allowed).isTrue();
-        verify(permissionCacheService).getPermissions("account-1");
+            assertThat(allowed).isTrue();
+            verify(permissionCacheService).getPermissions("account-1");
+        }
+    }
+
+    @Test
+    @DisplayName("Should reject non canonical resource format")
+    void should_RejectNonCanonicalResourceFormat() {
+        try (var mockedSecurityUtils = mockStatic(SecurityUtils.class)) {
+            mockedSecurityUtils.when(SecurityUtils::getCurrentAccountId).thenReturn("account-1");
+
+            assertThatThrownBy(() -> authService.checkPermission("stock-adjustment", ActionType.READ))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "PERM_009");
+        }
     }
 
     @Test
     @DisplayName("Should return false when permission is missing")
     void should_ReturnFalse_When_PermissionIsMissing() {
-        setAuthenticatedAccount("account-1");
-        when(permissionCacheService.getPermissions("account-1")).thenReturn(Set.of("PERM_USER_CREATE"));
+        try (var mockedSecurityUtils = mockStatic(SecurityUtils.class)) {
+            mockedSecurityUtils.when(SecurityUtils::getCurrentAccountId).thenReturn("account-1");
+            when(permissionCacheService.getPermissions("account-1")).thenReturn(Set.of("PERM_USER_CREATE"));
 
-        boolean allowed = authService.checkPermission("USER", ActionType.READ);
+            boolean allowed = authService.checkPermission("USER", ActionType.READ);
 
-        assertThat(allowed).isFalse();
+            assertThat(allowed).isFalse();
+        }
     }
 
     @Test
     @DisplayName("Should throw unauthorized when current user is missing")
     void should_ThrowUnauthorized_When_CurrentUserIsMissing() {
-        setAuthenticatedAccount(null);
+        try (var mockedSecurityUtils = mockStatic(SecurityUtils.class)) {
+            mockedSecurityUtils.when(SecurityUtils::getCurrentAccountId).thenReturn(null);
 
-        assertThatThrownBy(() -> authService.checkPermission("USER", ActionType.READ))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "AUTH_005");
+            assertThatThrownBy(() -> authService.checkPermission("USER", ActionType.READ))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "AUTH_005");
+        }
     }
 }

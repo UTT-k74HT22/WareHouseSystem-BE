@@ -3,9 +3,12 @@ package org.demo.whs.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.StorageException;
 import org.demo.whs.repository.PermissionRepository;
 import org.demo.whs.service.PermissionCacheService;
 import org.demo.whs.service.RedisService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -32,11 +35,15 @@ public class PermissionCacheServiceImpl implements PermissionCacheService {
 
         String key = KEY_PREFIX + userId;
 
-        var cached = redisService.getOptional(key, new TypeReference<Set<String>>() {});
+        try {
+            var cached = redisService.getOptional(key, new TypeReference<Set<String>>() {});
 
-        if (cached.isPresent()) {
-            log.debug("[CACHE HIT] userId={} -> {} permissions", userId, cached.get().size());
-            return cached.get();
+            if (cached.isPresent()) {
+                log.debug("[CACHE HIT] userId={} -> {} permissions", userId, cached.get().size());
+                return cached.get();
+            }
+        } catch (Exception e) {
+            log.error("[CACHE READ ERROR] userId={}: {}", userId, e.getMessage(), e);
         }
 
         // MISS
@@ -49,7 +56,7 @@ public class PermissionCacheServiceImpl implements PermissionCacheService {
             log.debug("[DB QUERY] Loaded {} permissions for userId={}", permissions.size(), userId);
         } catch (Exception e) {
             log.error("[DB QUERY ERROR] userId={}: {}", userId, e.getMessage(), e);
-            return Collections.emptySet();
+            throw new StorageException(ErrorCode.PERM_013, HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         try {
