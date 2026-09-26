@@ -94,6 +94,9 @@ jobs:
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=$(echo '${{ github.repository_owner }}/whs-backend' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
@@ -109,14 +112,16 @@ jobs:
           script: |
             set -e
             echo "==== Deploying WHS Backend ===="
-            cd /opt/whs/deploy
+            DEPLOY_DIR="/home/devops/whs/WareHouseSystem-INFRA/deploy"
 
             # Ensure data/log directories exist with proper write permissions for non-root container
-            mkdir -p logs/app data/email-attachments
-            chmod -R 777 logs/app data/email-attachments || true
+            mkdir -p "$DEPLOY_DIR/logs/app" "$DEPLOY_DIR/data/email-attachments"
+            chmod -R 777 "$DEPLOY_DIR/logs/app" "$DEPLOY_DIR/data/email-attachments" || true
+            cd "$DEPLOY_DIR"
 
             # Pull latest backend image
-            echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || github.actor }}" --password-stdin
+            # NOTE: GHCR_TOKEN must be a PAT with read:packages scope — GITHUB_TOKEN does NOT work from external servers
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || github.actor }}" --password-stdin
             IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             echo "Pulling $IMAGE_REF..."
             docker pull "$IMAGE_REF"
