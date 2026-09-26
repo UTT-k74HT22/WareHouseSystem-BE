@@ -52,7 +52,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .toArray(String[]::new);
 
         registry.addMapping("/api/**")
-                .allowedOrigins(origins)
+                .allowedOriginPatterns(origins)
                 .allowedMethods(methods)
                 .allowedHeaders(allowedHeaders.equals("*")
                         ? new String[]{"*"}
