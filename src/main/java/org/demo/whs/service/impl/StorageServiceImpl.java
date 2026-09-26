@@ -3,7 +3,6 @@ package org.demo.whs.service.impl;
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.configuration.MinioProperties;
 import org.demo.whs.entity.dto.response.FileUploadResponse;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class StorageServiceImpl implements StorageService {
 
     /** Hard limit: 50 MB per file */
@@ -51,7 +49,25 @@ public class StorageServiceImpl implements StorageService {
     );
 
     private final MinioClient minioClient;
+    private final MinioClient presignMinioClient;
     private final MinioProperties minioProperties;
+
+    public StorageServiceImpl(MinioClient minioClient, MinioProperties minioProperties) {
+        this.minioClient = minioClient;
+        this.minioProperties = minioProperties;
+
+        String publicEndpoint = minioProperties.getPublicEndpoint();
+        if (!StringUtils.hasText(publicEndpoint)
+                || Objects.equals(publicEndpoint, minioProperties.getEndpoint())) {
+            this.presignMinioClient = minioClient;
+        } else {
+            log.info("Initializing MinIO presign client - public endpoint: {}", publicEndpoint);
+            this.presignMinioClient = MinioClient.builder()
+                    .endpoint(publicEndpoint)
+                    .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                    .build();
+        }
+    }
 
     // =========================================================================
     // Private helpers
@@ -220,7 +236,7 @@ public class StorageServiceImpl implements StorageService {
         log.info("Generating presigned URL for object: {}", objectName);
         try {
 
-            String url = minioClient.getPresignedObjectUrl(
+            String url = presignMinioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(minioProperties.getBucketName())

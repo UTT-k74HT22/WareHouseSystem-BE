@@ -17,6 +17,12 @@ public class MinioProperties {
     /** MinIO server endpoint (e.g. http://localhost:9000) */
     private String endpoint;
 
+    /**
+     * Browser-facing endpoint used to generate presigned URLs. This may differ
+     * from {@link #endpoint} when MinIO is behind a reverse proxy.
+     */
+    private String publicEndpoint;
+
     /** Access key (root user) */
     private String accessKey;
 
