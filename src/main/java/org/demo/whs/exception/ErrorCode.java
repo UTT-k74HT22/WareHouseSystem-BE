@@ -229,7 +229,7 @@ public enum ErrorCode {
     PERM_010("PERM_010", "Hành động không hợp lệ"),
     PERM_011("PERM_011", "Không thể thay đổi mã quyền"),
     PERM_012("PERM_012", "Không thể thay đổi tài nguyên của quyền"),
-    PERM_013("PERM_013", "Permission source is temporarily unavailable"),
+    PERM_013("PERM_013", "Nguồn cấp quyền hiện tạm thời không khả dụng."),
     //User Role errors
     USER_ROLE_001("USER_ROLE_001", "Không tìm thấy người dùng"),
     USER_ROLE_002("USER_ROLE_002", "Không tìm thấy vai trò cần gán"),
