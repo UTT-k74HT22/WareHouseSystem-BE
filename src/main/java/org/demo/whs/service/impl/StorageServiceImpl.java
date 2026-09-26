@@ -56,15 +56,20 @@ public class StorageServiceImpl implements StorageService {
         this.minioClient = minioClient;
         this.minioProperties = minioProperties;
 
+        String region = StringUtils.hasText(minioProperties.getRegion())
+                ? minioProperties.getRegion()
+                : "us-east-1";
+
         String publicEndpoint = minioProperties.getPublicEndpoint();
         if (!StringUtils.hasText(publicEndpoint)
                 || Objects.equals(publicEndpoint, minioProperties.getEndpoint())) {
             this.presignMinioClient = minioClient;
         } else {
-            log.info("Initializing MinIO presign client - public endpoint: {}", publicEndpoint);
+            log.info("Initializing MinIO presign client - public endpoint: {}, region: {}", publicEndpoint, region);
             this.presignMinioClient = MinioClient.builder()
                     .endpoint(publicEndpoint)
                     .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                    .region(region)
                     .build();
         }
     }
@@ -159,6 +164,8 @@ public class StorageServiceImpl implements StorageService {
 
             return FileMapper.toResponse(objectName, file, presignedUrl, expiresAt);
 
+        } catch (StorageException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to upload file: {} to MinIO", originalFilename, e);
             throw new StorageException(ErrorCode.STORAGE_001);
@@ -197,6 +204,8 @@ public class StorageServiceImpl implements StorageService {
                     .presignedUrl(presignedUrl)
                     .presignedUrlExpiresAt(expiresAt)
                     .build();
+        } catch (StorageException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to upload generated file: {} to MinIO", originalFileName, e);
             throw new StorageException(ErrorCode.STORAGE_001);
@@ -235,12 +244,16 @@ public class StorageServiceImpl implements StorageService {
     public String getPresignedUrl(String objectName) {
         log.info("Generating presigned URL for object: {}", objectName);
         try {
+            String region = StringUtils.hasText(minioProperties.getRegion())
+                    ? minioProperties.getRegion()
+                    : "us-east-1";
 
             String url = presignMinioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(minioProperties.getBucketName())
                             .object(objectName)
+                            .region(region)
                             .expiry(minioProperties.getPresignedUrlExpiry(), TimeUnit.SECONDS)
                             .build()
             );
@@ -248,7 +261,6 @@ public class StorageServiceImpl implements StorageService {
             log.info("Generated presigned URL for object: {} (expires in {} seconds)", objectName, minioProperties.getPresignedUrlExpiry());
             return url;
         } catch (Exception ex) {
-
             log.error("Failed to generate presigned URL for object: {}", objectName, ex);
             throw new StorageException(ErrorCode.STORAGE_004); // Lỗi không lấy được URL
         }

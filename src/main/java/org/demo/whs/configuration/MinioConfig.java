@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * MinioConfig – creates the {@link MinioClient} bean and ensures the
@@ -28,11 +29,16 @@ public class MinioConfig {
      */
     @Bean
     public MinioClient minioClient() {
-        log.info("Initializing MinIO client – endpoint: {}", minioProperties.getEndpoint());
+        String region = StringUtils.hasText(minioProperties.getRegion())
+                ? minioProperties.getRegion()
+                : "us-east-1";
+
+        log.info("Initializing MinIO client – endpoint: {}, region: {}", minioProperties.getEndpoint(), region);
 
         MinioClient client = MinioClient.builder()
                 .endpoint(minioProperties.getEndpoint())
                 .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                .region(region)
                 .build();
 
         ensureBucketExists(client, minioProperties.getBucketName());

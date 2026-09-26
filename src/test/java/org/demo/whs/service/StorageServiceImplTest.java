@@ -3,6 +3,7 @@ package org.demo.whs.service;
 import io.minio.*;
 import org.demo.whs.configuration.MinioProperties;
 import org.demo.whs.entity.dto.response.FileUploadResponse;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.StorageException;
 import org.demo.whs.service.impl.StorageServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,7 +100,7 @@ class StorageServiceImplTest {
         assertThatThrownBy(() -> storageService.uploadFile(file, "uploads"))
                 .isInstanceOf(StorageException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                .hasMessageContaining("File type not allowed");
+                .hasMessage(ErrorCode.STORAGE_005.getMessage());
     }
 
     @Test
@@ -130,7 +131,7 @@ class StorageServiceImplTest {
         assertThatThrownBy(() -> storageService.uploadFile(file, "uploads"))
                 .isInstanceOf(StorageException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.PAYLOAD_TOO_LARGE)
-                .hasMessageContaining("File size exceeds maximum allowed limit");
+                .hasMessage(ErrorCode.STORAGE_006.getMessage());
     }
 
     // =========================================================================
@@ -148,7 +149,7 @@ class StorageServiceImplTest {
 
         assertThatThrownBy(() -> storageService.uploadFile(file, "products"))
                 .isInstanceOf(StorageException.class)
-                .hasMessageContaining("File upload failed");
+                .hasMessage(ErrorCode.STORAGE_001.getMessage());
     }
 
     // =========================================================================
@@ -223,7 +224,7 @@ class StorageServiceImplTest {
 
         assertThatThrownBy(() -> storageService.getPresignedUrl("products/img.jpg"))
                 .isInstanceOf(StorageException.class)
-                .hasMessageContaining("Failed to generate presigned URL");
+                .hasMessage(ErrorCode.STORAGE_004.getMessage());
     }
 
     // =========================================================================
@@ -249,7 +250,7 @@ class StorageServiceImplTest {
 
         assertThatThrownBy(() -> storageService.deleteFile("products/img.jpg"))
                 .isInstanceOf(StorageException.class)
-                .hasMessageContaining("File deletion failed");
+                .hasMessage(ErrorCode.STORAGE_003.getMessage());
     }
 
     // =========================================================================
@@ -264,5 +265,25 @@ class StorageServiceImplTest {
         boolean result = storageService.fileExists("products/img.jpg");
 
         assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("getPresignedUrl – with separate publicEndpoint – generates URL without network call")
+    void getPresignedUrl_withPublicEndpoint_generatesUrlWithoutNetworkCall() {
+        MinioProperties props = new MinioProperties();
+        props.setEndpoint("http://minio:9000");
+        props.setPublicEndpoint("http://192.0.2.1:8088");
+        props.setBucketName("warehouse");
+        props.setAccessKey("minioadmin");
+        props.setSecretKey("whs123456@");
+        props.setRegion("us-east-1");
+        props.setPresignedUrlExpiry(3600);
+
+        StorageServiceImpl customStorageService = new StorageServiceImpl(minioClient, props);
+        String url = customStorageService.getPresignedUrl("products/2026/09/photo.jpg");
+
+        assertThat(url).isNotNull();
+        assertThat(url).startsWith("http://192.0.2.1:8088/warehouse/products/2026/09/photo.jpg");
+        assertThat(url).contains("X-Amz-Signature");
     }
 }

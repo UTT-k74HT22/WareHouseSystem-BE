@@ -34,4 +34,7 @@ public class MinioProperties {
 
     /** Presigned URL expiry in seconds (default 3600 = 1 hour) */
     private int presignedUrlExpiry = 3600;
+
+    /** MinIO region (default us-east-1) */
+    private String region = "us-east-1";
 }

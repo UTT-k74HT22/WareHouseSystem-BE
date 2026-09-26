@@ -3,8 +3,7 @@ name: Backend CI/CD Pipeline
 on:
   push:
     branches:
-      - main
-      - develop
+      - staging
     paths:
       - 'src/**'
       - 'pom.xml'
@@ -75,7 +74,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/staging' }}
             type=sha,format=short,prefix=sha-
             type=ref,event=branch
 
@@ -92,7 +91,7 @@ jobs:
   deploy-to-server:
     name: Deploy to Server (163.61.72.183)
     needs: build-and-push-docker
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     steps:
       - name: Set lowercase image name
