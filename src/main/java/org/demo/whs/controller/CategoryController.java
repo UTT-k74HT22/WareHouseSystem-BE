@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
-import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
@@ -55,10 +54,11 @@ public class CategoryController {
     @GetMapping
     @PreAuthorize("hasAuthority('PERM_CATEGORY_READ')")
     public ResponseEntity<BaseResponse<PageResponse<CategoryResponse>>> getCategories(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) CategoryStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        PageResponse<CategoryResponse> response = categoryService.getCategories(status, pageable);
+        PageResponse<CategoryResponse> response = categoryService.getCategories(keyword, status, pageable);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
@@ -88,7 +88,7 @@ public class CategoryController {
     public ResponseEntity<BaseResponse<CategoryResponse>> updateCategoryStatus(
             @PathVariable
             @Pattern(regexp = UUID_PATTERN, message = "Invalid category id format") String id,
-            @RequestBody @Valid UpdateCategoryStatusRequest request
+            @RequestBody @Valid UpdateCategoryRequest request
     ) {
         CategoryResponse response = categoryService.updateCategoryStatus(id, request);
         return ResponseEntity.ok(BaseResponse.success(response));

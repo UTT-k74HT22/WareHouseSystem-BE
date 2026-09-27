@@ -3,7 +3,6 @@ package org.demo.whs.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
-import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -123,7 +122,7 @@ class CategoryControllerTest {
                 .isLast(true)
                 .build();
 
-        when(categoryService.getCategories(any(), any())).thenReturn(pageResponse);
+        when(categoryService.getCategories(any(), any(), any())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/api/v1/categories")
                         .param("page", "0")
@@ -241,7 +240,7 @@ class CategoryControllerTest {
     @Test
     @DisplayName("should_UpdateCategoryStatus_When_RequestIsValid")
     void should_UpdateCategoryStatus_When_RequestIsValid() throws Exception {
-        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
         setField(request, "status", CategoryStatus.INACTIVE);
 
         CategoryResponse response = CategoryResponse.builder()
@@ -251,7 +250,7 @@ class CategoryControllerTest {
                 .status(CategoryStatus.INACTIVE)
                 .build();
 
-        when(categoryService.updateCategoryStatus(any(), any(UpdateCategoryStatusRequest.class))).thenReturn(response);
+        when(categoryService.updateCategoryStatus(any(), any(UpdateCategoryRequest.class))).thenReturn(response);
 
         mockMvc.perform(patch("/api/v1/categories/{id}/status", "7c9e6679-7425-40de-944b-e07fc1f90ae7")
                         .contentType(MediaType.APPLICATION_JSON)

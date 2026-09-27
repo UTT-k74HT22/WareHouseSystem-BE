@@ -43,7 +43,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -192,24 +191,6 @@ class BatchControllerTest {
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
 
         verify(batchService, never()).releaseBatch(any(), any());
-    }
-
-    @Test
-    @DisplayName("Should return 400 when generic status patch is blocked")
-    void should_Return400_When_GenericStatusPatchIsBlocked() throws Exception {
-        when(batchService.changeBatchStatus(eq("batch-1"), any()))
-                .thenThrow(new BadRequestException(ErrorCode.BATCH_011));
-
-        mockMvc.perform(patch("/api/v1/batches/{id}/status", "batch-1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "status", "EXPIRED"
-                        ))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error_code").value("BATCH_011"));
-
-        verify(batchService).changeBatchStatus(eq("batch-1"), any());
     }
 
     @Test

@@ -67,8 +67,8 @@ class BusinessPartnerImplTest {
         BusinessPartnerRequest request = BusinessPartnerRequest.builder()
                 .code("BP-001")
                 .name("Partner A")
-                .type("SUPPLIER")
-                .status("ACTIVE")
+                .type(BusinessPartnerType.SUPPLIER)
+                .status(BusinessPartnerStatus.ACTIVE)
                 .build();
 
         assertThatThrownBy(() -> service.create(request))
@@ -83,8 +83,8 @@ class BusinessPartnerImplTest {
     void should_GenerateBusinessPartnerCode_When_CreateWithoutCode() {
         BusinessPartnerRequest request = BusinessPartnerRequest.builder()
                 .name("Partner A")
-                .type("SUPPLIER")
-                .status("ACTIVE")
+                .type(BusinessPartnerType.SUPPLIER)
+                .status(BusinessPartnerStatus.ACTIVE)
                 .build();
 
         BusinessPartners entity = new BusinessPartners();
@@ -96,8 +96,8 @@ class BusinessPartnerImplTest {
                 BusinessPartnerResponse.builder()
                         .code(entity.getCode())
                         .name("Partner A")
-                        .status("ACTIVE")
-                        .type("SUPPLIER")
+                        .status(BusinessPartnerStatus.ACTIVE)
+                        .type(BusinessPartnerType.SUPPLIER)
                         .build()
         );
 
@@ -109,8 +109,8 @@ class BusinessPartnerImplTest {
     }
 
     @Test
-    @DisplayName("should_ThrowBadRequestException_When_ChangeStatusWithInvalidStatus")
-    void should_ThrowBadRequestException_When_ChangeStatusWithInvalidStatus() {
+    @DisplayName("should_ThrowBadRequestException_When_ChangeStatusWithNullStatus")
+    void should_ThrowBadRequestException_When_ChangeStatusWithNullStatus() {
         BusinessPartners entity = new BusinessPartners();
         entity.setId("bp-001");
         entity.setCode("BP-001");
@@ -118,7 +118,7 @@ class BusinessPartnerImplTest {
 
         when(repository.findById("bp-001")).thenReturn(Optional.of(entity));
 
-        assertThatThrownBy(() -> service.changeStatus("bp-001", "NOT_A_STATUS"))
+        assertThatThrownBy(() -> service.changeStatus("bp-001", null))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "BP_003");
 

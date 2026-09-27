@@ -4,7 +4,6 @@ import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Batch;
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.Products;
-import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
@@ -412,15 +411,6 @@ class BatchServiceImplTest {
         assertThatThrownBy(() -> batchService.quarantineBatch("B1", request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining(ErrorCode.BATCH_007.getMessage());
-    }
-
-    @Test
-    void changeBatchStatus_shouldRejectGenericTransition() {
-        ChangeBatchStatusRequest request = new ChangeBatchStatusRequest();
-
-        assertThatThrownBy(() -> batchService.changeBatchStatus("B1", request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining(ErrorCode.BATCH_011.getMessage());
     }
 
     @Test

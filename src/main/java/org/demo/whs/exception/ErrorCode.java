@@ -90,7 +90,7 @@ public enum ErrorCode {
 
     // Category errors
     CAT_001("CAT_001", "Không tìm thấy danh mục"),
-    CAT_002("CAT_002", "Mã hoặc tên danh mục đã tồn tại"),
+    CAT_002("CAT_002", "Tên danh mục đã tồn tại"),
 
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Không tìm thấy đơn vị tính"),

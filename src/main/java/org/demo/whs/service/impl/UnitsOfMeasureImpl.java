@@ -8,10 +8,13 @@ import org.demo.whs.entity.dto.request.UnitsOfMeasure.UnitsOfMeasureRequest;
 import org.demo.whs.entity.dto.request.UnitsOfMeasure.UpdateUnitsOfMeasureRequest;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
+import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.UnitsOfMeasureService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.cache.annotation.CacheEvict;
@@ -54,7 +57,7 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
 
         validateRequest(request, code);
 
-        UnitsOfMeasure unitsOfMeasure = unitsOfMeasureMapper.buildRequest(request);
+        UnitsOfMeasure unitsOfMeasure = unitsOfMeasureMapper.toEntity(request);
         unitsOfMeasure.setCode(code);
         unitsOfMeasureRepository.save(unitsOfMeasure);
         log.info("Unit of measure with code {} created successfully", code);
@@ -87,7 +90,7 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Unit of measure with id {} not found", id);
-                    return new BadRequestException(ErrorCode.UOM_001);
+                    return new NotFoundException(ErrorCode.UOM_001);
                 });
         return unitsOfMeasureMapper.toResponse(unitsOfMeasure);
     }
@@ -107,14 +110,18 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Unit of measure with id {} not found", id);
-                    return new BadRequestException(ErrorCode.UOM_001);
+                    return new NotFoundException(ErrorCode.UOM_001);
                 });
 
-        // Validate request
-        validateUpdateRequest(request);
+        // Blank name is rejected; null name means partial update (field skipped by mapper)
+        if (request.getName() != null && request.getName().isBlank()) {
+            log.error("Unit of measure name must not be blank");
+            throw new BadRequestException(ErrorCode.UOM_003);
+        }
 
-        // Update entity
+        // Update entity (mapper ignores null/blank fields for partial update)
         unitsOfMeasureMapper.updateEntity(unitsOfMeasure, request);
+        unitsOfMeasure.setUpdatedBy(SecurityUtils.getCurrentAccountId());
         unitsOfMeasure.setUpdatedAt(LocalDateTime.now());
 
         unitsOfMeasureRepository.save(unitsOfMeasure);
@@ -137,7 +144,7 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
         UnitsOfMeasure unitsOfMeasure = unitsOfMeasureRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Unit of measure with id {} not found", id);
-                    return new BadRequestException(ErrorCode.UOM_001);
+                    return new NotFoundException(ErrorCode.UOM_001);
                 });
 
         long referencedProducts = productRepository.countByUomId(id);
@@ -154,16 +161,9 @@ public class UnitsOfMeasureImpl implements UnitsOfMeasureService {
     private void validateRequest(UnitsOfMeasureRequest request, String code) {
         if (unitsOfMeasureRepository.existsUnitsOfMeasureByCode(code)) {
             log.error("Unit of measure with code {} already exists", code);
-            throw new BadRequestException(ErrorCode.UOM_002);
+            throw new ConflictException(ErrorCode.UOM_002);
         }
 
-        if (request.getName() == null || request.getName().isBlank()) {
-            log.error("Unit of measure name is required");
-            throw new BadRequestException(ErrorCode.UOM_003);
-        }
-    }
-
-    private void validateUpdateRequest(UpdateUnitsOfMeasureRequest request) {
         if (request.getName() == null || request.getName().isBlank()) {
             log.error("Unit of measure name is required");
             throw new BadRequestException(ErrorCode.UOM_003);

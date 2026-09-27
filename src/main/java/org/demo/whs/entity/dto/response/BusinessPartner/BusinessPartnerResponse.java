@@ -3,6 +3,8 @@ package org.demo.whs.entity.dto.response.BusinessPartner;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.*;
+import org.demo.whs.entity.enums.BusinessPartnerStatus;
+import org.demo.whs.entity.enums.BusinessPartnerType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,7 +21,7 @@ public class BusinessPartnerResponse {
 
     private String code;
     private String name;
-    private String type;
+    private BusinessPartnerType type;
 
     private String contactPerson;
     private String email;
@@ -33,11 +35,8 @@ public class BusinessPartnerResponse {
     private String paymentTerms;
     private BigDecimal creditLimit;
 
-    private String status;
+    private BusinessPartnerStatus status;
     private String notes;
-
-    private Integer purchaseOrderCount;
-    private Integer salesOrderCount;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

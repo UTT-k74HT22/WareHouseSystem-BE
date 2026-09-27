@@ -1,6 +1,8 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.BusinessPartner.BusinessPartnerRequest;
@@ -127,7 +129,7 @@ public class BusinessPartnerController {
     @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_UPDATE')")
     public ResponseEntity<BaseResponse<BusinessPartnerResponse>> changeStatus(
             @PathVariable String id,
-            @RequestParam String status
+            @RequestParam BusinessPartnerStatus status
     ) {
         log.debug("Change business partner status, id={}, status={}", id, status);
 
@@ -142,14 +144,14 @@ public class BusinessPartnerController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAuthority('PERM_BUSINESS_PARTNER_READ')")
-    public PageResponse<BusinessPartnerResponse> search(
+    public ResponseEntity<BaseResponse<PageResponse<BusinessPartnerResponse>>> search(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) BusinessPartnerType type,
             @RequestParam(required = false) BusinessPartnerStatus status,
 
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size
+            @RequestParam(defaultValue = "0") @Min(0) Integer page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size
             ) {
 
         SearchBusinessPartnerRequest request = new SearchBusinessPartnerRequest();
@@ -158,6 +160,8 @@ public class BusinessPartnerController {
         request.setType(type);
         request.setStatus(status);
 
-        return businessPartnerService.searchBusinessPartners(request, page, size);
+        PageResponse<BusinessPartnerResponse> response =
+                businessPartnerService.searchBusinessPartners(request, page, size);
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

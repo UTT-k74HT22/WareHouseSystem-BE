@@ -3,7 +3,7 @@ package org.demo.whs.service.impl;
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
-import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
+import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -131,7 +131,7 @@ class CategoryServiceImplTest {
         when(categoryRepository.findAllByStatus(CategoryStatus.ACTIVE, pageable)).thenReturn(page);
         when(categoryMapper.toResponseList(page.getContent())).thenReturn(List.of(mapped));
 
-        PageResponse<CategoryResponse> actual = categoryService.getCategories(CategoryStatus.ACTIVE, pageable);
+        PageResponse<CategoryResponse> actual = categoryService.getCategories(null, CategoryStatus.ACTIVE, pageable);
 
         assertThat(actual).isNotNull();
         assertThat(actual.getContent()).hasSize(1);
@@ -264,7 +264,7 @@ class CategoryServiceImplTest {
     @Test
     @DisplayName("should_UpdateCategoryStatus_When_RequestIsValid")
     void should_UpdateCategoryStatus_When_RequestIsValid() {
-        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
         try {
             setField(request, "status", CategoryStatus.INACTIVE);
         } catch (ReflectiveOperationException ex) {
@@ -305,7 +305,7 @@ class CategoryServiceImplTest {
     @Test
     @DisplayName("should_ThrowNotFoundException_When_UpdatingStatusOfMissingCategory")
     void should_ThrowNotFoundException_When_UpdatingStatusOfMissingCategory() {
-        UpdateCategoryStatusRequest request = new UpdateCategoryStatusRequest();
+        UpdateCategoryRequest request = new UpdateCategoryRequest();
         try {
             setField(request, "status", CategoryStatus.INACTIVE);
         } catch (ReflectiveOperationException ex) {

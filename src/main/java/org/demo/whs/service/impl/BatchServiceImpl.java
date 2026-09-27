@@ -18,7 +18,6 @@ import org.demo.whs.entity.PurchaseOrders;
 import org.demo.whs.entity.SalesOrders;
 import org.demo.whs.entity.StockMovements;
 import org.demo.whs.entity.Warehouses;
-import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
@@ -162,13 +161,6 @@ public class BatchServiceImpl implements BatchService {
                 .collect(Collectors.toList());
         return PageResponse.from(batchPage, responses);
     }
-    @Override
-    @Transactional
-    public BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request) {
-        log.warn("Blocked generic batch status change for batchId={} targetStatus={}", id, request.getStatus());
-        throw new BadRequestException(ErrorCode.BATCH_011);
-    }
-
     @Override
     @Transactional
     public BatchResponse updateBatch(String id, UpdateBatchRequest request) {

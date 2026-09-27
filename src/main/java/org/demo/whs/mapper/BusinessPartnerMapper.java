@@ -30,8 +30,8 @@ public class BusinessPartnerMapper {
         if (request == null) return null;
 
         BusinessPartners bp = new BusinessPartners();
-        bp.setName(request.getName());
-        bp.setType(parseType(request.getType()));
+        bp.setName(request.getName().trim());
+        bp.setType(request.getType());
         bp.setContactPerson(request.getContactPerson());
         bp.setEmail(request.getEmail());
         bp.setPhone(request.getPhone());
@@ -41,7 +41,7 @@ public class BusinessPartnerMapper {
         bp.setTaxId(request.getTaxId());
         bp.setPaymentTerms(request.getPaymentTerms());
         bp.setCreditLimit(request.getCreditLimit());
-        bp.setStatus(parseStatus(request.getStatus()));
+        bp.setStatus(request.getStatus());
         bp.setNotes(request.getNotes());
 
         return bp;
@@ -76,8 +76,8 @@ public class BusinessPartnerMapper {
                 .id(entity.getId())
                 .code(entity.getCode())
                 .name(entity.getName())
-                .type(entity.getType().name())
-                .status(entity.getStatus().name())
+                .type(entity.getType())
+                .status(entity.getStatus())
                 .contactPerson(entity.getContactPerson())
                 .email(entity.getEmail())
                 .phone(entity.getPhone())
@@ -90,15 +90,13 @@ public class BusinessPartnerMapper {
                 .notes(entity.getNotes())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
-                .purchaseOrderCount(0)
-                .salesOrderCount(0)
                 .build();
     }
 
     /**
      * Update entity fields using update request.
      * <p>
-     * Only non-null fields will be updated.
+     * Only non-null (and for strings, non-blank) fields will be updated.
      *
      * @param entity  existing entity
      * @param request update request
@@ -108,14 +106,14 @@ public class BusinessPartnerMapper {
 
         if (entity == null || request == null) return;
 
-        if (request.getName() != null)
-            entity.setName(request.getName());
+        if (isPresent(request.getName()))
+            entity.setName(request.getName().trim());
 
         if (request.getType() != null)
-            entity.setType(parseType(request.getType()));
+            entity.setType(request.getType());
 
         if (request.getStatus() != null)
-            entity.setStatus(parseStatus(request.getStatus()));
+            entity.setStatus(request.getStatus());
 
         if (request.getContactPerson() != null)
             entity.setContactPerson(request.getContactPerson());
@@ -148,12 +146,7 @@ public class BusinessPartnerMapper {
             entity.setNotes(request.getNotes());
     }
 
-    /* ================= PRIVATE PARSERS ================= */
-    private BusinessPartnerType parseType(String type) {
-        return BusinessPartnerType.valueOf(type.toUpperCase());
-    }
-
-    private BusinessPartnerStatus parseStatus(String status) {
-        return BusinessPartnerStatus.valueOf(status.toUpperCase());
+    private static boolean isPresent(String value) {
+        return value != null && !value.isBlank();
     }
 }

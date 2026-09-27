@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.request.UnitsOfMeasure.UpdateUnitsOfMeasureReques
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.service.UnitsOfMeasureService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +35,7 @@ public class UnitsOfMeasureController {
         log.info("Received request to create unit of measure with code: {}", request.getCode());
         UnitsOfMeasureResponse data = unitsOfMeasureService.create(request);
         BaseResponse<UnitsOfMeasureResponse> response = BaseResponse.success(data);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**

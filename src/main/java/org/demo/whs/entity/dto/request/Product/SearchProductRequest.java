@@ -46,7 +46,7 @@ public class SearchProductRequest {
     private Boolean requiresBatchTracking;
 
     /**
-     * Full-text search across name and description
+     * Full-text search across name and description (partial match, case-insensitive)
      */
     private String searchText;
 }
