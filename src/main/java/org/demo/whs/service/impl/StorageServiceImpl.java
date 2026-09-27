@@ -3,7 +3,6 @@ package org.demo.whs.service.impl;
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.configuration.MinioProperties;
 import org.demo.whs.entity.dto.response.FileUploadResponse;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class StorageServiceImpl implements StorageService {
 
     /** Hard limit: 50 MB per file */
@@ -51,7 +49,30 @@ public class StorageServiceImpl implements StorageService {
     );
 
     private final MinioClient minioClient;
+    private final MinioClient presignMinioClient;
     private final MinioProperties minioProperties;
+
+    public StorageServiceImpl(MinioClient minioClient, MinioProperties minioProperties) {
+        this.minioClient = minioClient;
+        this.minioProperties = minioProperties;
+
+        String region = StringUtils.hasText(minioProperties.getRegion())
+                ? minioProperties.getRegion()
+                : "us-east-1";
+
+        String publicEndpoint = minioProperties.getPublicEndpoint();
+        if (!StringUtils.hasText(publicEndpoint)
+                || Objects.equals(publicEndpoint, minioProperties.getEndpoint())) {
+            this.presignMinioClient = minioClient;
+        } else {
+            log.info("Initializing MinIO presign client - public endpoint: {}, region: {}", publicEndpoint, region);
+            this.presignMinioClient = MinioClient.builder()
+                    .endpoint(publicEndpoint)
+                    .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                    .region(region)
+                    .build();
+        }
+    }
 
     // =========================================================================
     // Private helpers
@@ -143,6 +164,8 @@ public class StorageServiceImpl implements StorageService {
 
             return FileMapper.toResponse(objectName, file, presignedUrl, expiresAt);
 
+        } catch (StorageException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to upload file: {} to MinIO", originalFilename, e);
             throw new StorageException(ErrorCode.STORAGE_001);
@@ -181,6 +204,8 @@ public class StorageServiceImpl implements StorageService {
                     .presignedUrl(presignedUrl)
                     .presignedUrlExpiresAt(expiresAt)
                     .build();
+        } catch (StorageException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to upload generated file: {} to MinIO", originalFileName, e);
             throw new StorageException(ErrorCode.STORAGE_001);
@@ -219,12 +244,16 @@ public class StorageServiceImpl implements StorageService {
     public String getPresignedUrl(String objectName) {
         log.info("Generating presigned URL for object: {}", objectName);
         try {
+            String region = StringUtils.hasText(minioProperties.getRegion())
+                    ? minioProperties.getRegion()
+                    : "us-east-1";
 
-            String url = minioClient.getPresignedObjectUrl(
+            String url = presignMinioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(minioProperties.getBucketName())
                             .object(objectName)
+                            .region(region)
                             .expiry(minioProperties.getPresignedUrlExpiry(), TimeUnit.SECONDS)
                             .build()
             );
@@ -232,7 +261,6 @@ public class StorageServiceImpl implements StorageService {
             log.info("Generated presigned URL for object: {} (expires in {} seconds)", objectName, minioProperties.getPresignedUrlExpiry());
             return url;
         } catch (Exception ex) {
-
             log.error("Failed to generate presigned URL for object: {}", objectName, ex);
             throw new StorageException(ErrorCode.STORAGE_004); // Lỗi không lấy được URL
         }
