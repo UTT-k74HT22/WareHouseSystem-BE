@@ -2,6 +2,7 @@ package org.demo.whs.repository;
 
 import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.InboundReceipts;
+import org.demo.whs.entity.enums.InboundReceiptsStatus;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -19,6 +20,8 @@ import java.util.Optional;
 public interface InboundReceiptsRepository extends JpaRepository<InboundReceipts, String>, JpaSpecificationExecutor<InboundReceipts> {
 
     boolean existsByReceiptNumber(String receiptNumber);
+
+    long countByStatus(InboundReceiptsStatus status);
 
     List<InboundReceipts> findByPurchaseOrderIdOrderByCreatedAtDesc(String purchaseOrderId);
 

@@ -14,6 +14,10 @@ public class OutboundShipmentsSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            if (filter == null) {
+                return cb.conjunction();
+            }
+
             if (filter.getShipmentNumber() != null && !filter.getShipmentNumber().isBlank()) {
                 predicates.add(cb.like(cb.lower(root.get("shipmentNumber")), "%" + filter.getShipmentNumber().toLowerCase() + "%"));
             }

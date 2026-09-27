@@ -19,8 +19,18 @@ public interface OutboundShipmentLinesRepository extends JpaRepository<OutboundS
 
     List<OutboundShipmentLines> findByBatchIdOrderByCreatedAtDesc(String batchId);
 
-    List<OutboundShipmentLines> findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-            String outboundShipmentId, String salesOrderLineId, String locationId, String batchId);
+    @Query("select case when count(osl) > 0 then true else false end from OutboundShipmentLines osl " +
+           "where osl.outboundShipmentId = :shipmentId " +
+           "and osl.salesOrderLineId = :soLineId " +
+           "and ((:locationId is null and osl.locationId is null) or osl.locationId = :locationId) " +
+           "and ((:batchId is null and osl.batchId is null) or osl.batchId = :batchId) " +
+           "and (:excludeLineId is null or osl.id <> :excludeLineId)")
+    boolean existsByDuplicateDimension(
+            @Param("shipmentId") String shipmentId,
+            @Param("soLineId") String soLineId,
+            @Param("locationId") String locationId,
+            @Param("batchId") String batchId,
+            @Param("excludeLineId") String excludeLineId);
 
     @Query("SELECT MAX(l.lineNumber) FROM OutboundShipmentLines l WHERE l.outboundShipmentId = :shipmentId")
     Integer findMaxLineNumber(@Param("shipmentId") String shipmentId);

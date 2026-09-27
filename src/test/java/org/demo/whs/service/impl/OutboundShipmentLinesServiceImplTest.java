@@ -108,8 +108,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById(LOCATION_ID)).thenReturn(Optional.of(location));
@@ -155,8 +155,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), anyString())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), anyString(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById(LOCATION_ID)).thenReturn(Optional.of(location));
@@ -300,8 +300,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of(existingLine));
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(BadRequestException.class)
@@ -325,8 +325,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> service.create(request))
@@ -351,8 +351,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById("prod-missing")).thenReturn(Optional.empty());
 
@@ -379,8 +379,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById("loc-missing")).thenReturn(Optional.empty());
@@ -409,8 +409,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), any())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), any(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById("loc-other-wh")).thenReturn(Optional.of(location));
@@ -439,8 +439,8 @@ class OutboundShipmentLinesServiceImplTest {
 
         when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(soLine));
-        when(outboundShipmentLinesRepository.findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                anyString(), anyString(), anyString(), anyString())).thenReturn(List.of());
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(
+                anyString(), anyString(), anyString(), anyString(), any())).thenReturn(false);
         when(outboundShipmentLinesRepository.sumShippedForSoLine(anyString(), anyString())).thenReturn(null);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(locationRepository.findById(LOCATION_ID)).thenReturn(Optional.of(location));

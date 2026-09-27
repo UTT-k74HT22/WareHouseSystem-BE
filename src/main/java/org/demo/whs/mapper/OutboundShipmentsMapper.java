@@ -85,6 +85,9 @@ public class OutboundShipmentsMapper {
         if (request.getCarrier() != null) {
             entity.setCarrier(request.getCarrier());
         }
+        if (request.getTrackingNumber() != null && !request.getTrackingNumber().isBlank()) {
+            entity.setTrackingNumber(request.getTrackingNumber().trim());
+        }
         if (request.getNotes() != null) {
             entity.setNotes(request.getNotes());
         }

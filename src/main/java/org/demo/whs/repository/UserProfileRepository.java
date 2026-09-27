@@ -22,10 +22,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
     Optional<UserProfile> findByEmail(String email);
 
     /**
-     * Kiá»ƒm tra email Ä‘Ã£ tá»“n táº¡i hay chÆ°a.
+     * Kiểm tra email đã tồn tại hay chưa.
      *
-     * @param email email ngÆ°á»i dÃ¹ng
-     * @return true náº¿u Ä‘Ã£ tá»“n táº¡i
+     * @param email email người dùng
+     * @return true nếu đã tồn tại
      */
     boolean existsByEmail(String email);
 

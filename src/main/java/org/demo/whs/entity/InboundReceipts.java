@@ -45,6 +45,6 @@ public class InboundReceipts extends BaseEntity {
     @Column(name = "confirmed_by", length = 36, columnDefinition = ("char(36)"))
     private String confirmedBy;
 
-    @Column(name = "delivery_note_number", length = 50)
+    @Column(name = "delivery_note_number", length = 100)
     private String deliveryNoteNumber;
 }

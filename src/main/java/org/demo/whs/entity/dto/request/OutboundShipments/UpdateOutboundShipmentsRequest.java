@@ -2,6 +2,7 @@ package org.demo.whs.entity.dto.request.OutboundShipments;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,13 @@ import java.time.LocalDate;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateOutboundShipmentsRequest {
     private LocalDate shipmentDate;
+
+    @Size(max = 100, message = "Carrier must not exceed 100 characters")
     private String carrier;
+
+    @Size(max = 100, message = "Tracking number must not exceed 100 characters")
+    private String trackingNumber;
+
+    @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
 }

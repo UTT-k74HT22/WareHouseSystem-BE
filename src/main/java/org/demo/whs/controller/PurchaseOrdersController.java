@@ -144,6 +144,12 @@ public class PurchaseOrdersController {
      * @return the response containing the details of the retrieved purchase order
      */
     @Operation(summary = "Get purchase order by id")
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_READ')")
+    public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
+        return ResponseEntity.ok(BaseResponse.success(purchaseOrdersService.getStats()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_PURCHASE_ORDER_READ')")
     public ResponseEntity<BaseResponse<PurchaseOrdersResponse>> getById(@PathVariable String id) {

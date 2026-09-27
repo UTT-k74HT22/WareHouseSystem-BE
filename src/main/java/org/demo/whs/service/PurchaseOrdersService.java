@@ -60,4 +60,11 @@ public interface PurchaseOrdersService {
      * @return the response containing the details of the confirmed purchase order
      */
     PurchaseOrdersResponse confirm(String id);
+
+    /**
+     * Counts purchase orders by status for dashboard statistics.
+     *
+     * @return map of status name (lowercase) to count, plus "total"
+     */
+    java.util.Map<String, Long> getStats();
 }

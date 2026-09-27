@@ -208,7 +208,7 @@ class SalesOrderLinesServiceImplTest {
         SalesOrderLines line = buildLine("line-1", "so-1", 1, "5.00", "100.00", "500.00");
         SalesOrders so = buildSalesOrder("so-1", SalesOrdersStatus.DRAFT);
 
-        when(salesOrderLinesRepository.findById("line-1")).thenReturn(Optional.of(line));
+        when(salesOrderLinesRepository.findByIdForUpdate("line-1")).thenReturn(Optional.of(line));
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
         when(salesOrderLinesRepository.save(any(SalesOrderLines.class))).thenReturn(line);
         when(salesOrderLinesRepository.findBySalesOrderId("so-1")).thenReturn(List.of(line));
@@ -245,7 +245,7 @@ class SalesOrderLinesServiceImplTest {
                 .quantityOrdered(new BigDecimal("10.00"))
                 .build();
 
-        when(salesOrderLinesRepository.findById("line-1")).thenReturn(Optional.of(lineWithShipped));
+        when(salesOrderLinesRepository.findByIdForUpdate("line-1")).thenReturn(Optional.of(lineWithShipped));
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
 
         assertThatThrownBy(() -> service.update("line-1", request))
@@ -265,7 +265,7 @@ class SalesOrderLinesServiceImplTest {
                 .quantityOrdered(new BigDecimal("10.00"))
                 .build();
 
-        when(salesOrderLinesRepository.findById("line-1")).thenReturn(Optional.of(line));
+        when(salesOrderLinesRepository.findByIdForUpdate("line-1")).thenReturn(Optional.of(line));
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(confirmed));
 
         assertThatThrownBy(() -> service.update("line-1", request))
@@ -282,7 +282,7 @@ class SalesOrderLinesServiceImplTest {
                 .quantityOrdered(new BigDecimal("10.00"))
                 .build();
 
-        when(salesOrderLinesRepository.findById("line-missing")).thenReturn(Optional.empty());
+        when(salesOrderLinesRepository.findByIdForUpdate("line-missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update("line-missing", request))
                 .isInstanceOf(NotFoundException.class)

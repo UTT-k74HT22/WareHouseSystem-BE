@@ -690,11 +690,14 @@ class InboundReceiptLinesServiceImplTest {
 
         when(inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc("receipt-current"))
                 .thenReturn(List.of(firstLine, secondLine));
-        when(productRepository.findById("prod-1")).thenReturn(Optional.of(product("prod-1", "SKU-1", "Product 1", ProductStatus.ACTIVE, true)));
-        when(productRepository.findById("prod-2")).thenReturn(Optional.of(product("prod-2", "SKU-2", "Product 2", ProductStatus.ACTIVE, false)));
-        when(batchRepository.findById("batch-1")).thenReturn(Optional.of(batch("batch-1", "prod-1", BatchStatus.AVAILABLE)));
-        when(locationRepository.findById("loc-1")).thenReturn(Optional.of(location("loc-1", "wh-1", LocationStatus.ACTIVE)));
-        when(locationRepository.findById("loc-2")).thenReturn(Optional.of(location("loc-2", "wh-1", LocationStatus.ACTIVE)));
+        when(productRepository.findAllById(List.of("prod-1", "prod-2"))).thenReturn(List.of(
+                product("prod-1", "SKU-1", "Product 1", ProductStatus.ACTIVE, true),
+                product("prod-2", "SKU-2", "Product 2", ProductStatus.ACTIVE, false)));
+        when(batchRepository.findAllById(List.of("batch-1"))).thenReturn(List.of(
+                batch("batch-1", "prod-1", BatchStatus.AVAILABLE)));
+        when(locationRepository.findAllById(List.of("loc-1", "loc-2"))).thenReturn(List.of(
+                location("loc-1", "wh-1", LocationStatus.ACTIVE),
+                location("loc-2", "wh-1", LocationStatus.ACTIVE)));
         when(inboundReceiptLinesMapper.toResponse(firstLine, "SKU-1", "Product 1", "BATCH-001", "LOC-1", "Location loc-1"))
                 .thenReturn(InboundReceiptLinesResponse.builder().id("line-1").lineNumber(1).build());
         when(inboundReceiptLinesMapper.toResponse(secondLine, "SKU-2", "Product 2", null, "LOC-2", "Location loc-2"))

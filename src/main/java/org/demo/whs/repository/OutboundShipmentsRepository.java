@@ -1,6 +1,7 @@
 package org.demo.whs.repository;
 
 import org.demo.whs.entity.OutboundShipments;
+import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -19,6 +20,8 @@ import java.util.Optional;
 public interface OutboundShipmentsRepository extends JpaRepository<OutboundShipments, String>, JpaSpecificationExecutor<OutboundShipments> {
     List<OutboundShipments> findBySalesOrderId(String salesOrderId);
     boolean existsByShipmentNumber(String shipmentNumber);
+
+    long countByStatus(OutboundShipmentsStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM OutboundShipments s WHERE s.id = :id")

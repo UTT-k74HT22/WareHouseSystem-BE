@@ -62,4 +62,11 @@ public interface OutboundShipmentsService {
      * Transition: Any status except SHIPPED -> CANCELLED
      */
     OutboundShipmentsResponse cancel(String id);
+
+    /**
+     * Counts shipments by status for dashboard statistics.
+     *
+     * @return map of status name (lowercase) to count, plus "total"
+     */
+    java.util.Map<String, Long> getStats();
 }

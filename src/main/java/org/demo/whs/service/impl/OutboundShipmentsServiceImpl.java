@@ -109,6 +109,20 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (OutboundShipmentsStatus status : OutboundShipmentsStatus.values()) {
+            long count = outboundShipmentsRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
+    }
+
+    @Override
     @Transactional
     public OutboundShipmentsResponse update(String id, UpdateOutboundShipmentsRequest request) {
         log.info("Update outbound shipment, id={}, request={}", id, request);

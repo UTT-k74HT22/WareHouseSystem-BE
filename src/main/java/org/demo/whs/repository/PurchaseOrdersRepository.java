@@ -2,6 +2,7 @@ package org.demo.whs.repository;
 
 import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.PurchaseOrders;
+import org.demo.whs.entity.enums.PurchaseOrdersStatus;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +19,8 @@ import java.util.Optional;
 public interface PurchaseOrdersRepository extends JpaRepository<PurchaseOrders, String>, JpaSpecificationExecutor<PurchaseOrders> {
 
     boolean existsByPurchaseOrderNumber(String purchaseOrderNumber);
+
+    long countByStatus(PurchaseOrdersStatus status);
 
     Optional<PurchaseOrders> findByPurchaseOrderNumber(String purchaseOrderNumber);
 
