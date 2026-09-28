@@ -9,9 +9,12 @@ import org.demo.whs.entity.dto.request.Role.UpdateRoleRequest;
 import org.demo.whs.entity.dto.response.Permission.PermissionResponse;
 import org.demo.whs.entity.dto.response.Role.RoleResponse;
 import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.repository.AccountHasRoleRepository;
+import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.repository.RoleRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,9 @@ class RoleServiceImplTest {
     @Mock
     private AccountHasRoleRepository accountHasRoleRepository;
 
+    @Mock
+    private RolePermissionRepository rolePermissionRepository;
+
     private Role role1;
     private Role role2;
     private Role role;
@@ -73,7 +79,7 @@ class RoleServiceImplTest {
                 .build();
 
         role = Role.builder()
-                .code("ROLE_ADMIN")
+                .code("ROLE_MANAGER")
                 .name(request.getName())
                 .description("Administrator role")
                 .isDefault(true)
@@ -325,7 +331,7 @@ class RoleServiceImplTest {
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
 
         Role updatedRole = Role.builder()
-                .code("ROLE_ADMIN") // giữ nguyên code
+                .code("ROLE_MANAGER")
                 .name("Manager")
                 .description("Updated role")
                 .isDefault(true)
@@ -408,6 +414,58 @@ class RoleServiceImplTest {
 
         // When / Then
         assertThrows(NotFoundException.class, () -> roleService.deleteRole("role-404"));
+    }
+
+    @Test
+    void deleteRole_systemAdmin_throwsBadRequestException() {
+        Role adminRole = Role.builder()
+                .code("ROLE_ADMIN")
+                .name("ADMIN")
+                .isDefault(false)
+                .build();
+        when(roleRepository.findById("role-admin")).thenReturn(Optional.of(adminRole));
+
+        assertThatThrownBy(() -> roleService.deleteRole("role-admin"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROLE_007.getCode());
+
+        verify(roleRepository, never()).delete(any(Role.class));
+    }
+
+    @Test
+    void updateRole_systemAdmin_throwsBadRequestException() {
+        Role adminRole = Role.builder()
+                .code("ROLE_ADMIN")
+                .name("ADMIN")
+                .isDefault(false)
+                .build();
+        when(roleRepository.findById("role-admin")).thenReturn(Optional.of(adminRole));
+
+        UpdateRoleRequest request = UpdateRoleRequest.builder()
+                .description("Hacked")
+                .build();
+
+        assertThatThrownBy(() -> roleService.updateRole("role-admin", request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROLE_007.getCode());
+    }
+
+    @Test
+    void updateRole_unsetDefault_throwsBadRequestException() {
+        Role defaultRole = Role.builder()
+                .code("ROLE_MANAGER")
+                .name("Manager")
+                .isDefault(true)
+                .build();
+        when(roleRepository.findById("role-default")).thenReturn(Optional.of(defaultRole));
+
+        UpdateRoleRequest request = UpdateRoleRequest.builder()
+                .isDefault(false)
+                .build();
+
+        assertThatThrownBy(() -> roleService.updateRole("role-default", request))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROLE_005.getCode());
     }
 
     @Test

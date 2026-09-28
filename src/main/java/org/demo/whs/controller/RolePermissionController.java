@@ -61,11 +61,11 @@ public class RolePermissionController {
     public ResponseEntity<BaseResponse<Void>> removePermission(
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
+            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
             String permId
     ) {
 
@@ -84,7 +84,7 @@ public class RolePermissionController {
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getRolePermissions(
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
+            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @RequestParam(required = false) String resource,

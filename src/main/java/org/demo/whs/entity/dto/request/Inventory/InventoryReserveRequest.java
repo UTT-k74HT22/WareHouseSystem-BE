@@ -3,13 +3,13 @@ package org.demo.whs.entity.dto.request.Inventory;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.demo.whs.entity.enums.ReferenceType;
 
 import java.math.BigDecimal;
 
@@ -34,6 +34,7 @@ public class InventoryReserveRequest {
 
     @NotNull(message = "Quantity is required")
     @DecimalMin(value = "0.01", message = "Quantity must be greater than zero")
+    @Digits(integer = 13, fraction = 2, message = "Quantity must have up to 13 integer digits and 2 decimal places")
     private BigDecimal quantity;
 
     @NotBlank(message = "OrderLineId is required")

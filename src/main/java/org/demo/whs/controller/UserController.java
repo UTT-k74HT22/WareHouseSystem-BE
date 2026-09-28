@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.service.UserService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -38,7 +39,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('PERM_USER_READ')")
     public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getAllUsers(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) AccountStatus status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         log.info("Received request to get all users with search: {}, status: {}", search, status);

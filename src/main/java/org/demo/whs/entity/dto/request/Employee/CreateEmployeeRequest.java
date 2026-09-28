@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.demo.whs.entity.enums.RoleType;
 
 import java.time.LocalDate;
 
@@ -27,7 +26,7 @@ public class CreateEmployeeRequest {
     )
     private String password;
 
-    @NotNull(message = "Role is required")
+    @NotBlank(message = "Role is required")
     private String role;
 
     @NotBlank(message = "First name is required")

@@ -14,7 +14,7 @@ import java.util.Optional;
  * Repository Interface for managing UserProfile.
  */
 @Repository
-public interface UserProfileRepository extends JpaRepository<UserProfile, Long>, UserProfileRepositoryCustom {
+public interface UserProfileRepository extends JpaRepository<UserProfile, String>, UserProfileRepositoryCustom {
     @Query("""
     select u from UserProfile u
     where u.email = :email

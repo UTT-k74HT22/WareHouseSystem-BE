@@ -135,7 +135,6 @@ public class InventoryMapper {
                 .onHandQuantity(inventory != null ? inventory.getOnHandQuantity() : null)
                 .reservedQuantity(inventory != null ? inventory.getReservedQuantity() : null)
                 .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
-                .availableQuantity(inventory != null ? inventory.getAvailableQuantity() : null)
                 .build();
     }
 

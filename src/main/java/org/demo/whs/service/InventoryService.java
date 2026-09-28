@@ -1,7 +1,9 @@
 package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
@@ -84,7 +86,7 @@ public interface InventoryService {
      * @param request The increase request
      * @return Updated inventory data
      */
-    InventoryResponse increase(org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest request);
+    InventoryResponse increase(InventoryIncreaseRequest request);
 
     /**
      * Decrease inventory on-hand quantity.
@@ -93,7 +95,7 @@ public interface InventoryService {
      * @param request The decrease request
      * @return Updated inventory data
      */
-    InventoryResponse decrease(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request);
+    InventoryResponse decrease(InventoryDecreaseRequest request);
 
     /**
      * Moves inventory from one location to another within the same warehouse.

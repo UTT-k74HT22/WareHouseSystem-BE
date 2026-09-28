@@ -305,8 +305,8 @@ class EmployeeServiceImplTest {
     class ListEmployeesTests {
 
         @Test
-        @DisplayName("Should default status to ACTIVE when not provided")
-        void getEmployees_DefaultStatusActive() {
+    @DisplayName("getEmployees blank status returns all statuses")
+    void getEmployees_BlankStatusReturnsAll() {
             Employee employee = new Employee();
             employee.setId("emp-1");
             employee.setAccountId("acc-1");
@@ -328,7 +328,7 @@ class EmployeeServiceImplTest {
 
             employeeService.getEmployees(null, null, null, pageable);
 
-            verify(employeeRepository).findAllWithFilters(eq(null), eq(EmployeeStatus.ACTIVE), eq(null), eq(pageable));
+            verify(employeeRepository).findAllWithFilters(eq(null), isNull(), eq(null), eq(pageable));
             verify(employeeMapper).toResponse(employee, profile);
         }
 

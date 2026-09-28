@@ -2,6 +2,7 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.StockMovements;
+import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
@@ -78,7 +79,7 @@ public interface StockMovementsService {
      * @return the recorded stock movement response
      */
     StockMovementsResponse recordDecrease(
-            org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request,
+            InventoryDecreaseRequest request,
             BigDecimal quantityBefore,
             BigDecimal quantityAfter
     );

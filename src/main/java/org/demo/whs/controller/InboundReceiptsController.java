@@ -147,13 +147,14 @@ public class InboundReceiptsController {
      * @param id the ID of the inbound receipt to be retrieved
      * @return the response containing the details of the inbound receipt with the specified ID
      */
-    @Operation(summary = "Get inbound receipt by id")
+    @Operation(summary = "Get inbound receipt statistics")
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
     public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
         return ResponseEntity.ok(BaseResponse.success(inboundReceiptsService.getStats()));
     }
 
+    @Operation(summary = "Get inbound receipt by id")
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> getById(@PathVariable String id) {

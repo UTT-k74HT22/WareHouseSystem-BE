@@ -8,6 +8,7 @@ import org.demo.whs.entity.RolePermissionId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,6 +40,9 @@ public interface RolePermissionRepository extends JpaRepository<RoleHasPermissio
     List<String> findPermissionIdsByRoleId(@Param("roleId") String roleId);
 
     int deleteByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
+
+    @Modifying
+    int deleteByIdRoleId(String roleId);
 
     boolean existsByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
 

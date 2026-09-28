@@ -58,8 +58,9 @@ public class RolePermissionServiceImpl implements RolePermissionService {
 
         log.info("Assign permissions {} to role {}", permissionIds, roleId);
 
-        roleRepository.findById(roleId)
+        Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+        assertNotSystemAdmin(role);
 
         List<Permission> permissions = permissionRepository.findAllById(permissionIds);
 
@@ -108,8 +109,9 @@ public class RolePermissionServiceImpl implements RolePermissionService {
             throw new BadRequestException(ErrorCode.COM_001);
         }
 
-        roleRepository.findById(roleId)
+        Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
+        assertNotSystemAdmin(role);
 
         int deleted = rolePermissionRepository
                 .deleteByIdRoleIdAndIdPermissionId(roleId, permissionId);
@@ -146,8 +148,20 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         return PageResponse.from(responsePage);
     }
 
-    private void evictRoleUsersPermissionCache(String roleId) {
-        List<String> accountIds = accountHasRoleRepository.findAccountIdsByRoleId(roleId);
+    /**
+     * Blocks any permission change on the built-in system administrator role.
+     */
+    private static void assertNotSystemAdmin(Role role) {
+        if (role == null) {
+            return;
+        }
+        if ("ADMIN".equalsIgnoreCase(role.getName()) || "ROLE_ADMIN".equalsIgnoreCase(role.getCode())) {
+            log.warn("System admin role permissions are protected, id={}", role.getId());
+            throw new BadRequestException(ErrorCode.ROLE_007);
+        }
+    }
+
+    private void evictRoleUsersPermissionCache(String roleId) {        List<String> accountIds = accountHasRoleRepository.findAccountIdsByRoleId(roleId);
         if (accountIds == null || accountIds.isEmpty()) {
             log.debug("No user cache to evict for role {}", roleId);
             return;

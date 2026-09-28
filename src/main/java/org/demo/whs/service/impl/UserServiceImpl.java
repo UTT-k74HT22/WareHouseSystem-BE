@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.UserProfile;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.entity.enums.AccountStatus;
 import org.demo.whs.entity.enums.RoleType;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
@@ -41,7 +42,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<AccountResponse> getAll(String search, String status, Pageable pageable) {
+    public PageResponse<AccountResponse> getAll(String search, AccountStatus status, Pageable pageable) {
         log.info("Fetching users with search: {}, status: {}, page: {}", search, status, pageable);
 
         Page<org.demo.whs.entity.Account> page = accountRepository.findAllWithSearch(search, status, pageable);

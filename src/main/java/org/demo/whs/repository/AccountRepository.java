@@ -2,6 +2,7 @@ package org.demo.whs.repository;
 
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.entity.enums.AccountStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -51,11 +52,11 @@ public interface AccountRepository extends JpaRepository<Account, String> {
             OR LOWER(a.username) LIKE LOWER(CONCAT('%', :search, '%')) 
             OR LOWER(up.email) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(CONCAT(up.firstName, ' ', up.lastName)) LIKE LOWER(CONCAT('%', :search, '%')))
-        AND (a.status = :status OR :status IS NULL OR :status = '')
+        AND (a.status = :status OR :status IS NULL)
     """)
     Page<Account> findAllWithSearch(
         @Param("search") String search,
-        @Param("status") String status,
+        @Param("status") AccountStatus status,
         Pageable pageable
     );
 }

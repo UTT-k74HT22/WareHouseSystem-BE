@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
@@ -120,6 +121,20 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (EmployeeStatus status : EmployeeStatus.values()) {
+            long count = employeeRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public EmployeeResponse getById(String id) {
         log.info("Fetching employee by id={}", id);
 
@@ -185,6 +200,45 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Transactional
+    public EmployeeResponse updateEmployeeStatus(String id, UpdateEmployeeStatusRequest request) {
+        log.info("Updating employee status by id={}, status={}", id, request.getStatus());
+
+        EmployeeStatus newStatus;
+        try {
+            newStatus = EmployeeStatus.valueOf(request.getStatus().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+        if (newStatus == EmployeeStatus.TERMINATED) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        Employee employee = findEmployeeById(id);
+        if (employee.getStatus() == newStatus) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        employee.setStatus(newStatus);
+        Employee updated = employeeRepository.save(employee);
+
+        // Mirror softDelete: re-activating an employee unsuspends the linked account.
+        if (newStatus == EmployeeStatus.ACTIVE && updated.getAccountId() != null) {
+            accountRepository.findById(updated.getAccountId()).ifPresent(account -> {
+                if (account.getStatus() == AccountStatus.SUSPENDED) {
+                    account.setStatus(AccountStatus.ACTIVE);
+                    accountRepository.save(account);
+                }
+            });
+        }
+
+        log.info("Employee status updated successfully: id={}, status={}", updated.getId(), newStatus);
+        UserProfile userProfile = userProfileRepository.findByAccountId(updated.getAccountId())
+                .orElse(null);
+        return employeeMapper.toResponse(updated, userProfile);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<EmployeeResponse> getEmployees(String keyword, String status, String warehouseId, Pageable pageable) {
         validatePageable(pageable);
@@ -242,7 +296,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private EmployeeStatus parseStatusOrDefault(String status) {
         if (status == null || status.isBlank()) {
-            return EmployeeStatus.ACTIVE;
+            return null;
         }
         try {
             return EmployeeStatus.valueOf(status.trim().toUpperCase());

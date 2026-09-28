@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
@@ -150,7 +151,7 @@ public class InventoryController {
     @Operation(summary = "Decrease inventory", description = "Decrease on-hand stock from outbound or adjustment")
     @PreAuthorize("hasAuthority('PERM_INVENTORY_MUTATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryResponse>> decrease(
-            @Valid @RequestBody org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request) {
+            @Valid @RequestBody InventoryDecreaseRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.decrease(request)));
     }
 }

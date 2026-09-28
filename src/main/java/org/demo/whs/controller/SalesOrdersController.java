@@ -115,13 +115,14 @@ public class SalesOrdersController {
      * Mục đích:
      * - Xem thông tin đơn và các dòng sản phẩm
      */
-    @Operation(summary = "Get sales order by id")
+    @Operation(summary = "Get sales order statistics")
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('PERM_SALES_ORDER_READ')")
     public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
         return ResponseEntity.ok(BaseResponse.success(salesOrdersService.getStats()));
     }
 
+    @Operation(summary = "Get sales order by id")
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_SALES_ORDER_READ')")
     public ResponseEntity<BaseResponse<SalesOrdersResponse>> getById(@PathVariable String id) {

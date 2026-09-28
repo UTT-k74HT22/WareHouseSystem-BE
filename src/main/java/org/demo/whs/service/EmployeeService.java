@@ -2,6 +2,7 @@ package org.demo.whs.service;
 
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.springframework.data.domain.Pageable;
@@ -45,13 +46,30 @@ public interface EmployeeService {
     void softDelete(String id);
 
     /**
+     * Change employee lifecycle status (ACTIVE / ON_LEAVE).
+     * TERMINATED is only allowed via {@link #softDelete(String)}.
+     *
+     * @param id employee id
+     * @param request status change request
+     * @return updated employee response
+     */
+    EmployeeResponse updateEmployeeStatus(String id, UpdateEmployeeStatusRequest request);
+
+    /**
      * List employees with pagination and filters.
      *
      * @param keyword     optional search keyword
-     * @param status      optional status filter (default ACTIVE)
+     * @param status      optional status filter (blank = all statuses)
      * @param warehouseId optional warehouse filter
      * @param pageable    pagination and sorting
      * @return paginated employee responses
      */
     PageResponse<EmployeeResponse> getEmployees(String keyword, String status, String warehouseId, Pageable pageable);
+
+    /**
+     * Counts employees by status for dashboard statistics.
+     *
+     * @return map of status name (lowercase) to count, plus "total"
+     */
+    java.util.Map<String, Long> getStats();
 }
