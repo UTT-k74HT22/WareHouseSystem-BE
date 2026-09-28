@@ -46,7 +46,7 @@ public class ProductController {
         ProductResponse response = productService.createProduct(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(BaseResponse.success(response, "Product created successfully"));
+                .body(BaseResponse.success(response, "Tạo sản phẩm thành công"));
     }
 
     /**
@@ -65,7 +65,7 @@ public class ProductController {
             @RequestBody @Valid UpdateProductRequest request) {
         log.info("Received request to update product with ID={}", id);
         ProductResponse response = productService.updateProduct(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Product updated successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật sản phẩm thành công"));
     }
 
     /**
@@ -153,7 +153,7 @@ public class ProductController {
     public ResponseEntity<BaseResponse<Void>> deleteProduct(@PathVariable String id) {
         log.info("Received request to delete product with ID={}", id);
         productService.deleteProduct(id);
-        return ResponseEntity.ok(BaseResponse.success(null, "Product deleted successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa sản phẩm thành công"));
     }
 
     /**

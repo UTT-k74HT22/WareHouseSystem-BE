@@ -49,7 +49,7 @@ public class RolePermissionController {
         List<PermissionResponse> response = rolePermissionService.assignPermissions(id, request);
 
         return ResponseEntity.ok(
-                BaseResponse.success(response, "Permissions assigned successfully")
+                BaseResponse.success(response, "Gán quyền thành công")
         );
     }
 
@@ -72,7 +72,7 @@ public class RolePermissionController {
         rolePermissionService.removePermission(id, permId);
 
         return ResponseEntity.ok(
-                BaseResponse.success(null, "Permission removed successfully")
+                BaseResponse.success(null, "Gỡ quyền thành công")
         );
     }
 

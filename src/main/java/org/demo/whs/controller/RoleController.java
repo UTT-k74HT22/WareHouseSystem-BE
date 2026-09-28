@@ -55,7 +55,7 @@ public class RoleController {
     @PreAuthorize("hasAuthority('PERM_ROLE_READ')")
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getRoles(
             @RequestParam(required = false) Boolean isDefault,
-            @RequestParam(required = false) @Size(max = 100, message = "Search keyword max 50 chars") String search,
+            @RequestParam(required = false) @Size(max = 100, message = "Từ khóa tìm kiếm không được vượt quá 100 ký tự") String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
@@ -107,7 +107,7 @@ public class RoleController {
         roleService.deleteRole(id);
 
         return ResponseEntity.ok(
-                BaseResponse.success(null, "Role deleted successfully")
+                BaseResponse.success(null, "Xóa vai trò thành công")
         );
     }
 

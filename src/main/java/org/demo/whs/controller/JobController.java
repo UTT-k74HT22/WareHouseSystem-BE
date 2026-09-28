@@ -55,7 +55,7 @@ public class JobController {
         log.info("Get my jobs requested by accountId={}", currentAccountId);
 
         PageResponse<BackgroundJobSummaryResponse> response = backgroundJobService.getMyJobs(currentAccountId, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background jobs retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách tác vụ nền thành công"));
     }
 
     /**
@@ -71,7 +71,7 @@ public class JobController {
         log.info("Get background job detail id={} requested by accountId={}", jobId, currentAccountId);
 
         BackgroundJobDetailResponse response = backgroundJobService.getJobDetail(jobId, currentAccountId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background job detail retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy chi tiết tác vụ nền thành công"));
     }
 
     /**
@@ -87,7 +87,7 @@ public class JobController {
         log.info("Get background job status id={} requested by accountId={}", jobId, currentAccountId);
 
         BackgroundJobStatusResponse response = backgroundJobService.getJobStatus(jobId, currentAccountId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background job status retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy trạng thái tác vụ nền thành công"));
     }
 
     /**
@@ -106,7 +106,7 @@ public class JobController {
         log.info("Retry background job id={} requested by accountId={}", jobId, currentAccountId);
 
         BackgroundJobStatusResponse response = backgroundJobService.retryJob(jobId, currentAccountId, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background job retry flow is scaffolded"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Chức năng chạy lại tác vụ nền hiện chưa hoàn thiện"));
     }
 
     /**
@@ -125,7 +125,7 @@ public class JobController {
         log.info("Cancel background job id={} requested by accountId={}", jobId, currentAccountId);
 
         BackgroundJobStatusResponse response = backgroundJobService.cancelJob(jobId, currentAccountId, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background job cancel flow is scaffolded"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Chức năng hủy tác vụ nền hiện chưa hoàn thiện"));
     }
 
     /**
@@ -141,6 +141,6 @@ public class JobController {
         log.info("Get background job download id={} requested by accountId={}", jobId, currentAccountId);
 
         BackgroundJobFileResponse response = backgroundJobService.getJobDownload(jobId, currentAccountId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Background job download link generated successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Tạo đường dẫn tải kết quả tác vụ nền thành công"));
     }
 }
