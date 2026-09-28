@@ -91,6 +91,6 @@ public class PermissionController {
             @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id
     ) {
         permissionService.deletePermission(id);
-        return ResponseEntity.ok(BaseResponse.success(null, "Permission deleted successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa quyền thành công"));
     }
 }

@@ -41,12 +41,12 @@ public enum ErrorCode {
 
     // Ware House errors
     WHS_001("WHS_001", "Không tìm thấy kho"),
-    WHS_002("WHS_002", "Kho không đủ tồn"),
+    WHS_002("WHS_002", "Kho không đủ hàng tồn"),
     WHS_003("WHS_003", "Thao tác kho không hợp lệ"),
     WHS_004("WHS_004", "Mã kho đã tồn tại"),
 
     WH_001("WHS_001", "Không tìm thấy kho"),
-    WH_002("WHS_002", "Kho không đủ tồn"),
+    WH_002("WHS_002", "Kho không đủ hàng tồn"),
     WH_003("WHS_003", "Thao tác kho không hợp lệ"),
     WH_004("WHS_004", "Mã kho đã tồn tại"),
     WH_005("WHS_005", "Không thể xóa kho vì vẫn còn vị trí đang hoạt động"),
@@ -55,7 +55,7 @@ public enum ErrorCode {
     WH_008("WHS_008", "Kho đang được dữ liệu khác tham chiếu"),
     INV_001("INV_001", "Không tìm thấy tồn kho"),
     INV_002("INV_002", "Số lượng bỏ giữ chỗ vượt quá số lượng đang giữ chỗ"),
-    INV_003("INV_003", "Thông tin chiều tồn kho không hợp lệ"),
+    INV_003("INV_003", "Thông tin phân loại tồn kho không hợp lệ"),
     INV_004("INV_004", "Số lượng khả dụng không đủ"),
 
     STA_001("STA_001", "Yêu cầu điều chỉnh kho không hợp lệ"),
@@ -76,7 +76,7 @@ public enum ErrorCode {
     LOC_007("LOC_007", "Vị trí chưa hoạt động để thực hiện chuyển kho"),
     LOC_008("LOC_008", "Loại vị trí không phù hợp để chuyển kho"),
     LOC_009("LOC_009", "Vị trí đã vượt quá sức chứa"),
-    LOC_010("LOC_010", "Sức chứa đang sử dụng của vị trí không đủ cho thao tác này"),
+    LOC_010("LOC_010", "Sức chứa còn lại của vị trí không đủ cho thao tác này"),
 
     // Product errors
     PROD_001("PROD_001", "Không tìm thấy sản phẩm"),
@@ -229,7 +229,7 @@ public enum ErrorCode {
     PERM_010("PERM_010", "Hành động không hợp lệ"),
     PERM_011("PERM_011", "Không thể thay đổi mã quyền"),
     PERM_012("PERM_012", "Không thể thay đổi tài nguyên của quyền"),
-    PERM_013("PERM_013", "Nguồn cấp quyền hiện tạm thời không khả dụng."),
+    PERM_013("PERM_013", "Nguồn dữ liệu quyền hiện không khả dụng, vui lòng thử lại sau"),
     //User Role errors
     USER_ROLE_001("USER_ROLE_001", "Không tìm thấy người dùng"),
     USER_ROLE_002("USER_ROLE_002", "Không tìm thấy vai trò cần gán"),

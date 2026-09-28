@@ -65,7 +65,7 @@ public class StorageController {
                 originalFilename, folder);
 
         FileUploadResponse response = storageService.uploadFile(file, folder);
-        return ResponseEntity.ok(BaseResponse.success(response, "File uploaded successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Tải tệp lên thành công"));
     }
 
     // =========================================================================
@@ -88,12 +88,12 @@ public class StorageController {
 
         if (fileCount > 10) {
             return ResponseEntity.badRequest()
-                    .body(BaseResponse.error("COM_003", "Maximum 10 files per batch upload", null));
+                    .body(BaseResponse.error("COM_003", "Mỗi lần chỉ được tải lên tối đa 10 tệp", null));
         }
 
         List<FileUploadResponse> responses = storageService.uploadFiles(files, folder);
         return ResponseEntity.ok(
-                BaseResponse.success(responses, fileCount + " file(s) uploaded successfully"));
+                BaseResponse.success(responses, "Đã tải lên thành công " + fileCount + " tệp"));
     }
 
     // =========================================================================
@@ -116,7 +116,7 @@ public class StorageController {
 
         String url = storageService.getPresignedUrl(objectName);
         return ResponseEntity.ok(
-                BaseResponse.success(Map.of("presignedUrl", url), "Presigned URL generated"));
+                BaseResponse.success(Map.of("presignedUrl", url), "Tạo đường dẫn truy cập tệp thành công"));
     }
 
     // =========================================================================
@@ -142,7 +142,7 @@ public class StorageController {
         log.info("DELETE /api/v1/storage?objectName={}", objectName);
 
         storageService.deleteFile(objectName);
-        return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa tệp thành công"));
     }
 
     /**
@@ -165,7 +165,7 @@ public class StorageController {
         log.info("DELETE /api/v1/storage/{}", normalizedObjectName);
 
         storageService.deleteFile(normalizedObjectName);
-        return ResponseEntity.ok(BaseResponse.success(null, "File deleted successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa tệp thành công"));
     }
 
     // =========================================================================

@@ -191,7 +191,7 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody @Valid ChangePassWordRequest request){
         authService.changePassword(request);
-        return ResponseEntity.ok(BaseResponse.success("Password changed successfully"));
+        return ResponseEntity.ok(BaseResponse.success("Đổi mật khẩu thành công"));
     }
 
     /**

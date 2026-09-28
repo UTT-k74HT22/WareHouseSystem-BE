@@ -48,7 +48,7 @@ public class InboundReceiptLinesController {
         log.info("Creating inbound receipt line for receipt: {}", request.getInboundReceiptId());
         InboundReceiptLinesResponse response = inboundReceiptLinesService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.success(response, "Inbound receipt line created successfully"));
+                .body(BaseResponse.success(response, "Tạo dòng phiếu nhập thành công"));
     }
 
     /**
@@ -64,7 +64,7 @@ public class InboundReceiptLinesController {
     public ResponseEntity<BaseResponse<InboundReceiptLinesResponse>> update(@PathVariable String id, @Valid @RequestBody InboundReceiptLineUpdateRequest request) {
         log.info("Updating inbound receipt line: {}", id);
         InboundReceiptLinesResponse response = inboundReceiptLinesService.update(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Inbound receipt line updated successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật dòng phiếu nhập thành công"));
     }
 
     /**
@@ -79,7 +79,7 @@ public class InboundReceiptLinesController {
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable String id) {
         log.info("Deleting inbound receipt line: {}", id);
         inboundReceiptLinesService.delete(id);
-        return ResponseEntity.ok(BaseResponse.success(null, "Inbound receipt line deleted successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa dòng phiếu nhập thành công"));
     }
 
     /**

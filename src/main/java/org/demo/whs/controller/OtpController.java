@@ -38,7 +38,7 @@ public class OtpController {
         otpService.sendOtp(request.getEmail(), request.getType());
 
         return ResponseEntity.ok(
-                BaseResponse.success("OTP sent successfully")
+                BaseResponse.success("Gửi OTP thành công")
         );
     }
 
@@ -66,13 +66,13 @@ public class OtpController {
             return ResponseEntity.badRequest()
                     .body(BaseResponse.error(
                             ErrorCode.OTP_006.getCode(),
-                            "Invalid or expired OTP",
+                            "OTP không hợp lệ hoặc đã hết hạn",
                             null
                     ));
         }
 
         return ResponseEntity.ok(
-                BaseResponse.success("OTP verified successfully")
+                BaseResponse.success("Xác minh OTP thành công")
         );
     }
 }
