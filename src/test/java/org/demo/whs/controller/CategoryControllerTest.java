@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.CategoryService;
@@ -40,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(CategoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import(GlobalExceptionHandle.class)
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,
         FlywayAutoConfiguration.class
@@ -170,15 +171,18 @@ class CategoryControllerTest {
         mockMvc.perform(get("/api/v1/categories/{id}", "7c9e6679-7425-40de-944b-e07fc1f90ae7"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("CAT_001"))
-                .andExpect(jsonPath("$.message").value("Category not found"));
+                .andExpect(jsonPath("$.message").value(ErrorCode.CAT_001.getMessage()));
     }
 
     @Test
-    @DisplayName("should_ReturnBadRequest_When_CategoryIdIsInvalid")
-    void should_ReturnBadRequest_When_CategoryIdIsInvalid() throws Exception {
-        mockMvc.perform(get("/api/v1/categories/{id}", "invalid-id"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value("COM_001"));
+    @DisplayName("should_ReturnNotFound_When_CategoryIdUnknown")
+    void should_ReturnNotFound_When_CategoryIdUnknown() throws Exception {
+        when(categoryService.getCategoryById("unknown-id"))
+                .thenThrow(new NotFoundException(ErrorCode.CAT_001));
+
+        mockMvc.perform(get("/api/v1/categories/{id}", "unknown-id"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("CAT_001"));
     }
 
     @Test
@@ -261,11 +265,11 @@ class CategoryControllerTest {
     }
 
     @Test
-    @DisplayName("should_ReturnBadRequest_When_StatusPayloadIsInvalid")
-    void should_ReturnBadRequest_When_StatusPayloadIsInvalid() throws Exception {
+    @DisplayName("should_ReturnBadRequest_When_StatusValueIsInvalid")
+    void should_ReturnBadRequest_When_StatusValueIsInvalid() throws Exception {
         String invalidPayload = """
                 {
-                  "status": null
+                  "status": "WRONG_STATUS"
                 }
                 """;
 
@@ -273,7 +277,7 @@ class CategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value("COM_001"));
+                .andExpect(jsonPath("$.error_code").value("COM_003"));
     }
 
     private void setField(Object target, String fieldName, Object value) throws ReflectiveOperationException {

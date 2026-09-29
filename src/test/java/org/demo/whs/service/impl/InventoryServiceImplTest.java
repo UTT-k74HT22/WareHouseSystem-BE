@@ -118,7 +118,7 @@ class InventoryServiceImplTest {
         when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(warehouse));
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.increase(request);
@@ -176,13 +176,12 @@ class InventoryServiceImplTest {
                 .thenReturn(Optional.empty());
         when(inventoryMapper.toEntity(any(InventoryMutationRequest.class))).thenReturn(newInv);
         when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(newInv);
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(newInv);
 
         // Act
         inventoryService.increase(request);
 
         // Assert
-        verify(inventoryRepository).saveAndFlush(any(Inventory.class));
+        verify(inventoryRepository, times(2)).saveAndFlush(any(Inventory.class));
         verify(stockMovementsService).recordIncrease(eq(request), any(), any());
     }
 
@@ -321,7 +320,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.decrease(request);
@@ -348,7 +347,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.decrease(request);
@@ -379,7 +378,7 @@ class InventoryServiceImplTest {
         when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(reservation));
         when(inventoryReservationRepository.sumQuantityByInventoryIdAndStatus("inv-1", InventoryReservationStatus.RESERVED))
                 .thenReturn(BigDecimal.ZERO);
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         inventoryService.decrease(request);
 

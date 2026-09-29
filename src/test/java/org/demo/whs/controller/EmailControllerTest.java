@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.EmailLogResponse;
 import org.demo.whs.entity.enums.EmailStatus;
 import org.demo.whs.entity.enums.EmailType;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.EmailService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(EmailController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import(GlobalExceptionHandle.class)
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,
         FlywayAutoConfiguration.class

@@ -5,6 +5,7 @@ import org.demo.whs.entity.dto.request.PurchaseOrderLines.PurchaseOrderLinesRequ
 import org.demo.whs.entity.dto.request.PurchaseOrderLines.UpdatePurchaseOrderLinesRequest;
 import org.demo.whs.entity.dto.response.PurchaseOrderLines.PurchaseOrderLinesResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.PurchaseOrderLinesService;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(PurchaseOrderLinesController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import(GlobalExceptionHandle.class)
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,
         FlywayAutoConfiguration.class

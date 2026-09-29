@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.request.InboundReceipts.UpdateInboundReceiptsRequ
 import org.demo.whs.entity.dto.response.InboundReceipts.InboundReceiptsResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.InboundReceiptsService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(InboundReceiptsController.class)
 @ActiveProfiles("test")
-@Import({InboundReceiptsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({InboundReceiptsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_INBOUND_RECEIPT_CREATE",
         "PERM_INBOUND_RECEIPT_READ",

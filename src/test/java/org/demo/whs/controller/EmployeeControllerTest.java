@@ -5,6 +5,7 @@ import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.EmployeeService;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(EmployeeController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import(GlobalExceptionHandle.class)
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,
         FlywayAutoConfiguration.class
@@ -81,7 +82,7 @@ class EmployeeControllerTest {
         mockMvc.perform(get("/api/v1/employees/{id}", "missing"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("EMP_001"))
-                .andExpect(jsonPath("$.message").value("Employee not found"));
+                .andExpect(jsonPath("$.message").value(ErrorCode.EMP_001.getMessage()));
     }
 
     @Test

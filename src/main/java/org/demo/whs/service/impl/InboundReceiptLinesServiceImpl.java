@@ -31,9 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -217,13 +215,13 @@ public class InboundReceiptLinesServiceImpl implements InboundReceiptLinesServic
                 .distinct()
                 .toList();
 
-        java.util.Map<String, Products> productsMap = productIds.isEmpty() ? java.util.Map.of()
+        Map<String, Products> productsMap = productIds.isEmpty() ? new HashMap<>()
                 : productRepository.findAllById(productIds).stream()
                         .collect(java.util.stream.Collectors.toMap(Products::getId, p -> p));
-        java.util.Map<String, Batch> batchesMap = batchIds.isEmpty() ? java.util.Map.of()
+        Map<String, Batch> batchesMap = batchIds.isEmpty() ? new HashMap<>()
                 : batchRepository.findAllById(batchIds).stream()
                         .collect(java.util.stream.Collectors.toMap(Batch::getId, b -> b));
-        java.util.Map<String, Locations> locationsMap = locationIds.isEmpty() ? java.util.Map.of()
+        Map<String, Locations> locationsMap = locationIds.isEmpty() ? new HashMap<>()
                 : locationRepository.findAllById(locationIds).stream()
                         .collect(java.util.stream.Collectors.toMap(Locations::getId, l -> l));
 

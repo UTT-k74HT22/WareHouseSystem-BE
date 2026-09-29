@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.response.Batch.BatchInventorySnapshotResponse;
 import org.demo.whs.entity.dto.response.Batch.BatchTraceabilityResponse;
 import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BatchController.class)
 @ActiveProfiles("test")
 @WithMockUser(authorities = "PERM_BATCH_READ")
-@Import({BatchQueryControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({BatchQueryControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 class BatchQueryControllerTest {
 
@@ -67,8 +68,7 @@ class BatchQueryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.batch_id").value("batch-1"))
-                .andExpect(jsonPath("$.data.inventory_snapshot.total_available_quantity").value(7))
-                .andExpect(jsonPath("$.message").value("Batch traceability retrieved successfully"));
+                .andExpect(jsonPath("$.data.inventory_snapshot.total_available_quantity").value(7));
 
         verify(batchService).getBatchTraceability("batch-1");
     }

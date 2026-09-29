@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.request.SalesOrderLines.CreateSalesOrderLinesRequ
 import org.demo.whs.entity.dto.request.SalesOrderLines.UpdateSalesOrderLinesRequest;
 import org.demo.whs.entity.dto.response.SalesOrderLines.SalesOrderLinesResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.RateLimitService;
 import org.demo.whs.service.SalesOrderLinesService;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(SalesOrderLinesController.class)
 @ActiveProfiles("test")
-@Import({SalesOrderLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({SalesOrderLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_SALES_ORDER_LINE_CREATE",
         "PERM_SALES_ORDER_LINE_READ",

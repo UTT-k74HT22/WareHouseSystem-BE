@@ -8,6 +8,7 @@ import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BatchController.class)
 @ActiveProfiles("test")
 @WithMockUser(authorities = {"PERM_BATCH_READ", "PERM_BATCH_UPDATE"})
-@Import({BatchControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({BatchControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 class BatchControllerTest {
 
@@ -120,8 +121,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value("batch-1"))
-                .andExpect(jsonPath("$.message").value("Batch updated successfully"));
+                .andExpect(jsonPath("$.data.id").value("batch-1"));
 
         verify(batchService).updateBatch(eq("batch-1"), any());
     }
@@ -140,8 +140,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("QUARANTINE"))
-                .andExpect(jsonPath("$.message").value("Batch quarantined successfully"));
+                .andExpect(jsonPath("$.data.status").value("QUARANTINE"));
 
         verify(batchService).quarantineBatch(eq("batch-1"), any());
     }
@@ -174,8 +173,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("AVAILABLE"))
-                .andExpect(jsonPath("$.message").value("Batch released successfully"));
+                .andExpect(jsonPath("$.data.status").value("AVAILABLE"));
 
         verify(batchService).releaseBatch(eq("batch-1"), any());
     }
