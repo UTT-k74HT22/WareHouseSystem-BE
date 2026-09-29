@@ -203,25 +203,6 @@ public class BatchController {
     }
 
     /**
-     * Change the status of a batch with generic status transitions.
-     *
-     * @param id      the identifier of the batch to change status for
-     * @param request the request containing the new status and optional reason
-     * @return the response containing the details of the batch with updated status
-     */
-    @PatchMapping("/{id}/status")
-    @Operation(summary = "Change batch status", description = "Generic status changes are blocked. Use dedicated workflow endpoints instead")
-    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
-    public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
-            @PathVariable String id,
-            @RequestBody @Valid ChangeBatchStatusRequest request) {
-
-        BatchResponse response = batchService.changeBatchStatus(id, request);
-
-        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật trạng thái lô hàng thành công"));
-    }
-
-    /**
      * Update mutable batch master data such as manufacturing date, expiry date, and quantity.
      *
      * @param id      the identifier of the batch to be updated
