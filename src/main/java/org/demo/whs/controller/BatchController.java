@@ -63,7 +63,7 @@ public class BatchController {
         BatchResponse response = batchService.createBatch(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(BaseResponse.success(response, "Batch created successfully"));
+                .body(BaseResponse.success(response, "Tạo lô hàng thành công"));
     }
 
     /**
@@ -80,7 +80,7 @@ public class BatchController {
         log.info("Get batches with id: {}", id);
 
         BatchResponse response = batchService.getBatchById(id);
-        BaseResponse<BatchResponse> baseResponse = BaseResponse.success(response, "Batch retrieved successfully");
+        BaseResponse<BatchResponse> baseResponse = BaseResponse.success(response, "Lấy thông tin lô hàng thành công");
         return ResponseEntity.ok(baseResponse);
     }
 
@@ -146,7 +146,7 @@ public class BatchController {
     @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<BatchTraceabilityResponse>> getBatchTraceability(@PathVariable String id) {
         BatchTraceabilityResponse response = batchService.getBatchTraceability(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Batch traceability retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy thông tin truy xuất lô hàng thành công"));
     }
 
     /**
@@ -163,7 +163,7 @@ public class BatchController {
             @RequestParam(name = "threshold_days", defaultValue = "30") @Min(0) @Max(365) Integer thresholdDays,
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
         List<BatchExpiringResponse> response = batchService.getExpiringBatches(thresholdDays, warehouseId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Expiring batches retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách lô hàng sắp hết hạn thành công"));
     }
 
     /**
@@ -182,7 +182,7 @@ public class BatchController {
             @RequestParam(name = "warehouse_id") @NotBlank String warehouseId,
             @RequestParam(name = "limit", defaultValue = "5") @Min(1) @Max(50) Integer limit) {
         List<BatchFifoRecommendationResponse> response = batchService.getFifoRecommendations(productId, warehouseId, limit);
-        return ResponseEntity.ok(BaseResponse.success(response, "FIFO recommendations retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy đề xuất xuất kho theo FIFO thành công"));
     }
 
     /**
@@ -199,7 +199,26 @@ public class BatchController {
             @PathVariable String productId,
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
         List<BatchByProductResponse> response = batchService.getBatchesByProduct(productId, warehouseId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Batches retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách lô hàng thành công"));
+    }
+
+    /**
+     * Change the status of a batch with generic status transitions.
+     *
+     * @param id      the identifier of the batch to change status for
+     * @param request the request containing the new status and optional reason
+     * @return the response containing the details of the batch with updated status
+     */
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Change batch status", description = "Generic status changes are blocked. Use dedicated workflow endpoints instead")
+    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
+    public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
+            @PathVariable String id,
+            @RequestBody @Valid ChangeBatchStatusRequest request) {
+
+        BatchResponse response = batchService.changeBatchStatus(id, request);
+
+        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật trạng thái lô hàng thành công"));
     }
 
     /**
@@ -219,7 +238,7 @@ public class BatchController {
         BatchResponse response = batchService.updateBatch(id, request);
 
         return ResponseEntity.ok(
-                BaseResponse.success(response, "Batch updated successfully")
+                BaseResponse.success(response, "Cập nhật lô hàng thành công")
         );
     }
 
@@ -237,7 +256,7 @@ public class BatchController {
             @PathVariable String id,
             @Valid @RequestBody QuarantineBatchRequest request) {
         BatchResponse response = batchService.quarantineBatch(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Batch quarantined successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Cách ly lô hàng thành công"));
     }
 
     /**
@@ -254,7 +273,7 @@ public class BatchController {
             @PathVariable String id,
             @Valid @RequestBody ReleaseBatchRequest request) {
         BatchResponse response = batchService.releaseBatch(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Batch released successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Đưa lô hàng trở lại sử dụng thành công"));
     }
 
     private SearchBatchRequest buildSearchRequest(

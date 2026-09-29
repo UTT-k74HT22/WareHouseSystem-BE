@@ -45,7 +45,7 @@ public class OutboundShipmentLinesController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_CREATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> create(@Valid @RequestBody OutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.create(request);
-        return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment line created successfully"), HttpStatus.CREATED);
+        return new ResponseEntity<>(BaseResponse.success(response, "Tạo dòng phiếu xuất thành công"), HttpStatus.CREATED);
     }
     /**
      * Lấy danh sách tất cả Shipment Line theo Shipment ID.
@@ -61,7 +61,7 @@ public class OutboundShipmentLinesController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_READ')")
     public ResponseEntity<BaseResponse<List<OutboundShipmentLinesResponse>>> getByShipmentId(@PathVariable String shipmentId) {
         List<OutboundShipmentLinesResponse> response = outboundShipmentLinesService.getByShipmentId(shipmentId);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment lines retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách dòng phiếu xuất thành công"));
     }
     /**
      * Lấy chi tiết một Outbound Shipment Line theo ID.
@@ -77,7 +77,7 @@ public class OutboundShipmentLinesController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_READ')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> getById(@PathVariable String id) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.getById(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy thông tin dòng phiếu xuất thành công"));
     }
     /**
      * Cập nhật Outbound Shipment Line.
@@ -91,7 +91,7 @@ public class OutboundShipmentLinesController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentLinesResponse>> update(@PathVariable String id, @Valid @RequestBody UpdateOutboundShipmentLinesRequest request) {
         OutboundShipmentLinesResponse response = outboundShipmentLinesService.update(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment line updated successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật dòng phiếu xuất thành công"));
     }
     /**
      * Cập nhật Outbound Shipment Line.
@@ -105,6 +105,6 @@ public class OutboundShipmentLinesController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_LINE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> remove(@PathVariable String id) {
         outboundShipmentLinesService.remove(id);
-        return ResponseEntity.ok(BaseResponse.success(null, "Outbound shipment line removed successfully"));
+        return ResponseEntity.ok(BaseResponse.success(null, "Xóa dòng phiếu xuất thành công"));
     }
 }

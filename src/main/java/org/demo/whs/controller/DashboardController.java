@@ -30,6 +30,6 @@ public class DashboardController {
             @RequestParam(defaultValue = "5") int activityLimit,
             @RequestParam(defaultValue = "5") int jobLimit) {
         DashboardResponse response = dashboardService.getDashboard(warehouseId, days, activityLimit, jobLimit);
-        return ResponseEntity.ok(BaseResponse.success(response, "Dashboard data retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy dữ liệu tổng quan thành công"));
     }
 }

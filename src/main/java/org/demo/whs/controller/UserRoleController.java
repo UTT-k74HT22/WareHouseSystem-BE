@@ -47,7 +47,7 @@ public class UserRoleController {
         List<RoleResponse> response = userRoleService.assignRolesToUser(userId, request);
 
         return ResponseEntity.ok(
-                BaseResponse.success(response, "Roles assigned successfully")
+                BaseResponse.success(response, "Gán vai trò thành công")
         );
     }
 
@@ -71,7 +71,7 @@ public class UserRoleController {
         userRoleService.removeRoleFromUser(userId, roleId);
 
         return ResponseEntity.ok(
-                BaseResponse.success(null, "Role removed successfully")
+                BaseResponse.success(null, "Gỡ vai trò thành công")
         );
     }
 

@@ -45,7 +45,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_CREATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> create(@Valid @RequestBody OutboundShipmentsRequest request) {
         OutboundShipmentsResponse response = outboundShipmentsService.create(request);
-        return new ResponseEntity<>(BaseResponse.success(response, "Outbound shipment created successfully"), HttpStatus.CREATED);
+        return new ResponseEntity<>(BaseResponse.success(response, "Tạo phiếu xuất thành công"), HttpStatus.CREATED);
     }
     /**
      * Lấy danh sách Outbound Shipment có phân trang và filter.
@@ -92,7 +92,7 @@ public class OutboundShipmentsController {
         filter.setShipmentDateTo(shipmentDateTo);
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         PageResponse<OutboundShipmentsResponse> response = outboundShipmentsService.getAll(filter, pageable);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipments retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách phiếu xuất thành công"));
     }
     /**
      * Lấy chi tiết một Outbound Shipment theo ID.
@@ -113,7 +113,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> getById(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.getById(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment retrieved successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Lấy thông tin phiếu xuất thành công"));
     }
     /**
      * Cập nhật thông tin Outbound Shipment.
@@ -129,7 +129,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> update(@PathVariable String id, @Valid @RequestBody UpdateOutboundShipmentsRequest request) {
         OutboundShipmentsResponse response = outboundShipmentsService.update(id, request);
-        return ResponseEntity.ok(BaseResponse.success(response, "Outbound shipment updated successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật phiếu xuất thành công"));
     }
 
     /**
@@ -148,7 +148,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> startPicking(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.startPicking(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment status changed to PICKING"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Phiếu xuất đã chuyển sang trạng thái đang lấy hàng"));
     }
     /**
      * Chuyển trạng thái shipment từ PICKING -> PACKED.
@@ -165,7 +165,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> markAsPacked(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.markAsPacked(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment status changed to PACKED"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Phiếu xuất đã chuyển sang trạng thái đã đóng gói"));
     }
     /**
      * Chuyển shipment sang khu vực chờ xuất (PACKED -> STAGING).
@@ -188,7 +188,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> ship(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.ship(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment moved to STAGING successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Phiếu xuất đã chuyển sang khu vực tập kết thành công"));
     }
 
     @PutMapping("/{id}/confirm-dispatch")
@@ -196,7 +196,7 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> confirmDispatch(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.confirmDispatch(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment dispatched and inventory decreased successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Xuất hàng và cập nhật tồn kho thành công"));
     }
     /**
      * Hủy Outbound Shipment.
@@ -216,6 +216,6 @@ public class OutboundShipmentsController {
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_UPDATE')")
     public ResponseEntity<BaseResponse<OutboundShipmentsResponse>> cancel(@PathVariable String id) {
         OutboundShipmentsResponse response = outboundShipmentsService.cancel(id);
-        return ResponseEntity.ok(BaseResponse.success(response, "Shipment cancelled successfully"));
+        return ResponseEntity.ok(BaseResponse.success(response, "Hủy phiếu xuất thành công"));
     }
 }
