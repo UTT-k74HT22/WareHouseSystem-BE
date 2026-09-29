@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
 import org.demo.whs.entity.dto.response.User.AccountResponse;
+import org.demo.whs.entity.enums.WareHouseStatus;
+import org.demo.whs.entity.enums.WareHouseType;
 
 @Getter
 @Builder
@@ -16,8 +18,8 @@ public class WareHouseResponse {
     private String address;
     private String phone;
     private String email;
-    private String status;
-    private String wareHouseType;
+    private WareHouseStatus status;
+    private WareHouseType wareHouseType;
     private String managerId;
     private AccountResponse manager;
 }

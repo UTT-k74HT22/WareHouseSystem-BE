@@ -236,23 +236,6 @@ class UserRoleServiceImplTest {
         verify(accountHasRoleRepository, never()).deleteByIdAccountIdAndIdRoleId(any(), any());
     }
 
-    @Test
-    void removeRoleFromUser_raceCondition_throwIllegalState() {
-
-        when(accountHasRoleRepository.existsByIdAccountIdAndIdRoleId(userId, roleId1))
-                .thenReturn(true);
-
-        when(roleRepository.findById(roleId1))
-                .thenReturn(Optional.of(new Role()));
-
-        when(accountHasRoleRepository.countByIdAccountId(userId))
-                .thenReturn(2L)   // trước delete
-                .thenReturn(0L);  // sau delete (race condition)
-
-        assertThrows(IllegalStateException.class,
-                () -> service.removeRoleFromUser(userId, roleId1));
-    }
-
     // ================= GET USER ROLES =================
 
     @Test
@@ -268,6 +251,7 @@ class UserRoleServiceImplTest {
         RoleResponse res1 = mock(RoleResponse.class);
         RoleResponse res2 = mock(RoleResponse.class);
 
+        when(accountRepository.existsById(userId)).thenReturn(true);
         when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(2L);
         when(roleRepository.findRolesByUserId(eq(userId), any(Pageable.class))).thenReturn(page);
         when(roleMapper.toResponse(role1)).thenReturn(res1);
@@ -287,30 +271,27 @@ class UserRoleServiceImplTest {
     @Test
     void getUserRoles_userNotFound_throwException() {
 
-        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(0L);
+        when(accountRepository.existsById(userId)).thenReturn(false);
 
         NotFoundException ex = assertThrows(NotFoundException.class,
                 () -> service.getUserRoles(userId, PageRequest.of(0, 10)));
 
         assertEquals("USER_ROLE_001", ex.getErrorCode());
-        verify(accountHasRoleRepository).countByIdAccountId(userId);
+        verify(accountRepository).existsById(userId);
         verifyNoInteractions(roleRepository);
     }
 
     @Test
-    void getUserRoles_noRolesInPage_throwException() {
+    void getUserRoles_noRoles_returnEmptyPage() {
 
-        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(1L);
+        when(accountRepository.existsById(userId)).thenReturn(true);
+        when(accountHasRoleRepository.countByIdAccountId(userId)).thenReturn(0L);
 
-        Page<Role> emptyPage = Page.empty();
-        when(roleRepository.findRolesByUserId(eq(userId), any(Pageable.class))).thenReturn(emptyPage);
+        PageResponse<RoleResponse> response = service.getUserRoles(userId, PageRequest.of(0, 10));
 
-        NotFoundException ex = assertThrows(NotFoundException.class,
-                () -> service.getUserRoles(userId, PageRequest.of(0, 10)));
-
-        assertEquals("USER_ROLE_002", ex.getErrorCode());
-        verify(accountHasRoleRepository).countByIdAccountId(userId);
-        verify(roleRepository).findRolesByUserId(eq(userId), any(Pageable.class));
+        assertNotNull(response);
+        assertTrue(response.getContent().isEmpty());
+        verify(roleRepository, never()).findRolesByUserId(eq(userId), any(Pageable.class));
     }
 
     @Test

@@ -36,6 +36,8 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
      */
     boolean existsByWarehouseIdAndCode(String warehouseId, String code);
 
+    long countByStatus(LocationStatus status);
+
     /**
      * Finds a location by warehouse ID.
      *
@@ -91,6 +93,9 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
            "(:code IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', :code, '%'))) AND " +
            "(:name IS NULL OR LOWER(l.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(:zone IS NULL OR LOWER(l.zone) LIKE LOWER(CONCAT('%', :zone, '%'))) AND " +
+           "(:keyword IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+           + "OR LOWER(l.name) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+           + "OR LOWER(l.zone) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:type IS NULL OR l.type = :type) AND " +
            "(:status IS NULL OR l.status = :status)")
     Page<Locations> searchLocations(
@@ -98,6 +103,7 @@ public interface LocationRepository extends JpaRepository<Locations, String> {
         @Param("code") String code,
         @Param("name") String name,
         @Param("zone") String zone,
+        @Param("keyword") String keyword,
         @Param("type") LocationType type,
         @Param("status") LocationStatus status,
         Pageable pageable

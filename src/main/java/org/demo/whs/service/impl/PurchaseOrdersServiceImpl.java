@@ -108,6 +108,20 @@ public class PurchaseOrdersServiceImpl implements PurchaseOrdersService {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (PurchaseOrdersStatus status : PurchaseOrdersStatus.values()) {
+            long count = purchaseOrdersRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PurchaseOrdersResponse getById(String id) {
         log.info("Get purchase order by id={}", id);
 

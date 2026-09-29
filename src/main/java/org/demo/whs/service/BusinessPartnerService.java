@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.request.BusinessPartner.SearchBusinessPartnerRequ
 import org.demo.whs.entity.dto.request.BusinessPartner.UpdateBusinessPartnerRequest;
 import org.demo.whs.entity.dto.response.BusinessPartner.BusinessPartnerResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.BusinessPartnerStatus;
 
 import java.util.List;
 
@@ -39,7 +40,7 @@ public interface BusinessPartnerService {
     /**
      * Đổi trạng thái (optional nhưng rất hay dùng)
      */
-    BusinessPartnerResponse changeStatus(String id, String status);
+    BusinessPartnerResponse changeStatus(String id, BusinessPartnerStatus status);
 
     PageResponse<BusinessPartnerResponse> searchBusinessPartners(SearchBusinessPartnerRequest request, Integer page, Integer size );
 }

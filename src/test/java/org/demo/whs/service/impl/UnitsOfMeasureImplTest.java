@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.UnitsOfMeasure.UnitsOfMeasureResponse;
 import org.demo.whs.entity.enums.UnitsOfMeasureType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
+import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.UnitsOfMeasureMapper;
 import org.demo.whs.repository.ProductRepository;
 import org.demo.whs.repository.UnitsOfMeasureRepository;
@@ -75,7 +76,7 @@ class UnitsOfMeasureImplTest {
                     .build();
 
             when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
-            when(unitsOfMeasureMapper.buildRequest(request)).thenReturn(entity);
+            when(unitsOfMeasureMapper.toEntity(request)).thenReturn(entity);
             when(unitsOfMeasureRepository.save(any(UnitsOfMeasure.class))).thenReturn(entity);
             when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenAnswer(invocation -> {
                 UnitsOfMeasure persisted = invocation.getArgument(0);
@@ -98,7 +99,7 @@ class UnitsOfMeasureImplTest {
             assertThat(result.getType()).isEqualTo(UnitsOfMeasureType.WEIGHT);
             assertThat(entity.getCode()).isEqualTo(result.getCode());
 
-            verify(unitsOfMeasureMapper).buildRequest(request);
+            verify(unitsOfMeasureMapper).toEntity(request);
             verify(unitsOfMeasureRepository).save(any(UnitsOfMeasure.class));
             verify(unitsOfMeasureMapper).toResponse(any(UnitsOfMeasure.class));
         }
@@ -129,7 +130,7 @@ class UnitsOfMeasureImplTest {
                     .build();
 
             when(unitsOfMeasureRepository.existsUnitsOfMeasureByCode(anyString())).thenReturn(false);
-            when(unitsOfMeasureMapper.buildRequest(request)).thenReturn(entity);
+            when(unitsOfMeasureMapper.toEntity(request)).thenReturn(entity);
             when(unitsOfMeasureRepository.save(any(UnitsOfMeasure.class))).thenReturn(entity);
             when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenAnswer(invocation -> {
                 UnitsOfMeasure persisted = invocation.getArgument(0);
@@ -294,7 +295,7 @@ class UnitsOfMeasureImplTest {
         }
 
         @Test
-        @DisplayName("Should throw BadRequestException when unit of measure not found")
+        @DisplayName("Should throw NotFoundException when unit of measure not found")
         void findById_NotFound() {
             // Given
             String id = "non-existent-id";
@@ -302,7 +303,7 @@ class UnitsOfMeasureImplTest {
 
             // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.findById(id))
-                    .isInstanceOf(BadRequestException.class)
+                    .isInstanceOf(NotFoundException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_001.getCode());
 
             verify(unitsOfMeasureRepository).findById(id);
@@ -358,7 +359,7 @@ class UnitsOfMeasureImplTest {
         }
 
         @Test
-        @DisplayName("Should throw BadRequestException when unit of measure not found")
+        @DisplayName("Should throw NotFoundException when unit of measure not found")
         void update_NotFound() {
             // Given
             String id = "non-existent-id";
@@ -368,7 +369,7 @@ class UnitsOfMeasureImplTest {
 
             // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.update(id, request))
-                    .isInstanceOf(BadRequestException.class)
+                    .isInstanceOf(NotFoundException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_001.getCode());
 
             verify(unitsOfMeasureRepository).findById(id);
@@ -376,7 +377,7 @@ class UnitsOfMeasureImplTest {
         }
 
         @Test
-        @DisplayName("Should throw BadRequestException when update name is null")
+        @DisplayName("Should update successfully when name is null (partial update skips name)")
         void update_NameIsNull() {
             // Given
             String id = "uom-001";
@@ -389,15 +390,27 @@ class UnitsOfMeasureImplTest {
                     .name("Kilogram")
                     .build();
 
-            when(unitsOfMeasureRepository.findById(id)).thenReturn(Optional.of(entity));
+            UnitsOfMeasureResponse expectedResponse = UnitsOfMeasureResponse.builder()
+                    .id(id)
+                    .code("KG")
+                    .name("Kilogram")
+                    .build();
 
-            // When & Then
-            assertThatThrownBy(() -> unitsOfMeasureService.update(id, request))
-                    .isInstanceOf(BadRequestException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_003.getCode());
+            when(unitsOfMeasureRepository.findById(id)).thenReturn(Optional.of(entity));
+            doNothing().when(unitsOfMeasureMapper).updateEntity(any(UnitsOfMeasure.class), eq(request));
+            when(unitsOfMeasureRepository.save(any(UnitsOfMeasure.class))).thenReturn(entity);
+            when(unitsOfMeasureMapper.toResponse(any(UnitsOfMeasure.class))).thenReturn(expectedResponse);
+
+            // When
+            UnitsOfMeasureResponse result = unitsOfMeasureService.update(id, request);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getName()).isEqualTo("Kilogram");
 
             verify(unitsOfMeasureRepository).findById(id);
-            verify(unitsOfMeasureRepository, never()).save(any());
+            verify(unitsOfMeasureMapper).updateEntity(any(UnitsOfMeasure.class), eq(request));
+            verify(unitsOfMeasureRepository).save(any());
         }
 
         @Test
@@ -481,7 +494,7 @@ class UnitsOfMeasureImplTest {
         }
 
         @Test
-        @DisplayName("Should throw BadRequestException when unit of measure not found")
+        @DisplayName("Should throw NotFoundException when unit of measure not found")
         void delete_NotFound() {
             // Given
             String id = "non-existent-id";
@@ -489,7 +502,7 @@ class UnitsOfMeasureImplTest {
 
             // When & Then
             assertThatThrownBy(() -> unitsOfMeasureService.delete(id))
-                    .isInstanceOf(BadRequestException.class)
+                    .isInstanceOf(NotFoundException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UOM_001.getCode());
 
             verify(unitsOfMeasureRepository).findById(id);

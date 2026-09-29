@@ -1,8 +1,7 @@
 package org.demo.whs.mapper;
 
 import org.demo.whs.entity.StockMovements;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
 import org.demo.whs.entity.enums.StockMovementsType;
@@ -54,9 +53,9 @@ public class StockMovementsMapper {
         return movement;
     }
 
-    public StockMovements toEntity(
+    public StockMovements toIncreaseEntity(
             StockMovementsType movementType,
-            InventoryIncreaseRequest request,
+            InventoryMutationRequest request,
             BigDecimal quantityBefore,
             BigDecimal quantityAfter,
             String actorId
@@ -78,9 +77,9 @@ public class StockMovementsMapper {
         );
     }
 
-    public StockMovements toEntity(
+    public StockMovements toDecreaseEntity(
             StockMovementsType movementType,
-            InventoryDecreaseRequest request,
+            InventoryMutationRequest request,
             BigDecimal quantityBefore,
             BigDecimal quantityAfter,
             String actorId

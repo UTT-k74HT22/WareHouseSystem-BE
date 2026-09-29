@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeStatusRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
 import org.demo.whs.entity.enums.EmployeeStatus;
@@ -63,9 +64,9 @@ public class EmployeeServiceImpl implements EmployeeService {
      * Steps:
      * <ol>
      *   <li>Validate uniqueness of username and employeeCode.</li>
-     *   <li>Validate that the requested role exists.</li>
+     *   <li>Validate that all requested roles exist.</li>
      *   <li>Create {@link Account} with hashed password.</li>
-     *   <li>Assign the requested {@link Role} via {@link AccountHasRole}.</li>
+     *   <li>Assign all requested {@link Role}s via {@link AccountHasRole}.</li>
      *   <li>Create {@link UserProfile} with personal data.</li>
      *   <li>Create {@link Employee} with WMS operational data.</li>
      * </ol>
@@ -86,19 +87,32 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         validateRequest(request, employeeCode);
 
-        // 2. Validate role exists
-        Role role = roleRepository.findByName(request.getRole())
-                .orElseThrow(() -> new NotFoundException(
-                        "Role not found: " + request.getRole(), ErrorCode.ROLE_001));
+        // 2. Validate roles exist (deduplicated, order-preserving)
+        List<String> requestedRoleNames = request.getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .distinct()
+                .toList();
+        if (requestedRoleNames.isEmpty()) {
+            throw new BadRequestException("At least one role is required", ErrorCode.ROLE_001);
+        }
+        List<Role> roles = requestedRoleNames.stream()
+                .map(name -> roleRepository.findByName(name)
+                        .orElseThrow(() -> new NotFoundException(
+                                "Role not found: " + name, ErrorCode.ROLE_001)))
+                .toList();
 
         // 3. Create account with hashed password
         Account account = getAccount(request.getUsername(), passwordEncoder.encode(request.getPassword()));
         accountRepository.save(account);
         log.info("Account created with username={}", request.getUsername());
 
-        // 4. Assign role to account
-        AccountHasRole accountHasRole = getAccountHasRole(account, role);
-        accountHasRoleRepository.save(accountHasRole);
+        // 4. Assign roles to account
+        List<AccountHasRole> accountHasRoles = roles.stream()
+                .map(role -> getAccountHasRole(account, role))
+                .toList();
+        accountHasRoleRepository.saveAll(accountHasRoles);
 
         // 5. Create user profile
         UserProfile userProfile = getUserProfile(
@@ -116,6 +130,20 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         log.info("Employee created successfully with id={}, employeeCode={}", employee.getId(), employeeCode);
         return employeeMapper.toResponse(employee, userProfile);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (EmployeeStatus status : EmployeeStatus.values()) {
+            long count = employeeRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
     }
 
     @Override
@@ -185,6 +213,45 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Transactional
+    public EmployeeResponse updateEmployeeStatus(String id, UpdateEmployeeStatusRequest request) {
+        log.info("Updating employee status by id={}, status={}", id, request.getStatus());
+
+        EmployeeStatus newStatus;
+        try {
+            newStatus = EmployeeStatus.valueOf(request.getStatus().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+        if (newStatus == EmployeeStatus.TERMINATED) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        Employee employee = findEmployeeById(id);
+        if (employee.getStatus() == newStatus) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+
+        employee.setStatus(newStatus);
+        Employee updated = employeeRepository.save(employee);
+
+        // Mirror softDelete: re-activating an employee unsuspends the linked account.
+        if (newStatus == EmployeeStatus.ACTIVE && updated.getAccountId() != null) {
+            accountRepository.findById(updated.getAccountId()).ifPresent(account -> {
+                if (account.getStatus() == AccountStatus.SUSPENDED) {
+                    account.setStatus(AccountStatus.ACTIVE);
+                    accountRepository.save(account);
+                }
+            });
+        }
+
+        log.info("Employee status updated successfully: id={}, status={}", updated.getId(), newStatus);
+        UserProfile userProfile = userProfileRepository.findByAccountId(updated.getAccountId())
+                .orElse(null);
+        return employeeMapper.toResponse(updated, userProfile);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<EmployeeResponse> getEmployees(String keyword, String status, String warehouseId, Pageable pageable) {
         validatePageable(pageable);
@@ -242,7 +309,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private EmployeeStatus parseStatusOrDefault(String status) {
         if (status == null || status.isBlank()) {
-            return EmployeeStatus.ACTIVE;
+            return null;
         }
         try {
             return EmployeeStatus.valueOf(status.trim().toUpperCase());

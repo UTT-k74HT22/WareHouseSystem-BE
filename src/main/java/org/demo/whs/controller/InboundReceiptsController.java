@@ -147,6 +147,13 @@ public class InboundReceiptsController {
      * @param id the ID of the inbound receipt to be retrieved
      * @return the response containing the details of the inbound receipt with the specified ID
      */
+    @Operation(summary = "Get inbound receipt statistics")
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
+    public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
+        return ResponseEntity.ok(BaseResponse.success(inboundReceiptsService.getStats()));
+    }
+
     @Operation(summary = "Get inbound receipt by id")
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_READ')")
@@ -199,6 +206,21 @@ public class InboundReceiptsController {
     public ResponseEntity<BaseResponse<InboundReceiptsResponse>> confirm(@PathVariable String id) {
         log.info("Confirm inbound receipt, id={}", id);
         InboundReceiptsResponse response = inboundReceiptsService.confirm(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * Cancel a draft inbound receipt by its ID.
+     *
+     * @param id the ID of the inbound receipt to be cancelled
+     * @return the response containing the details of the cancelled inbound receipt
+     */
+    @Operation(summary = "Cancel inbound receipt draft")
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('PERM_INBOUND_RECEIPT_UPDATE')")
+    public ResponseEntity<BaseResponse<InboundReceiptsResponse>> cancel(@PathVariable String id) {
+        log.info("Cancel inbound receipt, id={}", id);
+        InboundReceiptsResponse response = inboundReceiptsService.cancel(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

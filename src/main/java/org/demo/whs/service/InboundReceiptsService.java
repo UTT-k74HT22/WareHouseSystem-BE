@@ -69,4 +69,20 @@ public interface InboundReceiptsService {
      * @return the response containing the details of the confirmed inbound receipt
      */
     InboundReceiptsResponse confirm(String id);
+
+    /**
+     * Cancel a draft inbound receipt by its ID.
+     * Already-cancelled receipts are returned as-is (idempotent).
+     *
+     * @param id the ID of the inbound receipt to be cancelled
+     * @return the response containing the details of the cancelled inbound receipt
+     */
+    InboundReceiptsResponse cancel(String id);
+
+    /**
+     * Counts inbound receipts by status for dashboard statistics.
+     *
+     * @return map of status name (lowercase) to count, plus "total"
+     */
+    java.util.Map<String, Long> getStats();
 }

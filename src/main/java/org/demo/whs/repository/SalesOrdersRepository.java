@@ -3,6 +3,7 @@ package org.demo.whs.repository;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.demo.whs.entity.SalesOrders;
+import org.demo.whs.entity.enums.SalesOrdersStatus;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,8 @@ import java.util.Optional;
 @Repository
 public interface SalesOrdersRepository extends JpaRepository<SalesOrders, String>, JpaSpecificationExecutor<SalesOrders> {
     boolean existsBySoNumber(String soNumber);
+
+    long countByStatus(SalesOrdersStatus status);
 
     /**
      * Lấy SalesOrder theo ID với khóa ghi (PESSIMISTIC_WRITE).

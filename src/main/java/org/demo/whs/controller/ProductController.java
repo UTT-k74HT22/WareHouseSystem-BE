@@ -1,6 +1,7 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -113,7 +114,7 @@ public class ProductController {
     @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getAllProducts(
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) Integer size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size) {
         log.info("Received request to get all products - page={}, size={}", page, size);
         PageResponse<ProductResponse> response = productService.getAllProducts(page, size);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -134,7 +135,7 @@ public class ProductController {
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> searchProducts(
             @RequestBody SearchProductRequest request,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) Integer size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size) {
         log.info("Received request to search products - page={}, size={}", page, size);
         PageResponse<ProductResponse> response = productService.searchProducts(request, page, size);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -171,7 +172,7 @@ public class ProductController {
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getProductsByCategory(
             @PathVariable String categoryId,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) Integer size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size) {
         log.info("Received request to get products by category ID={} - page={}, size={}", categoryId, page, size);
         PageResponse<ProductResponse> response = productService.getProductsByCategory(categoryId, page, size);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -190,7 +191,7 @@ public class ProductController {
     @PreAuthorize("hasAuthority('PERM_PRODUCT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<ProductResponse>>> getBatchTrackingProducts(
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) Integer size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size) {
         log.info("Received request to get batch tracking products - page={}, size={}", page, size);
         PageResponse<ProductResponse> response = productService.getBatchTrackingProducts(page, size);
         return ResponseEntity.ok(BaseResponse.success(response));

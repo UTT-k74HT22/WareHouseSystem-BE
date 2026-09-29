@@ -48,11 +48,11 @@ public class LocationMapper {
             return;
         }
 
-        if (request.getName() != null) {
-            location.setName(request.getName());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            location.setName(request.getName().trim());
         }
-        if (request.getZone() != null) {
-            location.setZone(request.getZone());
+        if (request.getZone() != null && !request.getZone().isBlank()) {
+            location.setZone(request.getZone().trim());
         }
         if (request.getType() != null) {
             location.setType(request.getType());
@@ -60,7 +60,7 @@ public class LocationMapper {
         if (request.getCapacity() != null) {
             location.setCapacity(request.getCapacity());
         }
-        if (request.getNotes() != null) {
+        if (request.getNotes() != null && !request.getNotes().isBlank()) {
             location.setNotes(request.getNotes());
         }
     }

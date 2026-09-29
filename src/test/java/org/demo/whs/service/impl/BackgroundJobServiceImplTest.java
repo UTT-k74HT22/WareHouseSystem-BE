@@ -2,9 +2,8 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.BackgroundJob;
 import org.demo.whs.entity.BackgroundJobStepLog;
+import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobActionRequest;
 import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobFilterRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.CancelBackgroundJobRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.RetryBackgroundJobRequest;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobDetailResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobFileResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobStatusResponse;
@@ -90,7 +89,8 @@ class BackgroundJobServiceImplTest {
             Page<BackgroundJob> page = new PageImpl<>(List.of(job));
             BackgroundJobSummaryResponse summary = BackgroundJobSummaryResponse.builder().id("job-1").build();
 
-            when(backgroundJobRepository.findByRequestedByOrderByCreatedAtDesc(eq("acc-1"), any(Pageable.class)))
+            when(backgroundJobRepository.searchMyJobs(eq("acc-1"), isNull(), isNull(), isNull(),
+                    isNull(), isNull(), isNull(), any(Pageable.class)))
                     .thenReturn(page);
             when(backgroundJobMapper.toSummaryResponse(job)).thenReturn(summary);
 
@@ -182,7 +182,7 @@ class BackgroundJobServiceImplTest {
             when(jobStatusUpdater.markCancelled(eq("job-1"), any())).thenReturn(cancelled);
             when(backgroundJobMapper.toStatusResponse(cancelled, null, null)).thenReturn(statusResponse);
 
-            CancelBackgroundJobRequest request = new CancelBackgroundJobRequest();
+            BackgroundJobActionRequest request = new BackgroundJobActionRequest();
             request.setReason("User requested");
             BackgroundJobStatusResponse result = backgroundJobService.cancelJob("job-1", "acc-1", request);
 

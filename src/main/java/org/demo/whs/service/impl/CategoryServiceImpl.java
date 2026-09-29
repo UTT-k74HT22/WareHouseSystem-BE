@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Category;
 import org.demo.whs.entity.dto.request.Category.CreateCategoryRequest;
 import org.demo.whs.entity.dto.request.Category.UpdateCategoryRequest;
-import org.demo.whs.entity.dto.request.Category.UpdateCategoryStatusRequest;
 import org.demo.whs.entity.dto.response.Category.CategoryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.CategoryStatus;
@@ -63,10 +62,19 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<CategoryResponse> getCategories(CategoryStatus status, Pageable pageable) {
-        Page<Category> categoryPage = status == null
-                ? categoryRepository.findAll(pageable)
-                : categoryRepository.findAllByStatus(status, pageable);
+    public PageResponse<CategoryResponse> getCategories(String keyword, CategoryStatus status, Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
+        }
+        String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Page<Category> categoryPage;
+        if (safeKeyword == null) {
+            categoryPage = status == null
+                    ? categoryRepository.findAll(pageable)
+                    : categoryRepository.findAllByStatus(status, pageable);
+        } else {
+            categoryPage = categoryRepository.search(safeKeyword, status, pageable);
+        }
 
         List<CategoryResponse> responses = categoryMapper.toResponseList(categoryPage.getContent());
         return PageResponse.from(categoryPage, responses);
@@ -86,8 +94,6 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Category not found", ErrorCode.CAT_001));
 
-        identifierGenerator.assertSystemManagedFieldNotProvided(request.getCode(), "Category code");
-
         if (!hasAnyUpdatableField(request)) {
             throw new BadRequestException(ErrorCode.COM_001);
         }
@@ -104,10 +110,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public CategoryResponse updateCategoryStatus(String id, UpdateCategoryStatusRequest request) {
+    public CategoryResponse updateCategoryStatus(String id, UpdateCategoryRequest request) {
+        if (request.getStatus() == null) {
+            throw new BadRequestException(ErrorCode.COM_003);
+        }
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Category not found", ErrorCode.CAT_001));
 
+        if (category.getStatus() == request.getStatus()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         category.setStatus(request.getStatus());
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(updatedCategory);

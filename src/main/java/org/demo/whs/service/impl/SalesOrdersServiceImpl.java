@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -95,7 +96,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
             line.setSalesOrderId(savedSO.getId());
             
             // Explicitly recalculate lineTotal to prevent client-side tampering
-            line.setLineTotal(line.getUnitPrice().multiply(line.getQuantityOrdered()));
+            line.setLineTotal(line.getUnitPrice().multiply(line.getQuantityOrdered()).setScale(2, RoundingMode.HALF_UP));
             
             return line;
         }).collect(Collectors.toList());
@@ -136,6 +137,20 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
                 .toList();
 
         return PageResponse.from(page, responses);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (SalesOrdersStatus status : SalesOrdersStatus.values()) {
+            long count = salesOrdersRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
     }
 
     @Override
@@ -282,7 +297,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
                 .orElseThrow(() -> new NotFoundException("Customer not found", ErrorCode.COM_001));
 
         boolean validType = customer.getType() == BusinessPartnerType.CUSTOMER
-                || customer.getType() == BusinessPartnerType.BOTH|| customer.getType() == BusinessPartnerType.SUPPLIER;
+                || customer.getType() == BusinessPartnerType.BOTH;
         if (customer.getStatus() != BusinessPartnerStatus.ACTIVE || !validType) {
             throw new BadRequestException("Customer is not active or not a customer", ErrorCode.COM_001);
         }
@@ -314,6 +329,9 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
         }
         if (pageable.getPageSize() <= 0) {
             throw new BadRequestException(ErrorCode.COM_007);
+        }
+        if (pageable.getPageSize() > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
         }
     }
 

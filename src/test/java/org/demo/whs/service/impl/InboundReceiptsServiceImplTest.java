@@ -38,6 +38,7 @@ import org.demo.whs.repository.PurchaseOrderLinesRepository;
 import org.demo.whs.repository.PurchaseOrdersRepository;
 import org.demo.whs.repository.StockMovementsRepository;
 import org.demo.whs.repository.WareHouseRepository;
+import org.demo.whs.service.InboundReceiptLinesService;
 import org.demo.whs.service.LocationService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
@@ -102,6 +103,8 @@ class InboundReceiptsServiceImplTest {
     private AccountRepository accountRepository;
     @Mock
     private LocationService locationService;
+    @Mock
+    private InboundReceiptLinesService inboundReceiptLinesService;
     @Mock
     private InboundReceiptsMapper inboundReceiptsMapper;
     @Mock
@@ -267,7 +270,7 @@ class InboundReceiptsServiceImplTest {
         when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(inboundReceiptsRepository.save(any(InboundReceipts.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
-        when(inboundReceiptLinesMapper.toResponses(receiptLines)).thenReturn(lineResponses);
+        when(inboundReceiptLinesService.findByInboundReceiptId("receipt-1")).thenReturn(lineResponses);
         when(inboundReceiptsMapper.toResponse(any(InboundReceipts.class), eq(purchaseOrder), eq(warehouse), eq(lineResponses)))
                 .thenReturn(expectedResponse);
 
@@ -331,7 +334,7 @@ class InboundReceiptsServiceImplTest {
         when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(inboundReceiptsRepository.save(any(InboundReceipts.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
-        when(inboundReceiptLinesMapper.toResponses(receiptLines)).thenReturn(lineResponses);
+        when(inboundReceiptLinesService.findByInboundReceiptId("receipt-1")).thenReturn(lineResponses);
         when(inboundReceiptsMapper.toResponse(any(InboundReceipts.class), eq(purchaseOrder), eq(warehouse), eq(lineResponses)))
                 .thenReturn(InboundReceiptsResponse.builder().id("receipt-1").status(InboundReceiptsStatus.CONFIRMED.name()).build());
 
@@ -380,7 +383,7 @@ class InboundReceiptsServiceImplTest {
         when(purchaseOrdersRepository.save(any(PurchaseOrders.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(inboundReceiptsRepository.save(any(InboundReceipts.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(wareHouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
-        when(inboundReceiptLinesMapper.toResponses(receiptLines)).thenReturn(lineResponses);
+        when(inboundReceiptLinesService.findByInboundReceiptId("receipt-1")).thenReturn(lineResponses);
         when(inboundReceiptsMapper.toResponse(any(InboundReceipts.class), eq(purchaseOrder), eq(warehouse), eq(lineResponses)))
                 .thenReturn(InboundReceiptsResponse.builder().id("receipt-1").status(InboundReceiptsStatus.CONFIRMED.name()).build());
 

@@ -31,9 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -132,6 +130,12 @@ public class InboundReceiptLinesServiceImpl implements InboundReceiptLinesServic
                 ? currentLine.getNotes()
                 : normalizeOptionalText(request.getNotes()));
         request.setQualityStatus(resolveQualityStatus(request.getQualityStatus(), currentLine.getQualityStatus()));
+        if (request.getLocationId() == null) {
+            request.setLocationId(currentLine.getLocationId());
+        }
+        if (request.getQuantityReceived() == null) {
+            request.setQuantityReceived(currentLine.getQuantityReceived());
+        }
 
         validateQuantityReceived(request.getQuantityReceived());
         validateLocationForReceiptLine(request.getLocationId(), receipt.getWarehouseId());
@@ -190,8 +194,50 @@ public class InboundReceiptLinesServiceImpl implements InboundReceiptLinesServic
     public List<InboundReceiptLinesResponse> findByInboundReceiptId(String inboundReceiptId) {
         List<InboundReceiptLines> lines = inboundReceiptLinesRepository
                 .findByInboundReceiptIdOrderByLineNumberAsc(inboundReceiptId);
+        if (lines.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch fetch related entities to avoid N+1
+        List<String> productIds = lines.stream()
+                .map(InboundReceiptLines::getProductId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<String> batchIds = lines.stream()
+                .map(InboundReceiptLines::getBatchId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        List<String> locationIds = lines.stream()
+                .map(InboundReceiptLines::getLocationId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, Products> productsMap = productIds.isEmpty() ? new HashMap<>()
+                : productRepository.findAllById(productIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Products::getId, p -> p));
+        Map<String, Batch> batchesMap = batchIds.isEmpty() ? new HashMap<>()
+                : batchRepository.findAllById(batchIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Batch::getId, b -> b));
+        Map<String, Locations> locationsMap = locationIds.isEmpty() ? new HashMap<>()
+                : locationRepository.findAllById(locationIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Locations::getId, l -> l));
+
         return lines.stream()
-                .map(this::buildLineResponseFromEntity)
+                .map(line -> {
+                    Products product = productsMap.get(line.getProductId());
+                    Batch batch = batchesMap.get(line.getBatchId());
+                    Locations location = locationsMap.get(line.getLocationId());
+                    return inboundReceiptLinesMapper.toResponse(
+                            line,
+                            product == null ? null : product.getSku(),
+                            product == null ? null : product.getName(),
+                            batch == null ? null : batch.getBatchNumber(),
+                            location == null ? null : location.getCode(),
+                            location == null ? null : location.getName());
+                })
                 .toList();
     }
 

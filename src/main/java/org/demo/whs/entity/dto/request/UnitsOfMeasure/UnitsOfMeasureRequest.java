@@ -3,11 +3,12 @@ package org.demo.whs.entity.dto.request.UnitsOfMeasure;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import org.demo.whs.entity.enums.UnitsOfMeasureType;
 
 /**
- * Request DTO for creating or updating a unit of measure.
+ * Request DTO for creating a unit of measure.
  */
 @Getter
 public class UnitsOfMeasureRequest {
@@ -16,8 +17,10 @@ public class UnitsOfMeasureRequest {
     private String code;
 
     @NotBlank(message = "Name is required")
+    @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
+    @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
 
     @NotNull(message = "Type is required")

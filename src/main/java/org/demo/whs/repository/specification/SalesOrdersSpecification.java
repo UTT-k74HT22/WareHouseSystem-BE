@@ -4,6 +4,8 @@ import jakarta.persistence.criteria.Predicate;
 import org.demo.whs.entity.SalesOrders;
 import org.demo.whs.entity.dto.request.SalesOrders.SalesOrdersFilterRequest;
 import org.demo.whs.entity.enums.SalesOrdersStatus;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
@@ -42,7 +44,7 @@ public final class SalesOrdersSpecification {
                 try {
                     predicates.add(cb.equal(root.get("status"), SalesOrdersStatus.valueOf(filter.getStatus().toUpperCase())));
                 } catch (IllegalArgumentException e) {
-                    // Ignore invalid status
+                    throw new BadRequestException("Invalid sales order status", ErrorCode.COM_001);
                 }
             }
 

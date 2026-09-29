@@ -1,15 +1,15 @@
 package org.demo.whs.service;
 
 import org.demo.whs.entity.Locations;
-import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
-import org.demo.whs.entity.dto.request.Location.SearchLocationRequest;
 import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.LocationType;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * Service interface for location-related operations.
@@ -25,13 +25,28 @@ public interface LocationService {
     LocationResponse createLocation(CreateLocationRequest request);
 
     /**
-     * Retrieves a paginated list of all locations.
+     * Retrieves a paginated list of all locations (legacy path, no filters).
      *
      * @param page the page number to retrieve
      * @param size the number of items per page
      * @return a paginated response containing location information
      */
     PageResponse<LocationResponse> getAllLocations(Integer page, Integer size);
+
+    /**
+     * Retrieves locations with pagination and optional filters.
+     * All filter params are optional: all null returns all locations.
+     *
+     * @param page the page number to retrieve
+     * @param size the page size
+     * @param warehouseId optional warehouse ID
+     * @param keyword optional keyword matched against code, name and zone
+     * @param type optional location type
+     * @param status optional location status
+     * @return a paginated response containing location information
+     */
+    PageResponse<LocationResponse> getLocations(Integer page, Integer size, String warehouseId,
+                                                String keyword, LocationType type, LocationStatus status);
 
     /**
      * Retrieves a location by its unique identifier.
@@ -52,16 +67,6 @@ public interface LocationService {
     PageResponse<LocationResponse> getLocationsByWarehouse(String warehouseId, Integer page, Integer size);
 
     /**
-     * Searches locations with multiple filters.
-     *
-     * @param request the search criteria
-     * @param page    the page number to retrieve
-     * @param size    the number of items per page
-     * @return a paginated response containing matching locations
-     */
-    PageResponse<LocationResponse> searchLocations(SearchLocationRequest request, Integer page, Integer size);
-
-    /**
      * Updates an existing location.
      *
      * @param id      the unique identifier of the location to update
@@ -77,7 +82,7 @@ public interface LocationService {
      * @param request the request containing the new status
      * @return the response containing updated location information
      */
-    LocationResponse changeLocationStatus(String id, ChangeLocationStatusRequest request);
+    LocationResponse changeLocationStatus(String id, UpdateLocationRequest request);
 
     /**
      * Deletes a location (soft delete).
@@ -85,6 +90,13 @@ public interface LocationService {
      * @param id the unique identifier of the location
      */
     void deleteLocation(String id);
+
+    /**
+     * Counts locations by status for dashboard statistics.
+     *
+     * @return the location statistics
+     */
+    Map<String, Long> getStats();
 
     /**
      * Resolves an active location by type in a warehouse.

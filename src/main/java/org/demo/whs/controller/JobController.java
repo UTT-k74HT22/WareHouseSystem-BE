@@ -5,9 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobActionRequest;
 import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobFilterRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.CancelBackgroundJobRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.RetryBackgroundJobRequest;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobDetailResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobFileResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobStatusResponse;
@@ -101,7 +100,7 @@ public class JobController {
     @Operation(summary = "Retry a background job")
     public ResponseEntity<BaseResponse<BackgroundJobStatusResponse>> retryJob(
             @PathVariable String jobId,
-            @Valid @RequestBody(required = false) RetryBackgroundJobRequest request) {
+            @Valid @RequestBody(required = false) BackgroundJobActionRequest request) {
         String currentAccountId = SecurityUtils.getCurrentAccountId();
         log.info("Retry background job id={} requested by accountId={}", jobId, currentAccountId);
 
@@ -120,7 +119,7 @@ public class JobController {
     @Operation(summary = "Cancel a background job")
     public ResponseEntity<BaseResponse<BackgroundJobStatusResponse>> cancelJob(
             @PathVariable String jobId,
-            @Valid @RequestBody(required = false) CancelBackgroundJobRequest request) {
+            @Valid @RequestBody(required = false) BackgroundJobActionRequest request) {
         String currentAccountId = SecurityUtils.getCurrentAccountId();
         log.info("Cancel background job id={} requested by accountId={}", jobId, currentAccountId);
 

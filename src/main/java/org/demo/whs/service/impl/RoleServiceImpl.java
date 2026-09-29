@@ -13,6 +13,7 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.mapper.RoleMapper;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.repository.AccountHasRoleRepository;
+import org.demo.whs.repository.RolePermissionRepository;
 import org.demo.whs.repository.RoleRepository;
 import org.demo.whs.repository.specification.RoleSpecification;
 import org.demo.whs.service.RoleService;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 public class RoleServiceImpl implements RoleService {
 
     private final AccountHasRoleRepository accountHasRoleRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final RoleRepository roleRepository;
     private final RoleMapper roleMapper;
 
@@ -163,8 +165,15 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
 
+        assertNotSystemAdmin(role);
+
         if (request.getName() != null && request.getName().isBlank()) {
             throw new BadRequestException(ErrorCode.ROLE_002);
+        }
+
+        if (Boolean.FALSE.equals(request.getIsDefault()) && Boolean.TRUE.equals(role.getIsDefault())) {
+            log.warn("Cannot unset default flag, system must keep one default role, id={}", id);
+            throw new BadRequestException(ErrorCode.ROLE_005);
         }
 
         if (Boolean.TRUE.equals(request.getIsDefault()) &&
@@ -198,6 +207,8 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ROLE_001));
 
+        assertNotSystemAdmin(role);
+
         if (Boolean.TRUE.equals(role.getIsDefault())) {
             log.warn("Cannot delete default role, id={}", id);
             throw new BadRequestException(ErrorCode.ROLE_005);
@@ -209,6 +220,7 @@ public class RoleServiceImpl implements RoleService {
             throw new BadRequestException(ErrorCode.ROLE_006);
         }
 
+        rolePermissionRepository.deleteByIdRoleId(id);
         roleRepository.delete(role);
 
         log.info("Role deleted successfully roleId={}, roleName={}", id, role.getName());
@@ -228,6 +240,19 @@ public class RoleServiceImpl implements RoleService {
 
         if (roleRepository.existsByNameIgnoreCase(name)) {
             throw new BadRequestException(ErrorCode.ROLE_004);
+        }
+    }
+
+    /**
+     * Blocks any mutation of the built-in system administrator role.
+     */
+    private static void assertNotSystemAdmin(Role role) {
+        if (role == null) {
+            return;
+        }
+        if ("ADMIN".equalsIgnoreCase(role.getName()) || "ROLE_ADMIN".equalsIgnoreCase(role.getCode())) {
+            log.warn("System admin role is protected, id={}", role.getId());
+            throw new BadRequestException(ErrorCode.ROLE_007);
         }
     }
 

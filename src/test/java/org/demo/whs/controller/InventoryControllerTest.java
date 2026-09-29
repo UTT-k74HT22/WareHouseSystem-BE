@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
@@ -25,6 +25,8 @@ import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -44,6 +46,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
+@Import(PublicErrorMessageResolver.class)
 @WithMockUser(authorities = {
         "PERM_INVENTORY_READ",
         "PERM_INVENTORY_RESERVATION_UPDATE",
@@ -388,7 +391,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 200 when increase is successful")
     void shouldReturn200WhenIncreaseIsSuccessful() throws Exception {
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+        InventoryMutationRequest request = InventoryMutationRequest.builder()
                 .productId("prod-1")
                 .warehouseId("wh-1")
                 .quantity(new BigDecimal("10.00"))
@@ -405,7 +408,7 @@ class InventoryControllerTest {
                 .onHandQuantity(new BigDecimal("110.00"))
                 .build();
 
-        when(inventoryService.increase(any(InventoryIncreaseRequest.class)))
+        when(inventoryService.increase(any(InventoryMutationRequest.class)))
                 .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/inventories/increase")
@@ -421,7 +424,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 200 when decrease is successful")
     void shouldReturn200WhenDecreaseIsSuccessful() throws Exception {
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 .productId("prod-1")
                 .warehouseId("wh-1")
                 .quantity(new BigDecimal("10.00"))
@@ -439,7 +442,7 @@ class InventoryControllerTest {
                 .reservedQuantity(new BigDecimal("10.00"))
                 .build();
 
-        when(inventoryService.decrease(any(org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.class)))
+        when(inventoryService.decrease(any(org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.class)))
                 .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/inventories/decrease")
@@ -455,7 +458,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("Should return 400 when decrease request is invalid")
     void shouldReturn400WhenDecreaseRequestIsInvalid() throws Exception {
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 // Missing fields
                 .quantity(new BigDecimal("-5.00"))
                 .build();

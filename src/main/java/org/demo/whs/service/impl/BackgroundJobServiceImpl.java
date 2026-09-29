@@ -4,14 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.BackgroundJob;
 import org.demo.whs.entity.BackgroundJobStepLog;
+import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobActionRequest;
 import org.demo.whs.entity.dto.request.BackgroundJob.BackgroundJobFilterRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.CancelBackgroundJobRequest;
-import org.demo.whs.entity.dto.request.BackgroundJob.RetryBackgroundJobRequest;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobDetailResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobFileResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobStatusResponse;
 import org.demo.whs.entity.dto.response.BackgroundJob.BackgroundJobSummaryResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.helpers.producer.BackgroundJobProducerService;
@@ -34,6 +34,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Core service scaffold for background job APIs.
@@ -62,7 +63,20 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
             return PageResponse.from(Page.empty(pageable));
         }
 
-        Page<BackgroundJob> page = backgroundJobRepository.findByRequestedByOrderByCreatedAtDesc(requestedBy, pageable);
+        if (request != null && request.getCreatedFrom() != null && request.getCreatedTo() != null
+                && request.getCreatedFrom().isAfter(request.getCreatedTo())) {
+            throw new BadRequestException("createdFrom must be before or equal to createdTo", ErrorCode.COM_003);
+        }
+
+        Page<BackgroundJob> page = backgroundJobRepository.searchMyJobs(
+                requestedBy,
+                normalizeSet(request == null ? null : request.getJobTypes()),
+                normalizeSet(request == null ? null : request.getStatuses()),
+                normalizeText(request == null ? null : request.getBusinessType()),
+                normalizeText(request == null ? null : request.getJobCode()),
+                request == null ? null : request.getCreatedFrom(),
+                request == null ? null : request.getCreatedTo(),
+                pageable);
         List<BackgroundJobSummaryResponse> content = page.getContent()
                 .stream()
                 .map(backgroundJobMapper::toSummaryResponse)
@@ -88,7 +102,7 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
 
     @Override
     @Transactional
-    public BackgroundJobStatusResponse retryJob(String jobId, String requestedBy, RetryBackgroundJobRequest request) {
+    public BackgroundJobStatusResponse retryJob(String jobId, String requestedBy, BackgroundJobActionRequest request) {
         BackgroundJob job = getOwnedJob(jobId, requestedBy);
         String reason = request == null ? null : request.getReason();
 
@@ -101,7 +115,7 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
 
     @Override
     @Transactional
-    public BackgroundJobStatusResponse cancelJob(String jobId, String requestedBy, CancelBackgroundJobRequest request) {
+    public BackgroundJobStatusResponse cancelJob(String jobId, String requestedBy, BackgroundJobActionRequest request) {
         BackgroundJob job = getOwnedJob(jobId, requestedBy);
         String reason = request == null ? null : request.getReason();
 
@@ -140,6 +154,17 @@ public class BackgroundJobServiceImpl implements BackgroundJobService {
 
     private int resolveSize(BackgroundJobFilterRequest request) {
         return request == null || request.getSize() == null ? 20 : request.getSize();
+    }
+
+    private static <T> Set<T> normalizeSet(Set<T> values) {
+        return (values == null || values.isEmpty()) ? null : values;
+    }
+
+    private static String normalizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private void dispatchAfterCommit(BackgroundJob job) {

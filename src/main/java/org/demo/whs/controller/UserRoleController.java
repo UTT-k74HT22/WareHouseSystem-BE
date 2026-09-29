@@ -13,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,7 +24,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@Validated
 public class UserRoleController {
 
     private final UserRoleService userRoleService;
@@ -62,11 +60,9 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<Void>> removeRoleFromUser(
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String roleId
     ) {
 
@@ -88,7 +84,6 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getUserRoles(
 
             @PathVariable
-//            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)

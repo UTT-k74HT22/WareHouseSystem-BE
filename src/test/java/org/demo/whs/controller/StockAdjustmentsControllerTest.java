@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockAdjustments.StockAdjustmentsResponse;
 import org.demo.whs.entity.enums.StockAdjustmentsStatus;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.RateLimitService;
 import org.demo.whs.service.StockAdjustmentsService;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(StockAdjustmentsController.class)
 @ActiveProfiles("test")
-@Import({StockAdjustmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({StockAdjustmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_STOCK_ADJUSTMENT_CREATE",
         "PERM_STOCK_ADJUSTMENT_READ",

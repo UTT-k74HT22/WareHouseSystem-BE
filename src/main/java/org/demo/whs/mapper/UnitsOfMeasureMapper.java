@@ -20,9 +20,9 @@ public class UnitsOfMeasureMapper {
      * @param request the UnitsOfMeasureRequest DTO
      * @return the corresponding UnitsOfMeasure entity
      */
-    public UnitsOfMeasure buildRequest(UnitsOfMeasureRequest request) {
+    public UnitsOfMeasure toEntity(UnitsOfMeasureRequest request) {
         return UnitsOfMeasure.builder()
-                .name(request.getName())
+                .name(request.getName().trim())
                 .description(request.getDescription())
                 .type(request.getType())
                 .build();
@@ -71,8 +71,8 @@ public class UnitsOfMeasureMapper {
      * @param request the UpdateUnitsOfMeasureRequest DTO containing new data
      */
     public void updateEntity(UnitsOfMeasure entity, UpdateUnitsOfMeasureRequest request) {
-        if (request.getName() != null) {
-            entity.setName(request.getName());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            entity.setName(request.getName().trim());
         }
         if (request.getDescription() != null) {
             entity.setDescription(request.getDescription());

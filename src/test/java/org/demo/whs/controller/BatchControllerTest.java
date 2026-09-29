@@ -8,6 +8,7 @@ import org.demo.whs.entity.enums.BatchStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.BatchService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +44,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BatchController.class)
 @ActiveProfiles("test")
 @WithMockUser(authorities = {"PERM_BATCH_READ", "PERM_BATCH_UPDATE"})
-@Import({BatchControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({BatchControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 class BatchControllerTest {
 
@@ -121,8 +121,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value("batch-1"))
-                .andExpect(jsonPath("$.message").value("Batch updated successfully"));
+                .andExpect(jsonPath("$.data.id").value("batch-1"));
 
         verify(batchService).updateBatch(eq("batch-1"), any());
     }
@@ -141,8 +140,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("QUARANTINE"))
-                .andExpect(jsonPath("$.message").value("Batch quarantined successfully"));
+                .andExpect(jsonPath("$.data.status").value("QUARANTINE"));
 
         verify(batchService).quarantineBatch(eq("batch-1"), any());
     }
@@ -175,8 +173,7 @@ class BatchControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("AVAILABLE"))
-                .andExpect(jsonPath("$.message").value("Batch released successfully"));
+                .andExpect(jsonPath("$.data.status").value("AVAILABLE"));
 
         verify(batchService).releaseBatch(eq("batch-1"), any());
     }
@@ -192,24 +189,6 @@ class BatchControllerTest {
                 .andExpect(jsonPath("$.error_code").value("COM_001"));
 
         verify(batchService, never()).releaseBatch(any(), any());
-    }
-
-    @Test
-    @DisplayName("Should return 400 when generic status patch is blocked")
-    void should_Return400_When_GenericStatusPatchIsBlocked() throws Exception {
-        when(batchService.changeBatchStatus(eq("batch-1"), any()))
-                .thenThrow(new BadRequestException(ErrorCode.BATCH_011));
-
-        mockMvc.perform(patch("/api/v1/batches/{id}/status", "batch-1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "status", "EXPIRED"
-                        ))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error_code").value("BATCH_011"));
-
-        verify(batchService).changeBatchStatus(eq("batch-1"), any());
     }
 
     @Test

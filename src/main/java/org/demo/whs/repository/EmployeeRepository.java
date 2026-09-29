@@ -50,6 +50,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
      */
     Optional<Employee> findByEmployeeCode(String employeeCode);
 
+    long countByStatus(EmployeeStatus status);
+
     /**
      * Find all employees assigned to a specific warehouse.
      *

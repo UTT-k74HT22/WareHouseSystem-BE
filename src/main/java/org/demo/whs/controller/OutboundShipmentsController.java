@@ -11,13 +11,22 @@ import org.demo.whs.entity.dto.request.OutboundShipments.UpdateOutboundShipments
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.OutboundShipments.OutboundShipmentsResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
+import org.demo.whs.entity.enums.OutboundShipmentsStatus;
+import org.demo.whs.exception.BadRequestException;
+import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.OutboundShipmentsService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Controller for managing outbound shipment-related operations.
@@ -49,7 +58,39 @@ public class OutboundShipmentsController {
     @GetMapping
     @Operation(summary = "Get all outbound shipments with filtering and pagination")
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
-    public ResponseEntity<BaseResponse<PageResponse<OutboundShipmentsResponse>>> getAll(OutboundShipmentsFilterRequest filter, Pageable pageable) {
+    public ResponseEntity<BaseResponse<PageResponse<OutboundShipmentsResponse>>> getAll(
+            @RequestParam(required = false) String shipmentNumber,
+            @RequestParam(required = false) String salesOrderId,
+            @RequestParam(required = false) String warehouseId,
+            @RequestParam(required = false) OutboundShipmentsStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shipmentDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shipmentDateTo,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "updatedAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
+        List<String> allowedSortFields = List.of(
+                "createdAt", "updatedAt", "shipmentNumber", "shipmentDate", "status");
+        if (!allowedSortFields.contains(sortBy)) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+        if (page == null || page < 0) {
+            throw new BadRequestException(ErrorCode.COM_006);
+        }
+        if (size == null || size <= 0) {
+            throw new BadRequestException(ErrorCode.COM_007);
+        }
+        if (size > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
+        }
+        OutboundShipmentsFilterRequest filter = new OutboundShipmentsFilterRequest();
+        filter.setShipmentNumber(shipmentNumber);
+        filter.setSalesOrderId(salesOrderId);
+        filter.setWarehouseId(warehouseId);
+        filter.setStatus(status);
+        filter.setShipmentDateFrom(shipmentDateFrom);
+        filter.setShipmentDateTo(shipmentDateTo);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         PageResponse<OutboundShipmentsResponse> response = outboundShipmentsService.getAll(filter, pageable);
         return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách phiếu xuất thành công"));
     }
@@ -61,6 +102,12 @@ public class OutboundShipmentsController {
      * Validate:
      * - Shipment phải tồn tại
      */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
+    public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
+        return ResponseEntity.ok(BaseResponse.success(outboundShipmentsService.getStats()));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get an outbound shipment by its ID")
     @PreAuthorize("hasAuthority('PERM_OUTBOUND_SHIPMENT_READ')")
@@ -121,7 +168,7 @@ public class OutboundShipmentsController {
         return ResponseEntity.ok(BaseResponse.success(response, "Phiếu xuất đã chuyển sang trạng thái đã đóng gói"));
     }
     /**
-     * Xác nhận shipment và thực hiện xuất kho (PACKED -> SHIPPED).
+     * Chuyển shipment sang khu vực chờ xuất (PACKED -> STAGING).
      * Nghiệp vụ:
      * - Đây là bước commit cuối cùng của nghiệp vụ kho
      * - Thực hiện trừ tồn kho (consume reserved)

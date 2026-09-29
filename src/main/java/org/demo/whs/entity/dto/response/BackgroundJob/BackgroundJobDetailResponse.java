@@ -32,7 +32,6 @@ public class BackgroundJobDetailResponse {
     private String currentStep;
     private String requestedBy;
     private String requestPayload;
-    private String requestHash;
     private Integer progressPercent;
     private Long processedRows;
     private Long totalRows;

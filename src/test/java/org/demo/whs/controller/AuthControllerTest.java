@@ -11,6 +11,7 @@ import org.demo.whs.entity.dto.response.Permission.MyPermissionsResponse;
 import org.demo.whs.exception.AuthenticationFailedException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.exception.StorageException;
 import org.demo.whs.exception.UnauthorizedException;
 import org.demo.whs.service.AuthService;
@@ -40,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import({GlobalExceptionHandle.class})
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, FlywayAutoConfiguration.class})
 class AuthControllerTest {
 
@@ -232,7 +233,7 @@ class AuthControllerTest {
 
             mockMvc.perform(get("/api/v1/auth/my-permissions"))
                     .andExpect(status().isServiceUnavailable())
-                    .andExpect(jsonPath("$.code").value("PERM_013"));
+                    .andExpect(jsonPath("$.error_code").value("PERM_013"));
         }
     }
 
@@ -268,7 +269,7 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.code").value("COM_001"));
+                    .andExpect(jsonPath("$.error_code").value("COM_001"));
         }
 
         @Test
@@ -285,7 +286,7 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isServiceUnavailable())
-                    .andExpect(jsonPath("$.code").value("PERM_013"));
+                    .andExpect(jsonPath("$.error_code").value("PERM_013"));
         }
     }
 }

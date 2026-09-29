@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Warehouses;
-import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
@@ -12,6 +11,7 @@ import org.demo.whs.entity.dto.response.User.AccountResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
 import org.demo.whs.entity.enums.LocationStatus;
 import org.demo.whs.entity.enums.WareHouseStatus;
+import org.demo.whs.entity.enums.WareHouseType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
@@ -22,10 +22,12 @@ import org.demo.whs.service.WareHouseService;
 import org.demo.whs.utils.IdentifierGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -107,19 +109,47 @@ public class WareHouseServiceImpl implements WareHouseService {
     }
 
     /**
-     * Retrieves a paginated list of all warehouses.
-     *
-     * @param page the page number to retrieve
-     * @param size the number of items per page
-     * @return a paginated response containing warehouse information
+     * Retrieves a paginated list of all warehouses (legacy path, no filters).
      */
     @Override
     public PageResponse<WareHouseResponse> getAll(Integer page, Integer size) {
         log.info("Retrieving all warehouses - page: {}, size: {}", page, size);
-        Page<Warehouses> warehousePage = wareHouseRepository.findAll(PageRequest.of(page, size));
+        if (page == null || page < 0) {
+            throw new BadRequestException(ErrorCode.COM_006);
+        }
+        if (size == null || size <= 0) {
+            throw new BadRequestException(ErrorCode.COM_007);
+        }
+        if (size > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
+        }
+        Page<Warehouses> warehousePage = wareHouseRepository.findAll(PageRequest.of(page, size, Sort.by("createdAt").descending()));
         List<Warehouses> content = warehousePage.getContent();
         Map<String, AccountResponse> managerMap = fetchManagerMap(content);
         List<WareHouseResponse> responses = wareHouseMapper.toResponses(content, managerMap);
+        return PageResponse.from(warehousePage, responses);
+    }
+
+    /**
+     * Retrieves warehouses with pagination and optional filters.
+     * No filter -> uses the legacy path to keep original behavior.
+     */
+    @Override
+    public PageResponse<WareHouseResponse> getWarehouses(Integer page, Integer size, String keyword, WareHouseStatus status, WareHouseType type) {
+        // Không có filter mở rộng -> dùng đường cũ để giữ nguyên hành vi.
+        if ((keyword == null || keyword.isBlank()) && status == null && type == null) {
+            return getAll(page, size);
+        }
+        int safePage = (page == null || page < 0) ? 0 : page;
+        int safeSize = size == null ? 10 : Math.min(Math.max(size, 1), 100);
+        String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        log.info("Searching warehouses - page: {}, size: {}, keyword: {}, status: {}, type: {}",
+                safePage, safeSize, safeKeyword, status, type);
+        Page<Warehouses> warehousePage = wareHouseRepository.searchWarehouses(
+                safeKeyword, status, type,
+                PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending()));
+        List<WareHouseResponse> responses = wareHouseMapper.toResponses(
+                warehousePage.getContent(), fetchManagerMap(warehousePage.getContent()));
         return PageResponse.from(warehousePage, responses);
     }
 
@@ -150,6 +180,19 @@ public class WareHouseServiceImpl implements WareHouseService {
         List<Warehouses> warehouses = wareHouseRepository.findAll();
         Map<String, AccountResponse> managerMap = fetchManagerMap(warehouses);
         return wareHouseMapper.toResponses(warehouses, managerMap);
+    }
+
+    @Override
+    public Map<String, Long> getStats() {
+        long active = wareHouseRepository.countByStatus(WareHouseStatus.ACTIVE);
+        long inactive = wareHouseRepository.countByStatus(WareHouseStatus.INACTIVE);
+        long maintenance = wareHouseRepository.countByStatus(WareHouseStatus.MAINTENANCE);
+        Map<String, Long> stats = new LinkedHashMap<>();
+        stats.put("total", active + inactive + maintenance);
+        stats.put("active", active);
+        stats.put("inactive", inactive);
+        stats.put("maintenance", maintenance);
+        return stats;
     }
 
     /**
@@ -198,11 +241,17 @@ public class WareHouseServiceImpl implements WareHouseService {
      */
     @Override
     @Transactional
-    public WareHouseResponse changeStatus(String id, ChangeStatusRequest request) {
+    public WareHouseResponse changeStatus(String id, UpdateWarehouseRequest request) {
         log.info("Changing status of warehouse with code={}, name={}", id, request.getStatus());
+        if (request.getStatus() == null) {
+            throw new BadRequestException(ErrorCode.COM_003);
+        }
         Warehouses warehouse = wareHouseRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException(ErrorCode.WHS_001));
 
+        if (warehouse.getStatus() == request.getStatus()) {
+            throw new BadRequestException(ErrorCode.WHS_003);
+        }
         warehouse.setStatus(request.getStatus());
         warehouse.setUpdatedBy(getCurrentUser().getId());
         warehouse.setUpdatedAt(LocalDateTime.now());

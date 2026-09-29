@@ -20,7 +20,7 @@ import org.demo.whs.entity.enums.StockMovementsType;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
-import org.demo.whs.mapper.InboundReceiptLinesMapper;
+import org.demo.whs.service.InboundReceiptLinesService;
 import org.demo.whs.mapper.InboundReceiptsMapper;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.*;
@@ -61,8 +61,8 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
     private final BatchRepository batchRepository;
     private final AccountRepository accountRepository;
     private final LocationService locationService;
+    private final InboundReceiptLinesService inboundReceiptLinesService;
     private final InboundReceiptsMapper inboundReceiptsMapper;
-    private final InboundReceiptLinesMapper inboundReceiptLinesMapper;
     private final StockMovementsMapper stockMovementsMapper;
     private final IdentifierGenerator identifierGenerator;
 
@@ -193,6 +193,27 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
         }
 
         inboundReceiptsRepository.delete(receipt);
+    }
+
+    @Override
+    @Transactional
+    public InboundReceiptsResponse cancel(String id) {
+        log.info("Cancel inbound receipt requested, id={}", id);
+        InboundReceipts receipt = inboundReceiptsRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Inbound receipt not found", ErrorCode.COM_004));
+
+        if (receipt.getStatus() == InboundReceiptsStatus.CANCELLED) {
+            return getById(id);
+        }
+        if (receipt.getStatus() != InboundReceiptsStatus.DRAFT) {
+            throw new BadRequestException("Only draft receipts can be cancelled", ErrorCode.COM_001);
+        }
+
+        receipt.setStatus(InboundReceiptsStatus.CANCELLED);
+        receipt.setUpdatedBy(getCurrentActorId());
+        inboundReceiptsRepository.save(receipt);
+        log.info("Inbound receipt cancelled successfully, id={}", id);
+        return getById(id);
     }
 
     @Override
@@ -638,9 +659,23 @@ public class InboundReceiptsServiceImpl implements InboundReceiptsService {
     private record InventorySnapshot(Inventory inventory, BigDecimal quantityBefore, BigDecimal quantityAfter) {
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getStats() {
+        java.util.Map<String, Long> stats = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (InboundReceiptsStatus status : InboundReceiptsStatus.values()) {
+            long count = inboundReceiptsRepository.countByStatus(status);
+            stats.put(status.name().toLowerCase(), count);
+            total += count;
+        }
+        stats.put("total", total);
+        return stats;
+    }
+
     private List<InboundReceiptLinesResponse> getLineResponses(String inboundReceiptId) {
-        List<InboundReceiptLines> lines = inboundReceiptLinesRepository.findByInboundReceiptIdOrderByLineNumberAsc(inboundReceiptId);
-        return inboundReceiptLinesMapper.toResponses(lines);
+        // Enriched + batch-fetched via line service (avoids N+1)
+        return inboundReceiptLinesService.findByInboundReceiptId(inboundReceiptId);
     }
 
     private void normalizeAndValidateFilter(InboundReceiptsFilterRequest filter) {

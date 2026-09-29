@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.response.Product.ProductResponse;
 import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.service.ProductService;
@@ -43,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ProductController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-@Import(GlobalExceptionHandle.class)
+@Import({GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,
         FlywayAutoConfiguration.class

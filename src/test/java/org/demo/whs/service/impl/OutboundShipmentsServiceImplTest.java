@@ -1,7 +1,7 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.*;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.OutboundShipmentsFilterRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.OutboundShipmentsRequest;
@@ -559,7 +559,7 @@ class OutboundShipmentsServiceImplTest {
                 eq(false)
         );
         verify(inventoryService, never()).unreserve(any(InventoryUnreserveRequest.class));
-        verify(inventoryService, never()).decrease(any(InventoryDecreaseRequest.class));
+        verify(inventoryService, never()).decrease(any(InventoryMutationRequest.class));
         verify(locationService).decreaseUsedCapacity("loc-packing", new BigDecimal("5.00"));
         verify(locationService).increaseUsedCapacity("loc-staging", new BigDecimal("5.00"));
         verify(outboundShipmentLinesRepository).saveAll(List.of(line));
@@ -641,7 +641,7 @@ class OutboundShipmentsServiceImplTest {
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
         when(locationService.decreaseUsedCapacity("loc-staging", new BigDecimal("20.00"))).thenReturn(1);
         when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
-        when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
+        when(inventoryService.decrease(any(InventoryMutationRequest.class))).thenReturn(null);
 
         assertThatThrownBy(() -> service.confirmDispatch(SHIPMENT_ID))
                 .isInstanceOf(BadRequestException.class)
@@ -670,7 +670,7 @@ class OutboundShipmentsServiceImplTest {
         when(locationService.resolveLocationByType(WAREHOUSE_ID, LocationType.STAGING)).thenReturn(stagingLoc);
         when(locationService.decreaseUsedCapacity("loc-staging", new BigDecimal("5.00"))).thenReturn(1);
         when(inventoryReservationRepository.findByOrderLineId("so-line-1")).thenReturn(Optional.of(reservation));
-        when(inventoryService.decrease(any(InventoryDecreaseRequest.class))).thenReturn(null);
+        when(inventoryService.decrease(any(InventoryMutationRequest.class))).thenReturn(null);
         when(salesOrderLinesRepository.findById("so-line-1")).thenReturn(Optional.of(soLine));
         when(salesOrdersRepository.findById(SALES_ORDER_ID)).thenReturn(Optional.of(buildSalesOrder(SALES_ORDER_ID, SalesOrdersStatus.CONFIRMED)));
         when(salesOrderLinesRepository.findBySalesOrderId(SALES_ORDER_ID)).thenReturn(List.of(soLine));

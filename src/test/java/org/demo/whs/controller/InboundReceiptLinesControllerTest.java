@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.demo.whs.entity.dto.response.InboundReceiptLines.InboundReceiptLinesResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.InboundReceiptLinesService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -52,7 +53,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "PERM_INBOUND_RECEIPT_LINE_UPDATE",
         "PERM_INBOUND_RECEIPT_LINE_DELETE"
 })
-@Import({InboundReceiptLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({InboundReceiptLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 class InboundReceiptLinesControllerTest {
 
@@ -168,18 +169,17 @@ class InboundReceiptLinesControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 when update request misses location_id")
-    void should_Return400_When_UpdateRequestMissesLocationId() throws Exception {
+    @DisplayName("Should accept partial update when location_id is missing")
+    void should_AcceptPartialUpdate_When_UpdateRequestMissesLocationId() throws Exception {
         mockMvc.perform(put("/api/v1/inbound-receipt-lines/{id}", "line-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "quantity_received", "8.00"
                         ))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error_code").value("COM_001"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
 
-        verify(inboundReceiptLinesService, never()).update(any(), any());
+        verify(inboundReceiptLinesService).update(eq("line-1"), any());
     }
 
     @Test

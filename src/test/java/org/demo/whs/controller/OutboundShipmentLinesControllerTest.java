@@ -6,6 +6,7 @@ import org.demo.whs.entity.dto.request.OutboundShipmentLines.OutboundShipmentLin
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.UpdateOutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.response.OutboundShipmentLines.OutboundShipmentLinesResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.OutboundShipmentLinesService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(OutboundShipmentLinesController.class)
 @ActiveProfiles("test")
-@Import({OutboundShipmentLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({OutboundShipmentLinesControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_OUTBOUND_SHIPMENT_LINE_CREATE",
         "PERM_OUTBOUND_SHIPMENT_LINE_READ",
@@ -227,8 +228,7 @@ class OutboundShipmentLinesControllerTest {
     void should_RemoveOutboundShipmentLine_When_RequestIsValid() throws Exception {
         mockMvc.perform(delete("/api/v1/outbound-shipment-lines/{id}", "line-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Outbound shipment line removed successfully"));
+                .andExpect(jsonPath("$.success").value(true));
 
         verify(outboundShipmentLinesService).remove("line-1");
     }

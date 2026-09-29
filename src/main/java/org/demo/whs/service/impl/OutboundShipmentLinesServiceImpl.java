@@ -64,15 +64,15 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             throw new BadRequestException("Product ID must match Sales Order Line product", ErrorCode.COM_001);
         }
 
-        // Check for duplicate line (same shipment, SOL, location, and batch)
-        List<OutboundShipmentLines> existingLines = outboundShipmentLinesRepository
-                .findByOutboundShipmentIdAndSalesOrderLineIdAndLocationIdAndBatchId(
-                        request.getOutboundShipmentId(),
-                        request.getSalesOrderLineId(),
-                        request.getLocationId(),
-                        request.getBatchId()
-                );
-        if (!existingLines.isEmpty()) {
+        // Check for duplicate line (same shipment, SOL, location, and batch; NULL-safe)
+        boolean duplicate = outboundShipmentLinesRepository.existsByDuplicateDimension(
+                request.getOutboundShipmentId(),
+                request.getSalesOrderLineId(),
+                request.getLocationId(),
+                request.getBatchId(),
+                null
+        );
+        if (duplicate) {
             throw new BadRequestException("This item pick already exists in this shipment. Please update the existing line instead.", ErrorCode.COM_001);
         }
 
@@ -226,6 +226,19 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
 
             if (!location.getWarehouseId().equals(shipment.getWarehouseId())) {
                 throw new BadRequestException("Location does not belong to the shipment's warehouse", ErrorCode.COM_001);
+            }
+        }
+
+        if (request.getLocationId() != null || request.getBatchId() != null) {
+            String effectiveLocationId = request.getLocationId() != null
+                    ? request.getLocationId() : line.getLocationId();
+            String effectiveBatchId = request.getBatchId() != null
+                    ? request.getBatchId() : line.getBatchId();
+            boolean duplicate = outboundShipmentLinesRepository.existsByDuplicateDimension(
+                    line.getOutboundShipmentId(), line.getSalesOrderLineId(),
+                    effectiveLocationId, effectiveBatchId, line.getId());
+            if (duplicate) {
+                throw new BadRequestException("This item pick already exists in this shipment. Please update the existing line instead.", ErrorCode.COM_001);
             }
         }
 

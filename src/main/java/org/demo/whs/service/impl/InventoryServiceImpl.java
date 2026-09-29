@@ -5,10 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
@@ -351,7 +350,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse increase(InventoryIncreaseRequest request) {
+    public InventoryResponse increase(InventoryMutationRequest request) {
         String lockKey = buildLockKey(request.getReferenceType(), request.getReferenceId(), request.getReferenceNumber());
         RLock lock = redissonClient.getLock(lockKey);
 
@@ -421,7 +420,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse decrease(InventoryDecreaseRequest request) {
+    public InventoryResponse decrease(InventoryMutationRequest request) {
         String lockKey = buildLockKey(request.getReferenceType(), request.getReferenceId(), request.getReferenceNumber());
         RLock lock = redissonClient.getLock(lockKey);
 
@@ -734,7 +733,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
 
-    private Inventory findOrCreateInventoryWithLock(InventoryIncreaseRequest request) {
+    private Inventory findOrCreateInventoryWithLock(InventoryMutationRequest request) {
         Optional<Inventory> existing = inventoryRepository.findByDimensionForUpdate(request.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId());
 
         if (existing.isPresent()) {

@@ -2,7 +2,7 @@ package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.*;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
@@ -94,7 +94,7 @@ class InventoryServiceImplTest {
         String warehouseId = "wh-1";
         BigDecimal increaseQty = new BigDecimal("10.00");
 
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+        InventoryMutationRequest request = InventoryMutationRequest.builder()
                 .productId(productId)
                 .warehouseId(warehouseId)
                 .quantity(increaseQty)
@@ -118,7 +118,7 @@ class InventoryServiceImplTest {
         when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(warehouse));
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.increase(request);
@@ -163,7 +163,7 @@ class InventoryServiceImplTest {
         // Arrange
         setupLock();
         String productId = "prod-1"; String warehouseId = "wh-1";
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+        InventoryMutationRequest request = InventoryMutationRequest.builder()
                 .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
                 .referenceType(ReferenceType.INBOUND_RECEIPT).referenceNumber("REC-001").build();
 
@@ -174,15 +174,14 @@ class InventoryServiceImplTest {
         when(wareHouseRepository.findById(anyString())).thenReturn(Optional.of(new Warehouses()));
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.empty());
-        when(inventoryMapper.toEntity(any(InventoryIncreaseRequest.class))).thenReturn(newInv);
+        when(inventoryMapper.toEntity(any(InventoryMutationRequest.class))).thenReturn(newInv);
         when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(newInv);
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(newInv);
 
         // Act
         inventoryService.increase(request);
 
         // Assert
-        verify(inventoryRepository).saveAndFlush(any(Inventory.class));
+        verify(inventoryRepository, times(2)).saveAndFlush(any(Inventory.class));
         verify(stockMovementsService).recordIncrease(eq(request), any(), any());
     }
 
@@ -192,7 +191,7 @@ class InventoryServiceImplTest {
         // Arrange
         setupLock();
         String productId = "prod-1"; String otherProductId = "prod-2";
-        InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+        InventoryMutationRequest request = InventoryMutationRequest.builder()
                 .productId(productId).warehouseId("wh-1").batchId("batch-1").quantity(BigDecimal.TEN)
                 .referenceType(ReferenceType.INBOUND_RECEIPT).referenceNumber("REC-001").build();
 
@@ -311,7 +310,7 @@ class InventoryServiceImplTest {
         // Arrange
         setupLock();
         String productId = "prod-1"; String warehouseId = "wh-1";
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
                 .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
                 .consumeReserved(false).build();
@@ -321,7 +320,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.decrease(request);
@@ -338,7 +337,7 @@ class InventoryServiceImplTest {
         // Arrange
         setupLock();
         String productId = "prod-1"; String warehouseId = "wh-1";
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 .productId(productId).warehouseId(warehouseId).quantity(BigDecimal.TEN)
                 .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
                 .consumeReserved(true).build();
@@ -348,7 +347,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.findByDimensionForUpdate(any(), any(), any(), any()))
                 .thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         // Act
         inventoryService.decrease(request);
@@ -363,7 +362,7 @@ class InventoryServiceImplTest {
     @DisplayName("decrease_shouldHealReservedAggregate_WhenConsumingReservedForOrderLine")
     void decrease_shouldHealReservedAggregate_WhenConsumingReservedForOrderLine() throws InterruptedException {
         setupLock();
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 .productId("p1").warehouseId("w1").locationId("loc-staging").quantity(BigDecimal.TEN)
                 .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("SHIP-001")
                 .consumeReserved(true).orderLineId("OL-1").build();
@@ -379,7 +378,7 @@ class InventoryServiceImplTest {
         when(inventoryReservationRepository.findByOrderLineId("OL-1")).thenReturn(Optional.of(reservation));
         when(inventoryReservationRepository.sumQuantityByInventoryIdAndStatus("inv-1", InventoryReservationStatus.RESERVED))
                 .thenReturn(BigDecimal.ZERO);
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryRepository.saveAndFlush(any(Inventory.class))).thenReturn(inventory);
 
         inventoryService.decrease(request);
 
@@ -394,7 +393,7 @@ class InventoryServiceImplTest {
     void decrease_shouldThrowConflict_WhenInsufficientAvailable() throws InterruptedException {
         // Arrange
         setupLock();
-        org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest.builder()
+        org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest request = org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest.builder()
                 .productId("p1").warehouseId("w1").quantity(new BigDecimal("100"))
                 .referenceType(ReferenceType.OUTBOUND_SHIPMENT).referenceNumber("S1")
                 .consumeReserved(false).build();

@@ -241,6 +241,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Products> productPage = productRepository.searchProducts(
                 request.getSku(),
                 request.getName(),
+                normalize(request.getSearchText()),
                 request.getCategoryId(),
                 request.getUomId(),
                 request.getStatus(),
@@ -249,6 +250,10 @@ public class ProductServiceImpl implements ProductService {
         );
 
         return buildPageResponse(productPage);
+    }
+
+    private static String normalize(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     /**

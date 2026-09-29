@@ -3,7 +3,7 @@ package org.demo.whs.service.impl;
 import org.demo.whs.entity.Account;
 import org.demo.whs.entity.Locations;
 import org.demo.whs.entity.Warehouses;
-import org.demo.whs.entity.dto.request.Location.ChangeLocationStatusRequest;
+import org.demo.whs.entity.dto.request.Location.UpdateLocationRequest;
 import org.demo.whs.entity.dto.request.Location.CreateLocationRequest;
 import org.demo.whs.entity.dto.response.Location.LocationResponse;
 import org.demo.whs.entity.enums.LocationStatus;
@@ -172,7 +172,7 @@ class LocationServiceImplTest {
         String locationId = "loc-1";
         LocationStatus newStatus = LocationStatus.INACTIVE;
 
-        ChangeLocationStatusRequest request = mock(ChangeLocationStatusRequest.class);
+        UpdateLocationRequest request = mock(UpdateLocationRequest.class);
         when(request.getStatus()).thenReturn(newStatus);
 
         Locations location = new Locations();
@@ -195,7 +195,7 @@ class LocationServiceImplTest {
         String locationId = "loc-1";
         LocationStatus newStatus = LocationStatus.INACTIVE;
 
-        ChangeLocationStatusRequest request = mock(ChangeLocationStatusRequest.class);
+        UpdateLocationRequest request = mock(UpdateLocationRequest.class);
         when(request.getStatus()).thenReturn(newStatus);
 
         Locations location = new Locations();

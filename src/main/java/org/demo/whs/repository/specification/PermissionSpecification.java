@@ -10,6 +10,8 @@ import java.util.List;
 
 public class PermissionSpecification {
 
+    private static final char ESCAPE_CHAR = '\\';
+
     public static Specification<Permission> filter(
             String resource,
             ActionType action,
@@ -29,17 +31,27 @@ public class PermissionSpecification {
 
             if (search != null && !search.isBlank()) {
 
-                String pattern = "%" + search.toLowerCase() + "%";
+                String keyword = "%" + escapeLike(search).toLowerCase() + "%";
 
                 predicates.add(
                         cb.or(
-                                cb.like(cb.lower(root.get("name")), pattern),
-                                cb.like(cb.lower(root.get("description")), pattern)
+                                cb.like(cb.lower(root.get("name")), keyword, ESCAPE_CHAR),
+                                cb.like(cb.lower(root.get("description")), keyword, ESCAPE_CHAR)
                         )
                 );
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * Escape special characters for SQL LIKE (same rule as RoleSpecification).
+     */
+    private static String escapeLike(String input) {
+        return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

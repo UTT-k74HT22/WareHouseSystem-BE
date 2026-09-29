@@ -1,6 +1,5 @@
 package org.demo.whs.service;
 
-import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
@@ -45,15 +44,6 @@ public interface BatchService {
      * @return a paginated response containing the list of batches matching the search criteria
      */
     PageResponse<BatchResponse> getAllBatches(SearchBatchRequest request, Integer page, Integer size);
-
-    /**
-     * Change the status of a batch.
-     *
-     * @param id      the ID of the batch to be updated
-     * @param request the request containing the new status of the batch
-     * @return the response containing the details of the updated batch
-     */
-    BatchResponse changeBatchStatus(String id, ChangeBatchStatusRequest request);
 
     /**
      * Update the details of an existing batch.

@@ -26,11 +26,12 @@ public enum ErrorCode {
     RESET_005("RESET_005", "Mật khẩu cũ không đúng"),
     // Role
     ROLE_001("ROLE_001", "Không tìm thấy vai trò"),
-    ROLE_002("ROLE_002", "Danh sách quyền không được để trống"),
+    ROLE_002("ROLE_002", "Tên vai trò không được để trống"),
     ROLE_003("ROLE_003", "Danh sách mã quyền không hợp lệ"),
     ROLE_004("ROLE_004", "Tên vai trò đã tồn tại"),
     ROLE_005("ROLE_005", "Không thể xóa vai trò mặc định"),
     ROLE_006("ROLE_006", "Vai trò đang được người dùng sử dụng"),
+    ROLE_007("ROLE_007", "Không thể sửa/xóa vai trò quản trị hệ thống"),
     // OTP errors
     OTP_001("OTP_001", "Loại OTP là bắt buộc"),
     OTP_002("OTP_002", "Không tìm thấy tài khoản"),
@@ -90,7 +91,7 @@ public enum ErrorCode {
 
     // Category errors
     CAT_001("CAT_001", "Không tìm thấy danh mục"),
-    CAT_002("CAT_002", "Mã hoặc tên danh mục đã tồn tại"),
+    CAT_002("CAT_002", "Tên danh mục đã tồn tại"),
 
     // UnitsOfMeasure errors
     UOM_001("UOM_001", "Không tìm thấy đơn vị tính"),

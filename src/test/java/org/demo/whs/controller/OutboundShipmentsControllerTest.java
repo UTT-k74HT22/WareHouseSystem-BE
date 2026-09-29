@@ -9,6 +9,7 @@ import org.demo.whs.entity.dto.response.OutboundShipments.OutboundShipmentsRespo
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.OutboundShipmentsService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(OutboundShipmentsController.class)
 @ActiveProfiles("test")
-@Import({OutboundShipmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({OutboundShipmentsControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_OUTBOUND_SHIPMENT_CREATE",
         "PERM_OUTBOUND_SHIPMENT_READ",

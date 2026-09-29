@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,7 +70,7 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
                 .quantityOrdered(request.getQuantityOrdered())
                 .quantityShipped(BigDecimal.ZERO)
                 .unitPrice(request.getUnitPrice())
-                .lineTotal(request.getUnitPrice().multiply(request.getQuantityOrdered())) // Recalculate on server
+                .lineTotal(request.getUnitPrice().multiply(request.getQuantityOrdered()).setScale(2, RoundingMode.HALF_UP)) // Recalculate on server
                 .notes(request.getNotes())
                 .build();
 
@@ -84,7 +85,7 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
     public SalesOrderLinesResponse update(String id, UpdateSalesOrderLinesRequest request) {
         log.info("Updating sales order line, id={}, request={}", id, request);
 
-        SalesOrderLines line = salesOrderLinesRepository.findById(id)
+        SalesOrderLines line = salesOrderLinesRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Sales order line not found", ErrorCode.COM_001));
 
         // Lock the parent Sales Order
@@ -120,7 +121,7 @@ public class SalesOrderLinesServiceImpl implements SalesOrderLinesService {
         }
 
         // Recalculate total on server
-        line.setLineTotal(line.getUnitPrice().multiply(line.getQuantityOrdered()));
+        line.setLineTotal(line.getUnitPrice().multiply(line.getQuantityOrdered()).setScale(2, RoundingMode.HALF_UP));
         SalesOrderLines updatedLine = salesOrderLinesRepository.save(line);
 
         recalculateAndSaveSalesOrder(salesOrder);

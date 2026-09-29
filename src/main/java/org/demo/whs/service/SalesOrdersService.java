@@ -23,4 +23,11 @@ public interface SalesOrdersService {
     SalesOrdersResponse confirm(String id);
 
     SalesOrdersResponse cancel(String id);
+
+    /**
+     * Counts sales orders by status for dashboard statistics.
+     *
+     * @return map of status name (lowercase) to count, plus "total"
+     */
+    java.util.Map<String, Long> getStats();
 }

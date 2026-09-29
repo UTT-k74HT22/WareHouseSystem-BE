@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import org.demo.whs.entity.enums.CategoryStatus;
 
 @Getter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -18,4 +19,9 @@ public class UpdateCategoryRequest {
 
     @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
+
+    /**
+     * Only honored by PATCH /{id}/status and ignored by PUT.
+     */
+    private CategoryStatus status;
 }

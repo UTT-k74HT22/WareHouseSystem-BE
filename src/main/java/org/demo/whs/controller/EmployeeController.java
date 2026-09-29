@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Employee.CreateEmployeeRequest;
 import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeRequest;
+import org.demo.whs.entity.dto.request.Employee.UpdateEmployeeStatusRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Employee.EmployeeResponse;
@@ -59,8 +60,14 @@ public class EmployeeController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    @GetMapping("/stats")
     @PreAuthorize("hasAuthority('PERM_EMPLOYEE_READ')")
+    public ResponseEntity<BaseResponse<java.util.Map<String, Long>>> getStats() {
+        return ResponseEntity.ok(BaseResponse.success(employeeService.getStats()));
+    }
+
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_READ')")
     public ResponseEntity<BaseResponse<EmployeeResponse>> getEmployeeById(@PathVariable String id) {
         log.info("Received request to fetch employee by id={}", id);
         EmployeeResponse response = employeeService.getById(id);
@@ -84,5 +91,15 @@ public class EmployeeController {
         log.info("Received request to soft delete employee by id={}", id);
         employeeService.softDelete(id);
         return ResponseEntity.ok(BaseResponse.success(null));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('PERM_EMPLOYEE_UPDATE')")
+    public ResponseEntity<BaseResponse<EmployeeResponse>> updateEmployeeStatus(
+            @PathVariable String id,
+            @RequestBody @Valid UpdateEmployeeStatusRequest request) {
+        log.info("Received request to update employee status by id={}, status={}", id, request.getStatus());
+        EmployeeResponse response = employeeService.updateEmployeeStatus(id, request);
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }

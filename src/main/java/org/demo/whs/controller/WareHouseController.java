@@ -3,17 +3,19 @@ package org.demo.whs.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.dto.request.WareHouse.ChangeStatusRequest;
 import org.demo.whs.entity.dto.request.WareHouse.CreateWarehouseRequest;
 import org.demo.whs.entity.dto.request.WareHouse.UpdateWarehouseRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.WareHouse.WareHouseResponse;
+import org.demo.whs.entity.enums.WareHouseStatus;
+import org.demo.whs.entity.enums.WareHouseType;
 import org.demo.whs.service.WareHouseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RequestMapping("/api/v1/warehouse")
 @RestController
@@ -47,19 +49,28 @@ public class WareHouseController {
     }
 
     /**
-     * Endpoint to retrieve all warehouses with pagination.
+     * Endpoint to retrieve warehouses with pagination and optional filters.
+     * No filter params = all warehouses; with keyword/status/type = filtered search.
      *
      * @param page the page number to retrieve
      * @param size the number of items per page
+     * @param keyword optional keyword matched against code, name and address
+     * @param status optional warehouse status
+     * @param type optional warehouse type
      * @return a paginated response containing warehouse information
      */
     @GetMapping
     @PreAuthorize("hasAuthority('PERM_WAREHOUSE_READ')")
-    public ResponseEntity<BaseResponse<PageResponse<WareHouseResponse>>> getAll(@RequestParam(name = "page", defaultValue = "0") Integer page, @RequestParam(name = "size", defaultValue = "10") Integer size) {
-        log.info("Fetching all warehouses - page: {}, size: {}", page, size);
-        PageResponse<WareHouseResponse> response = wareHouseService.getAll(page, size);
-        BaseResponse<PageResponse<WareHouseResponse>> baseResponse = BaseResponse.success(response);
-        return ResponseEntity.ok(baseResponse);
+    public ResponseEntity<BaseResponse<PageResponse<WareHouseResponse>>> getAll(
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) WareHouseStatus status,
+            @RequestParam(required = false) WareHouseType type) {
+        log.info("Fetching warehouses - page: {}, size: {}, keyword: {}, status: {}, type: {}",
+                page, size, keyword, status, type);
+        return ResponseEntity.ok(BaseResponse.success(
+                wareHouseService.getWarehouses(page, size, keyword, status, type)));
     }
 
     /**
@@ -74,6 +85,18 @@ public class WareHouseController {
         List<WareHouseResponse> response = wareHouseService.getWareHouses();
         BaseResponse<List<WareHouseResponse>> baseResponse = BaseResponse.success(response);
         return ResponseEntity.ok(baseResponse);
+    }
+
+    /**
+     * Endpoint to retrieve warehouse statistics by status.
+     *
+     * @return warehouse statistics
+     */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PERM_WAREHOUSE_READ')")
+    public ResponseEntity<BaseResponse<Map<String, Long>>> getStats() {
+        log.info("Fetching warehouse statistics");
+        return ResponseEntity.ok(BaseResponse.success(wareHouseService.getStats()));
     }
 
     /**
@@ -120,7 +143,7 @@ public class WareHouseController {
     @PreAuthorize("hasAuthority('PERM_WAREHOUSE_UPDATE')")
     public ResponseEntity<BaseResponse<WareHouseResponse>> changeStatus(
             @PathVariable("id") String id,
-            @RequestBody @Valid ChangeStatusRequest request) {
+            @RequestBody @Valid UpdateWarehouseRequest request) {
         log.info("Received request to change status for warehouse with id: {} to status: {}",
                 id, request.getStatus());
         WareHouseResponse response = wareHouseService.changeStatus(id, request);

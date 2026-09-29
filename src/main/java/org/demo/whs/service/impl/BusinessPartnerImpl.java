@@ -158,7 +158,7 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
      */
     @Override
     @Transactional
-    public BusinessPartnerResponse changeStatus(String id, String status) {
+    public BusinessPartnerResponse changeStatus(String id, BusinessPartnerStatus status) {
         log.info("[SERVICE][CHANGE_STATUS] Start, id={}, status={}", id, status);
 
         BusinessPartners entity = repository.findById(id)
@@ -167,15 +167,11 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
                     return new NotFoundException(ErrorCode.BP_001);
                 });
 
-        try {
-            entity.setStatus(
-                    BusinessPartnerStatus.valueOf(status.toUpperCase())
-            );
-        } catch (IllegalArgumentException | NullPointerException ex) {
-            log.warn("[SERVICE][CHANGE_STATUS] Invalid status={}, id={}", status, id);
+        if (status == null) {
+            log.warn("[SERVICE][CHANGE_STATUS] Invalid status=null, id={}", id);
             throw new BadRequestException(ErrorCode.BP_003);
         }
-
+        entity.setStatus(status);
         repository.save(entity);
 
         log.info("[SERVICE][CHANGE_STATUS] Success, id={}, newStatus={}",
@@ -192,6 +188,15 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
             Integer size
     ) {
         log.info("Searching business partners = page={}, size={}", page, size);
+        if (page == null || page < 0) {
+            throw new BadRequestException(ErrorCode.COM_006);
+        }
+        if (size == null || size <= 0) {
+            throw new BadRequestException(ErrorCode.COM_007);
+        }
+        if (size > 100) {
+            throw new BadRequestException(ErrorCode.COM_008);
+        }
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -202,14 +207,18 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
         List<BusinessPartnerType> types = normalizeType(request.getType());
 
         Page<BusinessPartners> partnerPage = repository.search(
-                request.getCode(),
-                request.getName(),
+                normalize(request.getCode()),
+                normalize(request.getName()),
                 request.getStatus(),
                 types,
                 pageable
         );
 
         return buildPageResponse(partnerPage);
+    }
+
+    private static String normalize(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     private List<BusinessPartnerType> normalizeType(BusinessPartnerType type) {
@@ -246,20 +255,16 @@ public class BusinessPartnerImpl implements BusinessPartnerService {
         return PageResponse.from(partnerPage, responses);
     }
 
-    private String resolveBusinessPartnerPrefix(String type) {
+    private String resolveBusinessPartnerPrefix(BusinessPartnerType type) {
         if (type == null) {
             return "BP";
         }
 
-        try {
-            return switch (BusinessPartnerType.valueOf(type.trim().toUpperCase())) {
-                case SUPPLIER -> "SUP";
-                case CUSTOMER -> "CUS";
-                case BOTH -> "BP";
-            };
-        } catch (IllegalArgumentException ex) {
-            return "BP";
-        }
+        return switch (type) {
+            case SUPPLIER -> "SUP";
+            case CUSTOMER -> "CUS";
+            case BOTH -> "BP";
+        };
     }
 
 }

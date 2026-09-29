@@ -14,7 +14,7 @@ import java.util.Optional;
  * Repository Interface for managing UserProfile.
  */
 @Repository
-public interface UserProfileRepository extends JpaRepository<UserProfile, Long>, UserProfileRepositoryCustom {
+public interface UserProfileRepository extends JpaRepository<UserProfile, String>, UserProfileRepositoryCustom {
     @Query("""
     select u from UserProfile u
     where u.email = :email
@@ -22,10 +22,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
     Optional<UserProfile> findByEmail(String email);
 
     /**
-     * Kiá»ƒm tra email Ä‘Ã£ tá»“n táº¡i hay chÆ°a.
+     * Kiểm tra email đã tồn tại hay chưa.
      *
-     * @param email email ngÆ°á»i dÃ¹ng
-     * @return true náº¿u Ä‘Ã£ tá»“n táº¡i
+     * @param email email người dùng
+     * @return true nếu đã tồn tại
      */
     boolean existsByEmail(String email);
 

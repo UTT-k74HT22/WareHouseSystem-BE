@@ -138,7 +138,7 @@ class RateLimitInterceptorTest {
         // When & Then
         assertThatThrownBy(() -> rateLimitInterceptor.preHandle(request, response, handlerMethod))
                 .isInstanceOf(RateLimitExceededException.class)
-                .hasMessageContaining("Rate limit exceeded");
+                .hasFieldOrPropertyWithValue("errorCode", "RATE_001");
 
         // Verify headers are still set
         assertThat(response.getHeader("X-RateLimit-Limit")).isEqualTo("10");

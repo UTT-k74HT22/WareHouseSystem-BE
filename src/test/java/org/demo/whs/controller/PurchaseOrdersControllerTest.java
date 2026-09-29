@@ -8,6 +8,7 @@ import org.demo.whs.entity.dto.request.PurchaseOrders.UpdatePurchaseOrdersReques
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.PurchaseOrders.PurchaseOrdersResponse;
 import org.demo.whs.exception.GlobalExceptionHandle;
+import org.demo.whs.exception.PublicErrorMessageResolver;
 import org.demo.whs.service.PurchaseOrdersService;
 import org.demo.whs.service.RateLimitService;
 import org.junit.jupiter.api.DisplayName;
@@ -49,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(PurchaseOrdersController.class)
 @ActiveProfiles("test")
-@Import({PurchaseOrdersControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class})
+@Import({PurchaseOrdersControllerTest.TestSecurityConfig.class, GlobalExceptionHandle.class, PublicErrorMessageResolver.class})
 @WithMockUser(authorities = {
         "PERM_PURCHASE_ORDER_CREATE",
         "PERM_PURCHASE_ORDER_READ",

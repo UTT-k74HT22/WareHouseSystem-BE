@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.demo.whs.entity.dto.request.Batch.ChangeBatchStatusRequest;
 import org.demo.whs.entity.dto.request.Batch.CreateBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.QuarantineBatchRequest;
 import org.demo.whs.entity.dto.request.Batch.ReleaseBatchRequest;
@@ -30,7 +29,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -89,7 +87,7 @@ public class BatchController {
     /**
      * List batches with business filters and pagination.
      *
-     * @param keyword                 optional search keyword for batch number or product name
+     * @param keyword                 optional search keyword for batch number or supplier batch number
      * @param productId               optional filter by product identifier
      * @param warehouseId             optional filter by warehouse identifier
      * @param status                  optional filter by batch status
@@ -162,7 +160,7 @@ public class BatchController {
     @Operation(summary = "Get expiring batches", description = "List batches approaching expiry that still have stock")
     @PreAuthorize("hasAuthority('PERM_BATCH_READ')")
     public ResponseEntity<BaseResponse<List<BatchExpiringResponse>>> getExpiringBatches(
-            @RequestParam(name = "threshold_days", defaultValue = "30") @Min(0) Integer thresholdDays,
+            @RequestParam(name = "threshold_days", defaultValue = "30") @Min(0) @Max(365) Integer thresholdDays,
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
         List<BatchExpiringResponse> response = batchService.getExpiringBatches(thresholdDays, warehouseId);
         return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách lô hàng sắp hết hạn thành công"));
@@ -202,25 +200,6 @@ public class BatchController {
             @RequestParam(name = "warehouse_id", required = false) String warehouseId) {
         List<BatchByProductResponse> response = batchService.getBatchesByProduct(productId, warehouseId);
         return ResponseEntity.ok(BaseResponse.success(response, "Lấy danh sách lô hàng thành công"));
-    }
-
-    /**
-     * Change the status of a batch with generic status transitions.
-     *
-     * @param id      the identifier of the batch to change status for
-     * @param request the request containing the new status and optional reason
-     * @return the response containing the details of the batch with updated status
-     */
-    @PatchMapping("/{id}/status")
-    @Operation(summary = "Change batch status", description = "Generic status changes are blocked. Use dedicated workflow endpoints instead")
-    @PreAuthorize("hasAuthority('PERM_BATCH_UPDATE')")
-    public ResponseEntity<BaseResponse<BatchResponse>> changeBatchStatus(
-            @PathVariable String id,
-            @RequestBody @Valid ChangeBatchStatusRequest request) {
-
-        BatchResponse response = batchService.changeBatchStatus(id, request);
-
-        return ResponseEntity.ok(BaseResponse.success(response, "Cập nhật trạng thái lô hàng thành công"));
     }
 
     /**
