@@ -1,7 +1,6 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +30,6 @@ import java.util.List;
 @Slf4j
 @Validated
 public class RoleController {
-
-    private static final String UUID_PATTERN =
-            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final RoleService roleService;
     private final UserRoleService userRoleService;
@@ -70,7 +66,6 @@ public class RoleController {
     public ResponseEntity<BaseResponse<RoleResponse>> getRoleById(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id
     ) {
 
@@ -84,7 +79,6 @@ public class RoleController {
     public ResponseEntity<BaseResponse<RoleResponse>> updateRole(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @RequestBody @Valid UpdateRoleRequest request
@@ -100,7 +94,6 @@ public class RoleController {
     public ResponseEntity<BaseResponse<Void>> deleteRole(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id
     ) {
 
@@ -116,7 +109,6 @@ public class RoleController {
     public ResponseEntity<BaseResponse<PageResponse<AccountResponse>>> getRoleUsers(
 
             @PathVariable("id")
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String roleId,
 
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)

@@ -3,7 +3,7 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.*;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.OutboundShipmentsFilterRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.OutboundShipmentsRequest;
 import org.demo.whs.entity.dto.request.OutboundShipments.UpdateOutboundShipmentsRequest;
@@ -590,7 +590,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         String currentLocationId = line.getLocationId() != null ? line.getLocationId() : stagingLocationId;
 
         inventoryService.decrease(
-                InventoryDecreaseRequest.builder()
+                InventoryMutationRequest.builder()
                         .warehouseId(shipment.getWarehouseId())
                         .productId(line.getProductId())
                         .locationId(currentLocationId)

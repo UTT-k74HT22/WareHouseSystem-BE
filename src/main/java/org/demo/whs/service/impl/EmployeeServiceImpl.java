@@ -64,9 +64,9 @@ public class EmployeeServiceImpl implements EmployeeService {
      * Steps:
      * <ol>
      *   <li>Validate uniqueness of username and employeeCode.</li>
-     *   <li>Validate that the requested role exists.</li>
+     *   <li>Validate that all requested roles exist.</li>
      *   <li>Create {@link Account} with hashed password.</li>
-     *   <li>Assign the requested {@link Role} via {@link AccountHasRole}.</li>
+     *   <li>Assign all requested {@link Role}s via {@link AccountHasRole}.</li>
      *   <li>Create {@link UserProfile} with personal data.</li>
      *   <li>Create {@link Employee} with WMS operational data.</li>
      * </ol>
@@ -87,19 +87,32 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         validateRequest(request, employeeCode);
 
-        // 2. Validate role exists
-        Role role = roleRepository.findByName(request.getRole())
-                .orElseThrow(() -> new NotFoundException(
-                        "Role not found: " + request.getRole(), ErrorCode.ROLE_001));
+        // 2. Validate roles exist (deduplicated, order-preserving)
+        List<String> requestedRoleNames = request.getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .distinct()
+                .toList();
+        if (requestedRoleNames.isEmpty()) {
+            throw new BadRequestException("At least one role is required", ErrorCode.ROLE_001);
+        }
+        List<Role> roles = requestedRoleNames.stream()
+                .map(name -> roleRepository.findByName(name)
+                        .orElseThrow(() -> new NotFoundException(
+                                "Role not found: " + name, ErrorCode.ROLE_001)))
+                .toList();
 
         // 3. Create account with hashed password
         Account account = getAccount(request.getUsername(), passwordEncoder.encode(request.getPassword()));
         accountRepository.save(account);
         log.info("Account created with username={}", request.getUsername());
 
-        // 4. Assign role to account
-        AccountHasRole accountHasRole = getAccountHasRole(account, role);
-        accountHasRoleRepository.save(accountHasRole);
+        // 4. Assign roles to account
+        List<AccountHasRole> accountHasRoles = roles.stream()
+                .map(role -> getAccountHasRole(account, role))
+                .toList();
+        accountHasRoleRepository.saveAll(accountHasRoles);
 
         // 5. Create user profile
         UserProfile userProfile = getUserProfile(

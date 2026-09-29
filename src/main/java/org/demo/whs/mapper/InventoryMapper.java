@@ -5,7 +5,7 @@ import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
@@ -211,7 +211,7 @@ public class InventoryMapper {
     /**
      * Request → Inventory Entity (Initial creation)
      */
-    public Inventory toEntity(InventoryIncreaseRequest request) {
+    public Inventory toEntity(InventoryMutationRequest request) {
         if (request == null) {
             return null;
         }

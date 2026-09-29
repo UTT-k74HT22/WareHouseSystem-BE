@@ -1,8 +1,7 @@
 package org.demo.whs.service.impl;
 
 import org.demo.whs.entity.StockMovements;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -229,7 +228,7 @@ class StockMovementsServiceImplTest {
         @DisplayName("should_RecordInboundMovement_When_ReferenceTypeIsNotAdjustment")
         void should_RecordInboundMovement_When_ReferenceTypeIsNotAdjustment() {
             // Arrange
-            InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+            InventoryMutationRequest request = InventoryMutationRequest.builder()
                     .productId("prod-1")
                     .warehouseId("wh-1")
                     .locationId("loc-1")
@@ -243,7 +242,7 @@ class StockMovementsServiceImplTest {
             savedMovement.setId("sm-inc-1");
             StockMovementsResponse expectedResponse = StockMovementsResponse.builder().id("sm-inc-1").build();
 
-            when(stockMovementsMapper.toEntity(
+            when(stockMovementsMapper.toIncreaseEntity(
                     eq(StockMovementsType.INBOUND),
                     eq(request),
                     eq(BigDecimal.ZERO),
@@ -262,7 +261,7 @@ class StockMovementsServiceImplTest {
             // Assert
             assertThat(actual).isNotNull();
             assertThat(actual.getId()).isEqualTo("sm-inc-1");
-            verify(stockMovementsMapper).toEntity(
+            verify(stockMovementsMapper).toIncreaseEntity(
                     eq(StockMovementsType.INBOUND),
                     eq(request),
                     eq(BigDecimal.ZERO),
@@ -275,7 +274,7 @@ class StockMovementsServiceImplTest {
         @DisplayName("should_RecordAdjustmentIncreaseMovement_When_ReferenceTypeIsStockAdjustment")
         void should_RecordAdjustmentIncreaseMovement_When_ReferenceTypeIsStockAdjustment() {
             // Arrange
-            InventoryIncreaseRequest request = InventoryIncreaseRequest.builder()
+            InventoryMutationRequest request = InventoryMutationRequest.builder()
                     .productId("prod-1")
                     .warehouseId("wh-1")
                     .locationId("loc-1")
@@ -288,7 +287,7 @@ class StockMovementsServiceImplTest {
             StockMovements savedMovement = StockMovements.builder().build();
             StockMovementsResponse expectedResponse = StockMovementsResponse.builder().id("sm-adj-inc").build();
 
-            when(stockMovementsMapper.toEntity(
+            when(stockMovementsMapper.toIncreaseEntity(
                     eq(StockMovementsType.ADJUSTMENT_INCREASE),
                     eq(request),
                     eq(BigDecimal.valueOf(20)),
@@ -306,7 +305,7 @@ class StockMovementsServiceImplTest {
 
             // Assert
             assertThat(actual).isNotNull();
-            verify(stockMovementsMapper).toEntity(
+            verify(stockMovementsMapper).toIncreaseEntity(
                     eq(StockMovementsType.ADJUSTMENT_INCREASE),
                     eq(request),
                     eq(BigDecimal.valueOf(20)),
@@ -324,7 +323,7 @@ class StockMovementsServiceImplTest {
         @DisplayName("should_RecordAdjustmentDecreaseMovement_When_ReferenceTypeIsStockAdjustment")
         void should_RecordAdjustmentDecreaseMovement_When_ReferenceTypeIsStockAdjustment() {
             // Arrange
-            InventoryDecreaseRequest request = InventoryDecreaseRequest.builder()
+            InventoryMutationRequest request = InventoryMutationRequest.builder()
                     .productId("prod-1")
                     .warehouseId("wh-1")
                     .locationId("loc-1")
@@ -337,7 +336,7 @@ class StockMovementsServiceImplTest {
             StockMovements savedMovement = StockMovements.builder().build();
             StockMovementsResponse expectedResponse = StockMovementsResponse.builder().id("sm-adj-dec").build();
 
-            when(stockMovementsMapper.toEntity(
+            when(stockMovementsMapper.toDecreaseEntity(
                     eq(StockMovementsType.ADJUSTMENT_DECREASE),
                     eq(request),
                     eq(BigDecimal.valueOf(50)),
@@ -355,7 +354,7 @@ class StockMovementsServiceImplTest {
 
             // Assert
             assertThat(actual).isNotNull();
-            verify(stockMovementsMapper).toEntity(
+            verify(stockMovementsMapper).toDecreaseEntity(
                     eq(StockMovementsType.ADJUSTMENT_DECREASE),
                     eq(request),
                     eq(BigDecimal.valueOf(50)),
@@ -368,7 +367,7 @@ class StockMovementsServiceImplTest {
         @DisplayName("should_RecordOutboundMovement_When_ReferenceTypeIsOutboundShipment")
         void should_RecordOutboundMovement_When_ReferenceTypeIsOutboundShipment() {
             // Arrange
-            InventoryDecreaseRequest request = InventoryDecreaseRequest.builder()
+            InventoryMutationRequest request = InventoryMutationRequest.builder()
                     .productId("prod-1")
                     .warehouseId("wh-1")
                     .locationId("loc-1")
@@ -381,7 +380,7 @@ class StockMovementsServiceImplTest {
             StockMovements savedMovement = StockMovements.builder().build();
             StockMovementsResponse expectedResponse = StockMovementsResponse.builder().id("sm-out-1").build();
 
-            when(stockMovementsMapper.toEntity(
+            when(stockMovementsMapper.toDecreaseEntity(
                     eq(StockMovementsType.OUTBOUND),
                     eq(request),
                     eq(BigDecimal.valueOf(50)),
@@ -399,7 +398,7 @@ class StockMovementsServiceImplTest {
 
             // Assert
             assertThat(actual).isNotNull();
-            verify(stockMovementsMapper).toEntity(
+            verify(stockMovementsMapper).toDecreaseEntity(
                     eq(StockMovementsType.OUTBOUND),
                     eq(request),
                     eq(BigDecimal.valueOf(50)),
@@ -412,7 +411,7 @@ class StockMovementsServiceImplTest {
         @DisplayName("should_RecordOutboundMovement_When_ReferenceTypeIsOther")
         void should_RecordOutboundMovement_When_ReferenceTypeIsOther() {
             // Arrange
-            InventoryDecreaseRequest request = InventoryDecreaseRequest.builder()
+            InventoryMutationRequest request = InventoryMutationRequest.builder()
                     .productId("prod-1")
                     .warehouseId("wh-1")
                     .locationId("loc-1")
@@ -425,7 +424,7 @@ class StockMovementsServiceImplTest {
             StockMovements savedMovement = StockMovements.builder().build();
             StockMovementsResponse expectedResponse = StockMovementsResponse.builder().id("sm-so-1").build();
 
-            when(stockMovementsMapper.toEntity(
+            when(stockMovementsMapper.toDecreaseEntity(
                     eq(StockMovementsType.OUTBOUND),
                     eq(request),
                     eq(BigDecimal.valueOf(30)),
@@ -443,7 +442,7 @@ class StockMovementsServiceImplTest {
 
             // Assert
             assertThat(actual).isNotNull();
-            verify(stockMovementsMapper).toEntity(
+            verify(stockMovementsMapper).toDecreaseEntity(
                     eq(StockMovementsType.OUTBOUND),
                     eq(request),
                     eq(BigDecimal.valueOf(30)),

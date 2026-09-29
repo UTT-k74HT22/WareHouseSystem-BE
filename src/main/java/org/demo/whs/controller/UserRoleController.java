@@ -1,7 +1,6 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.UserRole.AssignRolesRequest;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,11 +24,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@Validated
 public class UserRoleController {
-
-    private static final String UUID_PATTERN =
-            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final UserRoleService userRoleService;
 
@@ -43,7 +37,6 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<List<RoleResponse>>> assignRolesToUser(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @RequestBody @Valid AssignRolesRequest request
@@ -67,11 +60,9 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<Void>> removeRoleFromUser(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String roleId
     ) {
 
@@ -93,7 +84,6 @@ public class UserRoleController {
     public ResponseEntity<BaseResponse<PageResponse<RoleResponse>>> getUserRoles(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid user id format")
             String userId,
 
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)

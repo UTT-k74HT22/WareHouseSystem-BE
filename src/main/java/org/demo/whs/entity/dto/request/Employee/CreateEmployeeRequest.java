@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -26,8 +27,8 @@ public class CreateEmployeeRequest {
     )
     private String password;
 
-    @NotBlank(message = "Role is required")
-    private String role;
+    @NotEmpty(message = "At least one role is required")
+    private List<@NotBlank(message = "Role name must not be blank") String> roles;
 
     @NotBlank(message = "First name is required")
     @Size(max = 50, message = "First name must not exceed 50 characters")

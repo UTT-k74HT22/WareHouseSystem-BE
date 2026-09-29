@@ -15,12 +15,19 @@ import org.demo.whs.entity.enums.ReferenceType;
 
 import java.math.BigDecimal;
 
+/**
+ * Single request DTO for inventory on-hand mutations.
+ * Used by both {@code POST /api/v1/inventories/increase} and
+ * {@code POST /api/v1/inventories/decrease} — the endpoint decides
+ * the direction. {@code consumeReserved} / {@code orderLineId} are
+ * only meaningful for decrease and are ignored by increase.
+ */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class InventoryDecreaseRequest {
+public class InventoryMutationRequest {
 
     @NotBlank(message = "Product ID is required")
     private String productId;

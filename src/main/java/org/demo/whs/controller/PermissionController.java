@@ -1,7 +1,6 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Permission.CreatePermissionRequest;
@@ -17,18 +16,13 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/api/v1/permissions")
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@Validated
 public class PermissionController {
-
-    private static final String UUID_PATTERN =
-            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final PermissionService permissionService;
 
@@ -67,7 +61,7 @@ public class PermissionController {
     @PreAuthorize("hasAuthority('PERM_PERMISSION_READ')")
     public ResponseEntity<BaseResponse<PermissionResponse>> getPermissionById(
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id
+            String id
     ) {
         PermissionResponse response = permissionService.getPermissionById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -77,7 +71,7 @@ public class PermissionController {
     @PreAuthorize("hasAuthority('PERM_PERMISSION_UPDATE')")
     public ResponseEntity<BaseResponse<PermissionResponse>> updatePermission(
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id,
+            String id,
             @RequestBody @Valid UpdatePermissionRequest request
     ) {
         PermissionResponse response = permissionService.updatePermission(id, request);
@@ -88,7 +82,7 @@ public class PermissionController {
     @PreAuthorize("hasAuthority('PERM_PERMISSION_DELETE')")
     public ResponseEntity<BaseResponse<Void>> deletePermission(
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format") String id
+            String id
     ) {
         permissionService.deletePermission(id);
         return ResponseEntity.ok(BaseResponse.success(null, "Permission deleted successfully"));

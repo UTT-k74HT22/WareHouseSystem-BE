@@ -82,20 +82,24 @@ class EmployeeServiceImplTest {
         CreateEmployeeRequest request = CreateEmployeeRequest.builder()
                 .username("john.doe")
                 .password("Password1!")
-                .role(String.valueOf(RoleType.ADMIN))
+                .roles(List.of(String.valueOf(RoleType.ADMIN), String.valueOf(RoleType.USER)))
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@example.com")
                 .build();
 
-        Role role = new Role();
-        role.setId("role-1");
-        role.setName(request.getRole());
+        Role adminRole = new Role();
+        adminRole.setId("role-1");
+        adminRole.setName(String.valueOf(RoleType.ADMIN));
+        Role userRole = new Role();
+        userRole.setId("role-2");
+        userRole.setName(String.valueOf(RoleType.USER));
 
         Employee employee = new Employee();
         employee.setAccountId("acc-1");
 
-        when(roleRepository.findByName(request.getRole())).thenReturn(Optional.of(role));
+        when(roleRepository.findByName(String.valueOf(RoleType.ADMIN))).thenReturn(Optional.of(adminRole));
+        when(roleRepository.findByName(String.valueOf(RoleType.USER))).thenReturn(Optional.of(userRole));
         when(passwordEncoder.encode(request.getPassword())).thenReturn("hashed-password");
         when(employeeMapper.toEntity(request, "acc-1")).thenReturn(employee);
         when(employeeMapper.toResponse(eq(employee), any(UserProfile.class))).thenAnswer(invocation ->
@@ -113,6 +117,7 @@ class EmployeeServiceImplTest {
 
         assertThat(response.getEmployeeCode()).startsWith("EMP-");
         assertThat(response.getEmployeeCode()).hasSizeLessThanOrEqualTo(20);
+        verify(accountHasRoleRepository).saveAll(argThat((List<AccountHasRole> list) -> list.size() == 2));
         verify(employeeRepository).save(employee);
     }
 
@@ -122,7 +127,7 @@ class EmployeeServiceImplTest {
         CreateEmployeeRequest request = CreateEmployeeRequest.builder()
                 .username("john.doe")
                 .password("Password1!")
-                .role(String.valueOf(RoleType.ADMIN))
+                .roles(List.of(String.valueOf(RoleType.ADMIN)))
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@example.com")

@@ -5,9 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.demo.whs.entity.dto.request.Inventory.CheckAvailabilityRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
@@ -137,7 +136,7 @@ public class InventoryController {
     @Operation(summary = "Increase inventory", description = "Increase on-hand stock from inbound or adjustment")
     @PreAuthorize("hasAuthority('PERM_INVENTORY_MUTATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryResponse>> increase(
-            @Valid @RequestBody InventoryIncreaseRequest request) {
+            @Valid @RequestBody InventoryMutationRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.increase(request)));
     }
 
@@ -151,7 +150,7 @@ public class InventoryController {
     @Operation(summary = "Decrease inventory", description = "Decrease on-hand stock from outbound or adjustment")
     @PreAuthorize("hasAuthority('PERM_INVENTORY_MUTATION_UPDATE')")
     public ResponseEntity<BaseResponse<InventoryResponse>> decrease(
-            @Valid @RequestBody InventoryDecreaseRequest request) {
+            @Valid @RequestBody InventoryMutationRequest request) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.decrease(request)));
     }
 }

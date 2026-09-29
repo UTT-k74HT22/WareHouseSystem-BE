@@ -1,7 +1,6 @@
 package org.demo.whs.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.RolePermission.AssignPermissionsRequest;
@@ -15,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,11 +22,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@Validated
 public class RolePermissionController {
-
-    private static final String UUID_PATTERN =
-            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 
     private final RolePermissionService rolePermissionService;
 
@@ -40,7 +34,6 @@ public class RolePermissionController {
     public ResponseEntity<BaseResponse<List<PermissionResponse>>> assignPermissions(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @RequestBody @Valid AssignPermissionsRequest request
@@ -61,11 +54,9 @@ public class RolePermissionController {
     public ResponseEntity<BaseResponse<Void>> removePermission(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid permission id format")
             String permId
     ) {
 
@@ -84,7 +75,6 @@ public class RolePermissionController {
     public ResponseEntity<BaseResponse<PageResponse<PermissionResponse>>> getRolePermissions(
 
             @PathVariable
-            @Pattern(regexp = UUID_PATTERN, message = "Invalid role id format")
             String id,
 
             @RequestParam(required = false) String resource,

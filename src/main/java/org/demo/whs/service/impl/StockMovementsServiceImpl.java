@@ -3,8 +3,7 @@ package org.demo.whs.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.StockMovements;
-import org.demo.whs.entity.dto.request.Inventory.InventoryDecreaseRequest;
-import org.demo.whs.entity.dto.request.Inventory.InventoryIncreaseRequest;
+import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -87,14 +86,14 @@ public class StockMovementsServiceImpl implements StockMovementsService {
 
     @Override
     @Transactional
-    public StockMovementsResponse recordIncrease(InventoryIncreaseRequest request, BigDecimal quantityBefore, BigDecimal quantityAfter) {
+    public StockMovementsResponse recordIncrease(InventoryMutationRequest request, BigDecimal quantityBefore, BigDecimal quantityAfter) {
         StockMovementsType movementType = request.getReferenceType() == ReferenceType.STOCK_ADJUSTMENT
                 ? StockMovementsType.ADJUSTMENT_INCREASE
                 : StockMovementsType.INBOUND;
 
         String actorId = SecurityUtils.getCurrentAccountId();
 
-        StockMovements movement = stockMovementsMapper.toEntity(
+        StockMovements movement = stockMovementsMapper.toIncreaseEntity(
                 movementType,
                 request,
                 quantityBefore,
@@ -107,7 +106,7 @@ public class StockMovementsServiceImpl implements StockMovementsService {
 
     @Override
     @Transactional
-    public StockMovementsResponse recordDecrease(InventoryDecreaseRequest request, BigDecimal quantityBefore, BigDecimal quantityAfter) {
+    public StockMovementsResponse recordDecrease(InventoryMutationRequest request, BigDecimal quantityBefore, BigDecimal quantityAfter) {
         StockMovementsType movementType;
         if (request.getReferenceType() == ReferenceType.STOCK_ADJUSTMENT) {
             movementType = StockMovementsType.ADJUSTMENT_DECREASE;
@@ -119,7 +118,7 @@ public class StockMovementsServiceImpl implements StockMovementsService {
 
         String actorId = SecurityUtils.getCurrentAccountId();
 
-        StockMovements movement = stockMovementsMapper.toEntity(
+        StockMovements movement = stockMovementsMapper.toDecreaseEntity(
                 movementType,
                 request,
                 quantityBefore,
