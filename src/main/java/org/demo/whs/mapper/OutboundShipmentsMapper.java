@@ -30,6 +30,7 @@ public class OutboundShipmentsMapper {
                 .salesOrderId(request.getSalesOrderId())
                 .warehouseId(request.getWarehouseId())
                 .shipmentDate(request.getShipmentDate())
+                .shipmentTime(request.getShipmentTime())
                 .status(OutboundShipmentsStatus.DRAFT)
                 .carrier(request.getCarrier())
                 .notes(request.getNotes())
@@ -61,6 +62,7 @@ public class OutboundShipmentsMapper {
                 .salesOrderId(entity.getSalesOrderId())
                 .warehouseId(entity.getWarehouseId())
                 .shipmentDate(entity.getShipmentDate())
+                .shipmentTime(entity.getShipmentTime())
                 .status(entity.getStatus())
                 .trackingNumber(entity.getTrackingNumber())
                 .carrier(entity.getCarrier())
@@ -81,6 +83,9 @@ public class OutboundShipmentsMapper {
 
         if (request.getShipmentDate() != null) {
             entity.setShipmentDate(request.getShipmentDate());
+        }
+        if (request.getShipmentTime() != null) {
+            entity.setShipmentTime(request.getShipmentTime());
         }
         if (request.getCarrier() != null) {
             entity.setCarrier(request.getCarrier());

@@ -225,12 +225,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * @return Identifier string
      */
     private String getIdentifier(HttpServletRequest request, RateLimitType type, String rateLimitKey) {
-        return switch (type) {
-            case IP -> getTrustedClientIp(request);
-            case USER -> getUserIdentifier(request, rateLimitKey);
-            case API -> request.getRequestURI();
-            case GLOBAL -> "global";
-        };
+        if (type == RateLimitType.IP) {
+            return getTrustedClientIp(request);
+        }
+        if (type == RateLimitType.USER) {
+            return getUserIdentifier(request, rateLimitKey);
+        }
+        if (type == RateLimitType.API) {
+            return request.getRequestURI();
+        }
+        return "global";
     }
     
     /**

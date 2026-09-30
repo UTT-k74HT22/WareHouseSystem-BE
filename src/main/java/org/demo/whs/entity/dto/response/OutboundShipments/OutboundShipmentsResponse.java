@@ -11,6 +11,7 @@ import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -24,15 +25,19 @@ public class OutboundShipmentsResponse {
     private String salesOrderId;
     private String warehouseId;
     private LocalDate shipmentDate;
+    private LocalTime shipmentTime;
     private OutboundShipmentsStatus status;
     private String trackingNumber;
     private String carrier;
     private LocalDateTime shippedAt;
     private String confirmedBy;
+    private String confirmedByName;
     private String notes;
     private List<OutboundShipmentLinesResponse> lines;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
+    private String createdByName;
     private String updatedBy;
+    private String updatedByName;
 }
