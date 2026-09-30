@@ -163,7 +163,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
         List<SalesOrderLines> lines = salesOrderLinesRepository.findBySalesOrderId(id);
         SalesOrdersResponse response = salesOrdersMapper.toResponse(salesOrder);
         response.setLines(lines.stream().map(salesOrderLinesMapper::toResponse).collect(Collectors.toList()));
-        return response;
+        return enrichDisplayNames(response, salesOrder);
     }
 
     @Override
@@ -239,7 +239,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
         
         SalesOrdersResponse response = salesOrdersMapper.toResponse(confirmedSO);
         response.setLines(lines.stream().map(salesOrderLinesMapper::toResponse).collect(Collectors.toList()));
-        return response;
+        return enrichDisplayNames(response, confirmedSO);
     }
 
     @Override
@@ -352,6 +352,37 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
             salesOrder.setCreatedBy(actorId);
         }
         salesOrder.setUpdatedBy(actorId);
+    }
+
+    /**
+     * Bổ sung tên hiển thị cho API chi tiết nhưng vẫn giữ nguyên ID để đối chiếu.
+     * Số quan hệ cần tra cứu là cố định trên một đơn nên không tạo N+1 theo trang.
+     */
+    private SalesOrdersResponse enrichDisplayNames(SalesOrdersResponse response, SalesOrders salesOrder) {
+        response.setCustomerName(businessPartnersRepository.findById(salesOrder.getCustomerId())
+                .map(BusinessPartners::getName)
+                .orElse(null));
+        response.setWarehouseName(wareHouseRepository.findById(salesOrder.getWarehouseId())
+                .map(Warehouses::getName)
+                .orElse(null));
+
+        String createdByName = resolveAccountUsername(salesOrder.getCreatedBy());
+        response.setCreatedByName(createdByName);
+        response.setUpdatedByName(salesOrder.getUpdatedBy() != null
+                && salesOrder.getUpdatedBy().equals(salesOrder.getCreatedBy())
+                ? createdByName
+                : resolveAccountUsername(salesOrder.getUpdatedBy()));
+        response.setConfirmedByName(resolveAccountUsername(salesOrder.getConfirmedBy()));
+        return response;
+    }
+
+    private String resolveAccountUsername(String accountId) {
+        if (!StringUtils.hasText(accountId)) {
+            return null;
+        }
+        return accountRepository.findById(accountId)
+                .map(Account::getUsername)
+                .orElse(null);
     }
 
     private SalesOrders findByIdForMutation(String id) {

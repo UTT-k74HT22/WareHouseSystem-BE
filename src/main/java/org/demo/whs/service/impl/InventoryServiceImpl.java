@@ -17,10 +17,7 @@ import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryUnreserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.LocationInventoryItemResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
-import org.demo.whs.entity.enums.InventoryReservationStatus;
-import org.demo.whs.entity.enums.LocationStatus;
-import org.demo.whs.entity.enums.ReferenceType;
-import org.demo.whs.entity.enums.StockMovementsType;
+import org.demo.whs.entity.enums.*;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.exception.ErrorCode;
@@ -189,10 +186,22 @@ public class InventoryServiceImpl implements InventoryService {
             throw new BadRequestException(ErrorCode.COM_001);
         }
 
-        // 4. Aggregate inventory
-        CheckAvailabilityResponse availability = inventoryRepository.getAvailability(request.getProductId(), request.getWarehouseId(), request.getLocationId());
-
-        BigDecimal availableQuantity = availability.getAvailableQuantity();
+        // 4. Đơn xuất chỉ được giữ chỗ từ khu STORAGE. Các lần kiểm tra tồn
+        // tổng quát khác vẫn giữ nguyên hành vi cũ.
+        BigDecimal availableQuantity;
+        if (Boolean.TRUE.equals(request.getStorageOnly())
+                && request.getWarehouseId() != null
+                && request.getLocationId() == null) {
+            availableQuantity = inventoryRepository.sumAvailableByProductWarehouseAndLocationType(
+                    request.getProductId(),
+                    request.getWarehouseId(),
+                    LocationType.STORAGE
+            );
+        } else {
+            CheckAvailabilityResponse availability = inventoryRepository.getAvailability(
+                    request.getProductId(), request.getWarehouseId(), request.getLocationId());
+            availableQuantity = availability.getAvailableQuantity();
+        }
         boolean isAvailable = availableQuantity.compareTo(request.getQuantity()) >= 0;
 
         return inventoryMapper.toCheckAvailabilityResponse(request, availableQuantity, isAvailable);
@@ -235,7 +244,13 @@ public class InventoryServiceImpl implements InventoryService {
                     return inventoryMapper.toReserveResponse(existing.get(), inv);
                 }
 
-                Inventory inventory = inventoryRepository.findBestSuitableForUpdate(orderLine.getProductId(), request.getWarehouseId(), request.getLocationId(), request.getBatchId(), request.getQuantity()).orElseThrow(() -> new ConflictException(ErrorCode.INV_004));
+                Inventory inventory = inventoryRepository.findBestSuitableForUpdate(
+                        orderLine.getProductId(),
+                        request.getWarehouseId(),
+                        request.getLocationId(),
+                        request.getBatchId(),
+                        request.getQuantity()
+                ).orElseThrow(() -> buildStorageAvailabilityException(orderLine.getProductId(), request));
 
                 BigDecimal availableBefore = inventory.getAvailableQuantity();
 
@@ -266,6 +281,34 @@ public class InventoryServiceImpl implements InventoryService {
             Thread.currentThread().interrupt();
             throw new ConflictException(ErrorCode.COM_010);
         }
+    }
+
+    private ConflictException buildStorageAvailabilityException(String productId, InventoryReserveRequest request) {
+        Products product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(PROD_001));
+        BigDecimal storageAvailable = inventoryRepository.sumAvailableByProductWarehouseAndLocationType(
+                productId,
+                request.getWarehouseId(),
+                LocationType.STORAGE
+        );
+        BigDecimal pickingAvailable = inventoryRepository.sumAvailableByProductWarehouseAndLocationType(
+                productId,
+                request.getWarehouseId(),
+                LocationType.PICKING
+        );
+
+        String message = String.format(
+                "%s (%s) cần %s, nhưng tồn khả dụng tại khu STORAGE chỉ có %s.%s",
+                product.getName(),
+                product.getSku(),
+                request.getQuantity().stripTrailingZeros().toPlainString(),
+                storageAvailable.stripTrailingZeros().toPlainString(),
+                pickingAvailable.compareTo(BigDecimal.ZERO) > 0
+                        ? " Hiện có " + pickingAvailable.stripTrailingZeros().toPlainString()
+                            + " ở khu PICKING; hãy điều chuyển về STORAGE trước khi xác nhận đơn."
+                        : " Hãy bổ sung hoặc điều chuyển tồn về STORAGE trước khi xác nhận đơn."
+        );
+        return new ConflictException(message, ErrorCode.INV_004);
     }
 
     @Override

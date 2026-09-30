@@ -2,6 +2,7 @@ package org.demo.whs.repository;
 
 import jakarta.persistence.LockModeType;
 import org.demo.whs.entity.Inventory;
+import org.demo.whs.entity.enums.LocationType;
 import org.demo.whs.repository.custom.InventoryRepositoryCustom;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -99,6 +100,21 @@ public interface InventoryRepository extends
             @Param("locationId") String locationId,
             @Param("batchId") String batchId,
             @Param("requestedQuantity") java.math.BigDecimal requestedQuantity
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(i.onHandQuantity - i.quarantineQuantity - i.reservedQuantity), 0)
+        FROM Inventory i
+        WHERE i.productId = :productId
+        AND i.warehouseId = :warehouseId
+        AND i.locationId IN (
+            SELECT l.id FROM Locations l WHERE l.type = :locationType
+        )
+    """)
+    BigDecimal sumAvailableByProductWarehouseAndLocationType(
+            @Param("productId") String productId,
+            @Param("warehouseId") String warehouseId,
+            @Param("locationType") LocationType locationType
     );
 
     @Query("""

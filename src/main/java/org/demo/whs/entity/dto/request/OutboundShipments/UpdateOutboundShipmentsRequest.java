@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -17,6 +18,8 @@ import java.time.LocalDate;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UpdateOutboundShipmentsRequest {
     private LocalDate shipmentDate;
+
+    private LocalTime shipmentTime;
 
     @Size(max = 100, message = "Carrier must not exceed 100 characters")
     private String carrier;

@@ -24,7 +24,9 @@ public class SalesOrdersResponse {
     private String id;
     private String soNumber;
     private String customerId;
+    private String customerName;
     private String warehouseId;
+    private String warehouseName;
     private LocalDate orderDate;
     private LocalDate requestedDeliveryDate;
     private String status;
@@ -35,7 +37,12 @@ public class SalesOrdersResponse {
     private String notes;
     private LocalDateTime confirmedAt;
     private String confirmedBy;
+    private String confirmedByName;
     private LocalDateTime createdAt;
+    private String createdBy;
+    private String createdByName;
     private LocalDateTime updatedAt;
+    private String updatedBy;
+    private String updatedByName;
     private List<SalesOrderLinesResponse> lines;
 }

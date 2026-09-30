@@ -34,4 +34,11 @@ public class CheckAvailabilityRequest {
     private String warehouseId;
 
     private String locationId;
+
+    /**
+     * Chỉ kiểm tra tồn có thể cấp phát từ khu lưu trữ (STORAGE).
+     * Dùng cho đơn xuất hàng, vì hàng tại các khu PICKING/PACKING là hàng đang
+     * được xử lý nội bộ và không được dùng để giữ chỗ cho đơn mới.
+     */
+    private Boolean storageOnly;
 }

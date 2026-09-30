@@ -61,7 +61,9 @@ public class SalesOrdersMapper {
                 .confirmedAt(entity.getConfirmedAt())
                 .confirmedBy(entity.getConfirmedBy())
                 .createdAt(entity.getCreatedAt())
+                .createdBy(entity.getCreatedBy())
                 .updatedAt(entity.getUpdatedAt())
+                .updatedBy(entity.getUpdatedBy())
                 .lines(new ArrayList<>())
                 .build();
     }

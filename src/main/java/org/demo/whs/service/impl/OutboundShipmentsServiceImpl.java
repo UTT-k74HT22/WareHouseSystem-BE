@@ -85,7 +85,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         applyAuditFields(shipment, getCurrentActorId(), true);
 
         OutboundShipments savedShipment = outboundShipmentsRepository.save(shipment);
-        return outboundShipmentsMapper.toResponse(savedShipment);
+        return withActorNames(outboundShipmentsMapper.toResponse(savedShipment));
     }
 
     @Override
@@ -105,7 +105,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         log.info("Get outbound shipment by id={}", id);
         OutboundShipments shipment = findById(id);
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-        return outboundShipmentsMapper.toResponse(shipment, lines);
+        return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
     }
 
     @Override
@@ -136,7 +136,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         applyAuditFields(shipment, getCurrentActorId(), false);
 
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
-        return outboundShipmentsMapper.toResponse(updatedShipment);
+        return withActorNames(outboundShipmentsMapper.toResponse(updatedShipment));
     }
 
     // ==================== WORKFLOW ====================
@@ -151,9 +151,9 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
             log.info("Shipment already in PICKING status, reconciling transit capacity");
             Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
-            syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+            syncLocationUsedCapacity(pickingLoc.getId());
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-            return outboundShipmentsMapper.toResponse(shipment, lines);
+            return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
         }
         if (shipment.getStatus() != OutboundShipmentsStatus.DRAFT) {
             throw new BadRequestException("Shipment must be in DRAFT status to start picking", ErrorCode.COM_001);
@@ -196,7 +196,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                     shipment.getId(),
                     line.getSalesOrderLineId(),
                     false,
-                    false,
+                    true,
                     true
             );
 
@@ -211,9 +211,9 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         outboundShipmentLinesRepository.saveAll(lines);
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
-        syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+        syncLocationUsedCapacity(pickingLoc.getId());
         List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-        return outboundShipmentsMapper.toResponse(updatedShipment, updatedLines);
+        return withActorNames(outboundShipmentsMapper.toResponse(updatedShipment, updatedLines));
     }
 
     @Override
@@ -225,9 +225,9 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
             Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
-            syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+            syncLocationUsedCapacity(packingLoc.getId());
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-            return outboundShipmentsMapper.toResponse(shipment, lines);
+            return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
         }
         if (shipment.getStatus() != OutboundShipmentsStatus.PICKING) {
             throw new BadRequestException("Shipment must be in PICKING status to mark as packed", ErrorCode.COM_001);
@@ -239,7 +239,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         lines.stream()
                 .map(line -> line.getLocationId() != null ? line.getLocationId() : pickingLoc.getId())
                 .distinct()
-                .forEach(locationId -> syncTransitLocationUsedCapacity(locationId, List.of(OutboundShipmentsStatus.PICKING)));
+                .forEach(this::syncLocationUsedCapacity);
 
         for (OutboundShipmentLines line : lines) {
             String sourceLocationId = line.getLocationId() != null ? line.getLocationId() : pickingLoc.getId();
@@ -264,10 +264,10 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         outboundShipmentLinesRepository.saveAll(lines);
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
-        syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
-        syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+        syncLocationUsedCapacity(pickingLoc.getId());
+        syncLocationUsedCapacity(packingLoc.getId());
         List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-        return outboundShipmentsMapper.toResponse(updatedShipment, updatedLines);
+        return withActorNames(outboundShipmentsMapper.toResponse(updatedShipment, updatedLines));
     }
 
     @Override
@@ -279,7 +279,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED || shipment.getStatus() == OutboundShipmentsStatus.STAGING) {
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-            return outboundShipmentsMapper.toResponse(shipment, lines);
+            return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
         }
         if (shipment.getStatus() != OutboundShipmentsStatus.PACKED) {
             throw new BadRequestException("Shipment must be PACKED to ship", ErrorCode.COM_001);
@@ -296,7 +296,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         lines.stream()
                 .map(line -> line.getLocationId() != null ? line.getLocationId() : packingLoc.getId())
                 .distinct()
-                .forEach(locationId -> syncTransitLocationUsedCapacity(locationId, List.of(OutboundShipmentsStatus.PACKED)));
+                .forEach(this::syncLocationUsedCapacity);
 
         for (OutboundShipmentLines line : lines) {
             // Move PACKING → STAGING
@@ -320,11 +320,11 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         applyAuditFields(shipment, actorId, false);
         outboundShipmentLinesRepository.saveAll(lines);
         outboundShipmentsRepository.save(shipment);
-        syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
-        syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+        syncLocationUsedCapacity(packingLoc.getId());
+        syncLocationUsedCapacity(stagingLoc.getId());
 
         List<OutboundShipmentLines> updatedLines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-        return outboundShipmentsMapper.toResponse(shipment, updatedLines);
+        return withActorNames(outboundShipmentsMapper.toResponse(shipment, updatedLines));
     }
 
     @Override
@@ -336,7 +336,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         if (shipment.getStatus() == OutboundShipmentsStatus.SHIPPED) {
             List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
-            return outboundShipmentsMapper.toResponse(shipment, lines);
+            return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
         }
         if (shipment.getStatus() != OutboundShipmentsStatus.STAGING) {
             throw new BadRequestException("Shipment must be in STAGING status to confirm dispatch", ErrorCode.COM_001);
@@ -350,7 +350,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
         String actorId = getCurrentActorId();
         List<SalesOrderLines> updatedSalesOrderLines = new java.util.ArrayList<>(lines.size());
-        syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+        syncLocationUsedCapacity(stagingLoc.getId());
 
         for (OutboundShipmentLines line : lines) {
             InventoryReservation reservation = inventoryReservationRepository.findByOrderLineId(line.getSalesOrderLineId())
@@ -379,13 +379,15 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         shipment.setConfirmedBy(actorId);
         applyAuditFields(shipment, actorId, false);
         outboundShipmentLinesRepository.saveAllAndFlush(lines);
-        salesOrderLinesRepository.saveAll(updatedSalesOrderLines.stream().distinct().collect(Collectors.toList()));
+        // Ghi ngay số lượng đã xuất trước khi tính lại trạng thái đơn xuất hàng.
+        // Nhờ đó tránh việc truy vấn trạng thái đọc dữ liệu cũ và đánh dấu nhầm hoàn thành.
+        salesOrderLinesRepository.saveAllAndFlush(updatedSalesOrderLines.stream().distinct().collect(Collectors.toList()));
         outboundShipmentsRepository.saveAndFlush(shipment);
-        locationRepository.forceUpdateUsedCapacity(stagingLoc.getId(), BigDecimal.ZERO);
+        syncLocationUsedCapacity(stagingLoc.getId());
 
         updateSalesOrderStatus(shipment.getSalesOrderId());
 
-        return outboundShipmentsMapper.toResponse(shipment, lines);
+        return withActorNames(outboundShipmentsMapper.toResponse(shipment, lines));
     }
 
     @Override
@@ -399,7 +401,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
             throw new BadRequestException("Cannot cancel a SHIPPED shipment", ErrorCode.COM_001);
         }
         if (shipment.getStatus() == OutboundShipmentsStatus.CANCELLED) {
-            return outboundShipmentsMapper.toResponse(shipment);
+            return withActorNames(outboundShipmentsMapper.toResponse(shipment));
         }
 
         if (shipment.getStatus() == OutboundShipmentsStatus.PICKING
@@ -426,7 +428,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                                         line.getSalesOrderLineId(),
                                         false,
                                         true,
-                                        false
+                                        true
                                 );
                                 line.setLocationId(reservation.getLocationId());
                             });
@@ -465,11 +467,11 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
             outboundShipmentLinesRepository.saveAll(lines);
 
             if (shipment.getStatus() == OutboundShipmentsStatus.PICKING) {
-                syncTransitLocationUsedCapacity(pickingLoc.getId(), List.of(OutboundShipmentsStatus.PICKING));
+                syncLocationUsedCapacity(pickingLoc.getId());
             } else if (shipment.getStatus() == OutboundShipmentsStatus.PACKED) {
-                syncTransitLocationUsedCapacity(packingLoc.getId(), List.of(OutboundShipmentsStatus.PACKED));
+                syncLocationUsedCapacity(packingLoc.getId());
             } else {
-                syncTransitLocationUsedCapacity(stagingLoc.getId(), List.of(OutboundShipmentsStatus.STAGING));
+                syncLocationUsedCapacity(stagingLoc.getId());
             }
         }
 
@@ -477,10 +479,30 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         applyAuditFields(shipment, getCurrentActorId(), false);
 
         OutboundShipments updatedShipment = outboundShipmentsRepository.save(shipment);
-        return outboundShipmentsMapper.toResponse(updatedShipment);
+        return withActorNames(outboundShipmentsMapper.toResponse(updatedShipment));
     }
 
     // ==================== HELPER METHODS ====================
+
+    private OutboundShipmentsResponse withActorNames(OutboundShipmentsResponse response) {
+        if (response == null) {
+            return null;
+        }
+
+        response.setCreatedByName(resolveAccountUsername(response.getCreatedBy()));
+        response.setUpdatedByName(resolveAccountUsername(response.getUpdatedBy()));
+        response.setConfirmedByName(resolveAccountUsername(response.getConfirmedBy()));
+        return response;
+    }
+
+    private String resolveAccountUsername(String accountId) {
+        if (accountId == null || accountId.isBlank()) {
+            return null;
+        }
+        return accountRepository.findById(accountId)
+                .map(Account::getUsername)
+                .orElse(null);
+    }
 
     private OutboundShipments findById(String id) {
         return outboundShipmentsRepository.findById(id).orElseThrow(() -> new NotFoundException("Outbound shipment not found", ErrorCode.COM_001));
@@ -513,13 +535,15 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
 
         List<SalesOrderLines> lines = salesOrderLinesRepository.findBySalesOrderId(soId);
 
-        boolean allShipped = lines.stream().allMatch(line -> line.getQuantityShipped().compareTo(line.getQuantityOrdered()) >= 0);
+        boolean hasRemainingQuantity = lines.stream().anyMatch(line -> {
+            BigDecimal ordered = line.getQuantityOrdered() == null ? BigDecimal.ZERO : line.getQuantityOrdered();
+            BigDecimal shipped = line.getQuantityShipped() == null ? BigDecimal.ZERO : line.getQuantityShipped();
+            return shipped.compareTo(ordered) < 0;
+        });
 
-        if (allShipped) {
-            salesOrder.setStatus(SalesOrdersStatus.COMPLETED);
-        } else {
-            salesOrder.setStatus(SalesOrdersStatus.PARTIALLY_SHIPPED);
-        }
+        salesOrder.setStatus(hasRemainingQuantity
+                ? SalesOrdersStatus.PARTIALLY_SHIPPED
+                : SalesOrdersStatus.COMPLETED);
 
         salesOrdersRepository.save(salesOrder);
     }
@@ -530,10 +554,10 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
     }
 
-    private void syncTransitLocationUsedCapacity(String locationId, List<OutboundShipmentsStatus> statuses) {
-        BigDecimal expected = outboundShipmentLinesRepository
-                .sumQuantityByLocationIdAndShipmentStatuses(locationId, statuses);
-        locationRepository.forceUpdateUsedCapacity(locationId, expected == null ? BigDecimal.ZERO : expected);
+    private void syncLocationUsedCapacity(String locationId) {
+        BigDecimal actualQuantity = inventoryRepository.sumTotalQuantityByLocationId(locationId);
+        locationRepository.forceUpdateUsedCapacity(locationId,
+                actualQuantity == null ? BigDecimal.ZERO : actualQuantity);
     }
 
     private void moveAndUpdateCapacity(

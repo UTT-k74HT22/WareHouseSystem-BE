@@ -5,6 +5,7 @@ import lombok.*;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * Entity representing outbound shipments in the warehouse management system.
@@ -29,6 +30,9 @@ public class OutboundShipments extends BaseEntity {
 
     @Column(name = "shipment_date", nullable = false)
     private LocalDate shipmentDate;
+
+    @Column(name = "shipment_time")
+    private LocalTime shipmentTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

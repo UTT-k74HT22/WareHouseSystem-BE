@@ -1,6 +1,7 @@
 package org.demo.whs.entity.dto.response.Inventory;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,7 @@ public class CheckAvailabilityResponse {
     private String locationId;
     private BigDecimal requestedQuantity;
     private BigDecimal availableQuantity;
+    @JsonProperty("is_available")
     private boolean isAvailable;
     private String message;
 }

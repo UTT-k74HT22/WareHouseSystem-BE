@@ -21,6 +21,8 @@ public class SalesOrderLinesResponse {
     private String id;
     private String salesOrderId;
     private String productId;
+    private String productName;
+    private String productSku;
     private Integer lineNumber;
     private BigDecimal quantityOrdered;
     private BigDecimal quantityShipped;

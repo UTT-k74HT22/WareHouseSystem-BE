@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -26,6 +27,8 @@ public class OutboundShipmentsRequest {
 
     @NotNull(message = "Shipment date is required")
     private LocalDate shipmentDate;
+
+    private LocalTime shipmentTime;
 
     @Size(max = 100, message = "Carrier must not exceed 100 characters")
     private String carrier;
