@@ -288,6 +288,7 @@ class SalesOrdersServiceImplTest {
 
         when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
         when(salesOrderLinesRepository.findAllBySalesOrderIdForUpdate("so-1")).thenReturn(List.of(line));
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(buildProduct("prod-1", ProductStatus.ACTIVE)));
         when(inventoryService.reserve(any(InventoryReserveRequest.class))).thenReturn(
                 InventoryReserveResponse.builder().inventoryId("inv-1").status("RESERVED").build()
         );
@@ -306,6 +307,22 @@ class SalesOrdersServiceImplTest {
         assertThat(so.getStatus()).isEqualTo(SalesOrdersStatus.CONFIRMED);
         assertThat(so.getConfirmedBy()).isEqualTo(ACTOR_ID);
         verify(inventoryService).reserve(any(InventoryReserveRequest.class));
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_ConfirmingOrderWithInactiveProduct")
+    void should_ThrowBadRequest_When_ConfirmingOrderWithInactiveProduct() {
+        SalesOrders so = buildSalesOrder("so-1", "SO-001", SalesOrdersStatus.DRAFT);
+        SalesOrderLines line = buildSalesOrderLine("line-1", "so-1", 1, "5.00", "100.00", "500.00");
+
+        when(salesOrdersRepository.findByIdForUpdate("so-1")).thenReturn(Optional.of(so));
+        when(salesOrderLinesRepository.findAllBySalesOrderIdForUpdate("so-1")).thenReturn(List.of(line));
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(buildProduct("prod-1", ProductStatus.INACTIVE)));
+
+        assertThatThrownBy(() -> service.confirm("so-1"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Product is not active");
+        verify(inventoryService, never()).reserve(any(InventoryReserveRequest.class));
     }
 
     @Test

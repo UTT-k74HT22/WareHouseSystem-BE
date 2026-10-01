@@ -10,6 +10,7 @@ import org.demo.whs.entity.dto.request.OutboundShipments.UpdateOutboundShipments
 import org.demo.whs.entity.dto.response.OutboundShipments.OutboundShipmentsResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.enums.LocationType;
+import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.exception.ConflictException;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -48,6 +49,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
     private final OutboundShipmentLinesRepository outboundShipmentLinesRepository;
     private final SalesOrdersRepository salesOrdersRepository;
     private final SalesOrderLinesRepository salesOrderLinesRepository;
+    private final ProductRepository productRepository;
     private final WareHouseRepository wareHouseRepository;
     private final AccountRepository accountRepository;
     private final InventoryService inventoryService;
@@ -164,6 +166,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         if (lines.isEmpty()) {
             throw new BadRequestException("Shipment must have at least one line to start picking", ErrorCode.COM_001);
         }
+        validateProductsActive(lines);
 
         Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
         String actorId = getCurrentActorId();
@@ -235,6 +238,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
 
         List<OutboundShipmentLines> lines = outboundShipmentLinesRepository.findByOutboundShipmentId(id);
+        validateProductsActive(lines);
         Locations pickingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PICKING);
         Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
         lines.stream()
@@ -290,6 +294,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         if (lines.isEmpty()) {
             throw new BadRequestException("Shipment must have at least one line to ship", ErrorCode.COM_001);
         }
+        validateProductsActive(lines);
 
         Locations packingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.PACKING);
         Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
@@ -347,6 +352,7 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         if (lines.isEmpty()) {
             throw new BadRequestException("Shipment must have at least one line to confirm dispatch", ErrorCode.COM_001);
         }
+        validateProductsActive(lines);
 
         Locations stagingLoc = locationService.resolveLocationByType(shipment.getWarehouseId(), LocationType.STAGING);
         String actorId = getCurrentActorId();
@@ -547,6 +553,16 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
                 : SalesOrdersStatus.COMPLETED);
 
         salesOrdersRepository.save(salesOrder);
+    }
+
+    private void validateProductsActive(List<OutboundShipmentLines> lines) {
+        for (String productId : lines.stream().map(OutboundShipmentLines::getProductId).distinct().toList()) {
+            Products product = productRepository.findById(productId)
+                    .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.PROD_001));
+            if (product.getStatus() != ProductStatus.ACTIVE) {
+                throw new BadRequestException("Product is not active", ErrorCode.PROD_003);
+            }
+        }
     }
 
     private void validateIntegerQuantity(BigDecimal quantity) {

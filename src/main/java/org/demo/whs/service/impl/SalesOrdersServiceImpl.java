@@ -216,6 +216,7 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
 
         // Step 0: Pre-validate quantities to fail fast
         for (SalesOrderLines line : lines) {
+            validateProduct(line.getProductId());
             if (line.getQuantityOrdered() == null || line.getQuantityOrdered().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BadRequestException(
                     String.format("Invalid quantity for product %s. Quantity must be greater than zero.", line.getProductId()),
@@ -322,10 +323,10 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
 
     private void validateProduct(String productId) {
         Products product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.COM_001));
+                .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.PROD_001));
 
         if (product.getStatus() != ProductStatus.ACTIVE) {
-            throw new BadRequestException("Product is not active", ErrorCode.COM_001);
+            throw new BadRequestException("Product is not active", ErrorCode.PROD_003);
         }
     }
 

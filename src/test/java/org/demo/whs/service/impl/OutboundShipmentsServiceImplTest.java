@@ -62,6 +62,7 @@ class OutboundShipmentsServiceImplTest {
     @Mock private OutboundShipmentLinesRepository outboundShipmentLinesRepository;
     @Mock private SalesOrdersRepository salesOrdersRepository;
     @Mock private SalesOrderLinesRepository salesOrderLinesRepository;
+    @Mock private ProductRepository productRepository;
     @Mock private WareHouseRepository wareHouseRepository;
     @Mock private AccountRepository accountRepository;
     @Mock private InventoryService inventoryService;
@@ -82,6 +83,7 @@ class OutboundShipmentsServiceImplTest {
                 outboundShipmentLinesRepository,
                 salesOrdersRepository,
                 salesOrderLinesRepository,
+                productRepository,
                 wareHouseRepository,
                 accountRepository,
                 inventoryService,
@@ -98,7 +100,10 @@ class OutboundShipmentsServiceImplTest {
         );
         Account account = Account.builder().username(USERNAME).password("secret").status(AccountStatus.ACTIVE).build();
         account.setId(ACTOR_ID);
+        Products product = Products.builder().sku("SKU-001").name("Product A").status(ProductStatus.ACTIVE).build();
+        product.setId("prod-1");
         lenient().when(accountRepository.findByUsername(USERNAME)).thenReturn(Optional.of(account));
+        lenient().when(productRepository.findById("prod-1")).thenReturn(Optional.of(product));
     }
 
     @AfterEach
@@ -434,6 +439,23 @@ class OutboundShipmentsServiceImplTest {
         assertThatThrownBy(() -> service.startPicking(SHIPMENT_ID))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("at least one line");
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_StartPickingWithInactiveProduct")
+    void should_ThrowBadRequest_When_StartPickingWithInactiveProduct() {
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, "SHIP-001", OutboundShipmentsStatus.DRAFT);
+        OutboundShipmentLines line = buildShipmentLine("line-1", SHIPMENT_ID);
+        Products inactiveProduct = Products.builder().sku("SKU-001").name("Product A").status(ProductStatus.INACTIVE).build();
+        inactiveProduct.setId("prod-1");
+
+        when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+        when(outboundShipmentLinesRepository.findByOutboundShipmentId(SHIPMENT_ID)).thenReturn(List.of(line));
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(inactiveProduct));
+
+        assertThatThrownBy(() -> service.startPicking(SHIPMENT_ID))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Product is not active");
     }
 
     @Test
