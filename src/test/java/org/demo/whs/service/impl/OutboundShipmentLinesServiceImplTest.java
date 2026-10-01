@@ -76,7 +76,9 @@ class OutboundShipmentLinesServiceImplTest {
         );
         Account account = Account.builder().username(USERNAME).password("secret").status(AccountStatus.ACTIVE).build();
         account.setId(ACTOR_ID);
+        Products product = buildProduct(PRODUCT_ID);
         lenient().when(accountRepository.findByUsername(USERNAME)).thenReturn(Optional.of(account));
+        lenient().when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
     }
 
     @AfterEach
@@ -129,6 +131,31 @@ class OutboundShipmentLinesServiceImplTest {
         assertThat(result.getId()).isEqualTo(LINE_ID);
         assertThat(result.getOutboundShipmentId()).isEqualTo(SHIPMENT_ID);
         verify(outboundShipmentLinesRepository).save(any(OutboundShipmentLines.class));
+    }
+
+    @Test
+    @DisplayName("should_ThrowBadRequest_When_CreatingLineForInactiveProduct")
+    void should_ThrowBadRequest_When_CreatingLineForInactiveProduct() {
+        OutboundShipmentLinesRequest request = OutboundShipmentLinesRequest.builder()
+                .outboundShipmentId(SHIPMENT_ID)
+                .salesOrderLineId(SALES_ORDER_LINE_ID)
+                .productId(PRODUCT_ID)
+                .quantityShipped(new BigDecimal("5.00"))
+                .build();
+        OutboundShipments shipment = buildShipment(SHIPMENT_ID, OutboundShipmentsStatus.DRAFT);
+        SalesOrderLines salesOrderLine = buildSalesOrderLine(SALES_ORDER_LINE_ID, PRODUCT_ID, "10.00", "0.00");
+        Products inactiveProduct = buildProduct(PRODUCT_ID);
+        inactiveProduct.setStatus(ProductStatus.INACTIVE);
+
+        when(outboundShipmentsRepository.findByIdWithLock(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+        when(salesOrderLinesRepository.findById(SALES_ORDER_LINE_ID)).thenReturn(Optional.of(salesOrderLine));
+        when(outboundShipmentLinesRepository.existsByDuplicateDimension(SHIPMENT_ID, SALES_ORDER_LINE_ID, null, null, null)).thenReturn(false);
+        when(outboundShipmentLinesRepository.sumShippedForSoLine(SHIPMENT_ID, SALES_ORDER_LINE_ID)).thenReturn(BigDecimal.ZERO);
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(inactiveProduct));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Product is not active");
     }
 
     @Test

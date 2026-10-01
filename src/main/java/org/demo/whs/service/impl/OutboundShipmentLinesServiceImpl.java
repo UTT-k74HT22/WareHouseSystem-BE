@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.request.OutboundShipmentLines.OutboundShipmentLin
 import org.demo.whs.entity.dto.request.OutboundShipmentLines.UpdateOutboundShipmentLinesRequest;
 import org.demo.whs.entity.dto.response.OutboundShipmentLines.OutboundShipmentLinesResponse;
 import org.demo.whs.entity.enums.OutboundShipmentsStatus;
+import org.demo.whs.entity.enums.ProductStatus;
 import org.demo.whs.exception.BadRequestException;
 import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
@@ -90,7 +91,8 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
 
         // 3. Validate Product
         Products product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.COM_001));
+                .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.PROD_001));
+        validateProductStatus(product);
 
         // 4. Validate Location (Optional)
         Locations location = null;
@@ -200,6 +202,10 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             throw new BadRequestException("Only DRAFT shipments can have lines updated", ErrorCode.COM_001);
         }
 
+        Products product = productRepository.findById(line.getProductId())
+                .orElseThrow(() -> new NotFoundException("Product not found", ErrorCode.PROD_001));
+        validateProductStatus(product);
+
         if (request.getQuantityShipped() != null) {
             SalesOrderLines soLine = salesOrderLinesRepository.findById(line.getSalesOrderLineId())
                     .orElseThrow(() -> new NotFoundException("Sales order line not found", ErrorCode.COM_001));
@@ -248,9 +254,9 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         OutboundShipmentLines updatedLine = outboundShipmentLinesRepository.save(line);
         
         OutboundShipmentLinesResponse response = outboundShipmentLinesMapper.toResponse(updatedLine);
-        Products product = productRepository.findById(line.getProductId()).orElse(null);
+        Products responseProduct = productRepository.findById(line.getProductId()).orElse(null);
         Locations location = locationRepository.findById(line.getLocationId()).orElse(null);
-        enrichResponse(response, product, location, line.getBatchId());
+        enrichResponse(response, responseProduct, location, line.getBatchId());
         
         return response;
     }
@@ -274,6 +280,12 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
     private OutboundShipmentLines findById(String id) {
         return outboundShipmentLinesRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Outbound shipment line not found", ErrorCode.COM_001));
+    }
+
+    private void validateProductStatus(Products product) {
+        if (product.getStatus() != ProductStatus.ACTIVE) {
+            throw new BadRequestException("Product is not active", ErrorCode.PROD_003);
+        }
     }
 
     private String getCurrentActorId() {
