@@ -76,6 +76,9 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
             throw new BadRequestException("This item pick already exists in this shipment. Please update the existing line instead.", ErrorCode.COM_001);
         }
 
+        if (request.getQuantityShipped() == null || request.getQuantityShipped().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         // Validate total quantity against Sales Order Line
         BigDecimal currentShipmentQuantity = outboundShipmentLinesRepository.sumShippedForSoLine(
                 request.getOutboundShipmentId(),
@@ -83,7 +86,8 @@ public class OutboundShipmentLinesServiceImpl implements OutboundShipmentLinesSe
         );
         currentShipmentQuantity = currentShipmentQuantity == null ? BigDecimal.ZERO : currentShipmentQuantity;
 
-        BigDecimal totalPlanned = soLine.getQuantityShipped().add(currentShipmentQuantity).add(request.getQuantityShipped());
+        BigDecimal shippedBefore = soLine.getQuantityShipped() == null ? BigDecimal.ZERO : soLine.getQuantityShipped();
+        BigDecimal totalPlanned = shippedBefore.add(currentShipmentQuantity).add(request.getQuantityShipped());
         if (totalPlanned.compareTo(soLine.getQuantityOrdered()) > 0) {
             throw new BadRequestException("Total planned shipment quantity exceeds ordered quantity for this line", ErrorCode.COM_001);
         }

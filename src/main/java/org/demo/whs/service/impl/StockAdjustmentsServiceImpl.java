@@ -61,6 +61,10 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
         String actorId = getCurrentActorId();
         List<String> roles = roleRepository.findRoleNamesByAccountId(actorId);
 
+        if (request == null || request.getInventoryId() == null || request.getInventoryId().isBlank()
+                || request.getQuantityAfter() == null) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         //Step 2: Retrieve inventory with pessimistic lock to ensure data integrity during adjustment
         Inventory inventory = getInventoryForUpdate(request.getInventoryId());
 
@@ -71,7 +75,9 @@ public class StockAdjustmentsServiceImpl implements StockAdjustmentsService {
             validateWarehouseOwnership(inventory.getWarehouseId());
         }
 
-        BigDecimal quantityBefore = inventory.getOnHandQuantity();
+        BigDecimal quantityBefore = inventory.getOnHandQuantity() == null
+                ? BigDecimal.ZERO
+                : inventory.getOnHandQuantity();
         BigDecimal quantityAfter = request.getQuantityAfter();
         BigDecimal adjustmentQuantity = quantityAfter.subtract(quantityBefore);
 

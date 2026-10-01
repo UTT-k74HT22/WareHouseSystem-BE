@@ -122,7 +122,7 @@ public class BatchServiceImpl implements BatchService {
         }
         if (request.getManufacturingDate() != null
                 && request.getExpiryDate() != null
-                && request.getExpiryDate().isBefore(request.getManufacturingDate())) {
+                && !request.getExpiryDate().isAfter(request.getManufacturingDate())) {
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
         Account currentUser = getCurrentUser();
@@ -176,7 +176,7 @@ public class BatchServiceImpl implements BatchService {
         if (manufacturingDate != null && manufacturingDate.isAfter(LocalDate.now())) {
             throw new BadRequestException(ErrorCode.BATCH_005);
         }
-        if (expiryDate != null && manufacturingDate != null && expiryDate.isBefore(manufacturingDate)) {
+        if (expiryDate != null && manufacturingDate != null && !expiryDate.isAfter(manufacturingDate)) {
             throw new BadRequestException(ErrorCode.BATCH_006);
         }
         batchMapper.updateEntity(request, batch);

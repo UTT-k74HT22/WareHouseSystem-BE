@@ -88,6 +88,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         validateRequest(request, employeeCode);
 
         // 2. Validate roles exist (deduplicated, order-preserving)
+        if (request == null || request.getRoles() == null) {
+            throw new BadRequestException("At least one role is required", ErrorCode.ROLE_001);
+        }
         List<String> requestedRoleNames = request.getRoles().stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -189,6 +190,27 @@ public class GlobalExceptionHandle {
         log.warn("Optimistic locking conflict: entity={}", ex.getPersistentClassName());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(BaseResponse.error(ErrorCode.COM_009.getCode(), ErrorCode.COM_009.getMessage(), null));
+    }
+
+    @ExceptionHandler({
+            NullPointerException.class,
+            java.util.NoSuchElementException.class,
+            IllegalArgumentException.class,
+            IllegalStateException.class,
+            ArithmeticException.class,
+            java.time.format.DateTimeParseException.class
+    })
+    public ResponseEntity<BaseResponse<Void>> handleBadRequestRuntime(RuntimeException ex) {
+        log.warn("Bad request runtime: {}: {}", ex.getClass().getSimpleName(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), ErrorCode.COM_001.getMessage(), null));
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<BaseResponse<Void>> handleInvalidDataAccess(InvalidDataAccessApiUsageException ex) {
+        log.warn("Invalid data access: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(ErrorCode.COM_001.getCode(), ErrorCode.COM_001.getMessage(), null));
     }
 
     /**

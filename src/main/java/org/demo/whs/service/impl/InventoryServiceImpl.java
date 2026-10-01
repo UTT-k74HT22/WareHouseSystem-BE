@@ -167,6 +167,12 @@ public class InventoryServiceImpl implements InventoryService {
 
         log.info("Checking inventory availability for request: {}", request);
 
+        if (request == null || request.getProductId() == null || request.getProductId().isBlank()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         // 1. Validate product
         productRepository.findById(request.getProductId()).orElseThrow(() -> new NotFoundException(PROD_001));
 
@@ -200,7 +206,12 @@ public class InventoryServiceImpl implements InventoryService {
         } else {
             CheckAvailabilityResponse availability = inventoryRepository.getAvailability(
                     request.getProductId(), request.getWarehouseId(), request.getLocationId());
-            availableQuantity = availability.getAvailableQuantity();
+            availableQuantity = availability == null || availability.getAvailableQuantity() == null
+                    ? BigDecimal.ZERO
+                    : availability.getAvailableQuantity();
+        }
+        if (availableQuantity == null) {
+            availableQuantity = BigDecimal.ZERO;
         }
         boolean isAvailable = availableQuantity.compareTo(request.getQuantity()) >= 0;
 
@@ -252,13 +263,18 @@ public class InventoryServiceImpl implements InventoryService {
                         request.getQuantity()
                 ).orElseThrow(() -> buildStorageAvailabilityException(orderLine.getProductId(), request));
 
-                BigDecimal availableBefore = inventory.getAvailableQuantity();
+                BigDecimal availableBefore = inventory.getAvailableQuantity() == null
+                        ? BigDecimal.ZERO
+                        : inventory.getAvailableQuantity();
 
-                if (inventory.getAvailableQuantity().compareTo(request.getQuantity()) < 0) {
+                if (availableBefore.compareTo(request.getQuantity()) < 0) {
                     throw new ConflictException(ErrorCode.INV_004);
                 }
 
-                inventory.setReservedQuantity(inventory.getReservedQuantity().add(request.getQuantity()));
+                BigDecimal reservedBefore = inventory.getReservedQuantity() == null
+                        ? BigDecimal.ZERO
+                        : inventory.getReservedQuantity();
+                inventory.setReservedQuantity(reservedBefore.add(request.getQuantity()));
                 inventory.setLastMovementAt(LocalDateTime.now());
                 inventoryRepository.save(inventory);
 
@@ -296,6 +312,12 @@ public class InventoryServiceImpl implements InventoryService {
                 request.getWarehouseId(),
                 LocationType.PICKING
         );
+        if (storageAvailable == null) {
+            storageAvailable = BigDecimal.ZERO;
+        }
+        if (pickingAvailable == null) {
+            pickingAvailable = BigDecimal.ZERO;
+        }
 
         String message = String.format(
                 "%s (%s) cần %s, nhưng tồn khả dụng tại khu STORAGE chỉ có %s.%s",

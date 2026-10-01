@@ -80,16 +80,22 @@ public class SalesOrdersServiceImpl implements SalesOrdersService {
         SalesOrders savedSO = salesOrdersRepository.save(salesOrder);
 
         // Step 4: Create lines and compute totals
+        if (request.getLines() == null || request.getLines().isEmpty()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         BigDecimal subTotal = BigDecimal.ZERO;
         List<SalesOrderLines> lines = request.getLines().stream().map(lineRequest -> {
             validateProduct(lineRequest.getProductId());
-            
+
             // Validation: Quantity must be positive
             if (lineRequest.getQuantityOrdered() == null || lineRequest.getQuantityOrdered().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BadRequestException(
                     String.format("Invalid quantity for product %s. Quantity must be greater than zero.", lineRequest.getProductId()),
                     ErrorCode.COM_001
                 );
+            }
+            if (lineRequest.getUnitPrice() == null || lineRequest.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
+                throw new BadRequestException(ErrorCode.COM_001);
             }
 
             SalesOrderLines line = salesOrderLinesMapper.toEntity(lineRequest);

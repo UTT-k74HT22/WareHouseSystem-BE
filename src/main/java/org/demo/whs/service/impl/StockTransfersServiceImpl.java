@@ -260,9 +260,15 @@ public class StockTransfersServiceImpl implements StockTransfersService {
     }
 
     private void validateTransferRequest(StockTransfersRequest request, String actorId) {
+        if (request == null || request.getWarehouseId() == null || request.getWarehouseId().isBlank()
+                || request.getProductId() == null || request.getProductId().isBlank()
+                || request.getFromLocationId() == null || request.getFromLocationId().isBlank()
+                || request.getToLocationId() == null || request.getToLocationId().isBlank()) {
+            throw new BadRequestException(ErrorCode.COM_001);
+        }
         validateWarehouseAccess(actorId, request.getWarehouseId());
 
-        if (request.getFromLocationId().equals(request.getToLocationId())) {
+        if (java.util.Objects.equals(request.getFromLocationId(), request.getToLocationId())) {
             throw new BadRequestException("Source and destination locations must be different", ErrorCode.STF_002);
         }
 
