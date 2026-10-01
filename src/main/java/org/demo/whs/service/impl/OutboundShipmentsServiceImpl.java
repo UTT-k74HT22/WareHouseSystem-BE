@@ -72,7 +72,8 @@ public class OutboundShipmentsServiceImpl implements OutboundShipmentsService {
         }
 
         // Validate Warehouse
-        if (!salesOrder.getWarehouseId().equals(request.getWarehouseId())) {
+        if (request.getWarehouseId() == null || request.getWarehouseId().isBlank()
+                || !java.util.Objects.equals(salesOrder.getWarehouseId(), request.getWarehouseId())) {
             throw new BadRequestException("Shipment warehouse must match Sales Order warehouse", ErrorCode.COM_001);
         }
         validateWarehouse(request.getWarehouseId());
