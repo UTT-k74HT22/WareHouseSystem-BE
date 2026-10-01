@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 import org.demo.whs.repository.custom.InventoryRepositoryCustom;
@@ -168,6 +169,50 @@ public class InventoryRepositoryCustomImpl implements InventoryRepositoryCustom 
         query.setParameter("warehouseId", filter.getWarehouseId());
         query.setParameter("locationId", filter.getLocationId());
         query.setParameter("batchId", filter.getBatchId());
+
+        return query.getResultList();
+    }
+
+    /**
+     * Aggregate stock per (warehouse, product). Only products that have
+     * inventory records are returned (INNER JOIN).
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<InventoryByProductResponse> getStockByProduct(InventoryFilterRequest filter) {
+
+        Query query = entityManager.createNativeQuery(
+                """
+                SELECT
+                    w.id AS warehouseId,
+                    w.name AS warehouseName,
+                    p.id AS productId,
+                    p.sku AS productSku,
+                    p.name AS productName,
+                    COALESCE(SUM(i.on_hand_quantity),0) AS totalOnHandQuantity,
+                    COALESCE(SUM(i.quarantine_quantity),0) AS totalQuarantineQuantity,
+                    COALESCE(SUM(i.reserved_quantity),0) AS totalReservedQuantity,
+                    COUNT(DISTINCT i.location_id) AS locationCount
+                FROM inventory i
+                JOIN products p ON p.id = i.product_id
+                JOIN warehouses w ON w.id = i.warehouse_id
+                LEFT JOIN batches b ON b.id = i.batch_id
+                WHERE (:productId IS NULL OR p.id = :productId)
+                AND (:warehouseId IS NULL OR w.id = :warehouseId)
+                AND (:batchId IS NULL OR b.id = :batchId)
+                AND (:productSku IS NULL OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :productSku, '%')))
+                AND (:productName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :productName, '%')))
+                GROUP BY w.id, w.name, p.id, p.sku, p.name
+                ORDER BY p.name
+                """,
+                "InventoryByProductResponseMapping"
+        );
+
+        query.setParameter("productId", filter.getProductId());
+        query.setParameter("warehouseId", filter.getWarehouseId());
+        query.setParameter("batchId", filter.getBatchId());
+        query.setParameter("productSku", filter.getProductSku());
+        query.setParameter("productName", filter.getProductName());
 
         return query.getResultList();
     }

@@ -112,6 +112,7 @@ public class StockMovementsMapper {
                 .productId(entity.getProductId())
                 .warehouseId(entity.getWarehouseId())
                 .locationId(entity.getLocationId())
+                .toLocationId(entity.getToLocationId())
                 .batchId(entity.getBatchId())
                 .quantityChange(entity.getQuantityChange())
                 .quantityBefore(entity.getQuantityBefore())

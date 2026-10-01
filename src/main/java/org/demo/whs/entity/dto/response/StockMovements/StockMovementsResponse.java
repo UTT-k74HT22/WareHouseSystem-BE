@@ -19,6 +19,7 @@ public class StockMovementsResponse {
     private String productId;
     private String warehouseId;
     private String locationId;
+    private String toLocationId;
     private String batchId;
     private BigDecimal quantityChange;
     private BigDecimal quantityBefore;

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.demo.whs.entity.StockMovements;
 import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
+import org.demo.whs.entity.dto.request.StockMovements.SearchStockMovementsRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -13,6 +14,7 @@ import org.demo.whs.exception.ErrorCode;
 import org.demo.whs.exception.NotFoundException;
 import org.demo.whs.mapper.StockMovementsMapper;
 import org.demo.whs.repository.StockMovementsRepository;
+import org.demo.whs.repository.specification.StockMovementsSpecification;
 import org.demo.whs.security.SecurityUtils;
 import org.demo.whs.service.StockMovementsService;
 import org.springframework.data.domain.Page;
@@ -47,8 +49,15 @@ public class StockMovementsServiceImpl implements StockMovementsService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<StockMovementsResponse> getAll(Integer page, Integer size) {
+        return search(new SearchStockMovementsRequest(), page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<StockMovementsResponse> search(SearchStockMovementsRequest filter, Integer page, Integer size) {
         Pageable pageable = buildPageable(page, size);
-        Page<StockMovements> movementPage = stockMovementsRepository.findAll(pageable);
+        Page<StockMovements> movementPage = stockMovementsRepository.findAll(
+                StockMovementsSpecification.withFilter(filter), pageable);
         List<StockMovementsResponse> content = movementPage.getContent().stream()
                 .map(stockMovementsMapper::toResponse)
                 .toList();

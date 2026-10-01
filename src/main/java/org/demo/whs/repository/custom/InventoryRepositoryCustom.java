@@ -2,6 +2,7 @@ package org.demo.whs.repository.custom;
 
 import org.demo.whs.entity.dto.request.Inventory.InventoryFilterRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
 
@@ -33,4 +34,13 @@ public interface InventoryRepositoryCustom {
     );
 
     List<InventoryLocationProjection> getInventoryByLocation(InventoryFilterRequest filter);
+
+    /**
+     * Aggregate stock per (warehouse, product).
+     * Only products that have inventory records are returned.
+     *
+     * @param filter the inventory filter criteria
+     * @return aggregate rows ordered by product name
+     */
+    List<InventoryByProductResponse> getStockByProduct(InventoryFilterRequest filter);
 }
