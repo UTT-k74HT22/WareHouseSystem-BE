@@ -74,6 +74,24 @@ import java.time.LocalDateTime;
                                 @ColumnResult(name = "totalReservedQuantity", type = BigDecimal.class)
                         }
                 )
+        ),
+
+        @SqlResultSetMapping(
+                name = "InventoryByProductResponseMapping",
+                classes = @ConstructorResult(
+                        targetClass = org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse.class,
+                        columns = {
+                                @ColumnResult(name = "warehouseId", type = String.class),
+                                @ColumnResult(name = "warehouseName", type = String.class),
+                                @ColumnResult(name = "productId", type = String.class),
+                                @ColumnResult(name = "productSku", type = String.class),
+                                @ColumnResult(name = "productName", type = String.class),
+                                @ColumnResult(name = "totalOnHandQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "totalQuarantineQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "totalReservedQuantity", type = BigDecimal.class),
+                                @ColumnResult(name = "locationCount", type = Long.class)
+                        }
+                )
         )
 })
 @Getter

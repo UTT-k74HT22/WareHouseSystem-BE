@@ -112,7 +112,7 @@ class StockMovementsServiceImplTest {
             StockMovementsResponse response = StockMovementsResponse.builder().movementType(StockMovementsType.INBOUND).build();
             Page<StockMovements> page = new PageImpl<>(List.of(movement));
 
-            when(stockMovementsRepository.findAll(any(Pageable.class))).thenReturn(page);
+            when(stockMovementsRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class))).thenReturn(page);
             when(stockMovementsMapper.toResponse(movement)).thenReturn(response);
 
             // Act
@@ -122,7 +122,7 @@ class StockMovementsServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().get(0)).isEqualTo(response);
-            verify(stockMovementsRepository).findAll(any(Pageable.class));
+            verify(stockMovementsRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
         }
 
         @Test

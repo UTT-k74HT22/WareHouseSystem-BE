@@ -7,6 +7,7 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -53,6 +54,14 @@ public interface InventoryService {
      * @return List<InventoryByLocationResponse>
      */
     List<InventoryByLocationResponse> getInventoryByLocation(InventoryFilterRequest filter);
+
+    /**
+      * Get aggregate stock per (warehouse, product).
+      * Only products that have inventory records are returned.
+      * @param filter InventoryFilterRequest
+      * @return List<InventoryByProductResponse>
+      */
+    List<InventoryByProductResponse> getStockByProduct(InventoryFilterRequest filter);
 
     /**
      * Check if requested quantity is available for a product.

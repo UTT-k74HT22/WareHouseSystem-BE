@@ -5,6 +5,7 @@ import org.demo.whs.entity.enums.ReferenceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,7 +14,8 @@ import java.util.List;
  * Repository interface for StockMovements entity.
  */
 @Repository
-public interface StockMovementsRepository extends JpaRepository<StockMovements, String> {
+public interface StockMovementsRepository extends JpaRepository<StockMovements, String>,
+        JpaSpecificationExecutor<StockMovements> {
 
     Page<StockMovements> findByReferenceTypeAndReferenceId(
             ReferenceType referenceType,

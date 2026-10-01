@@ -3,6 +3,7 @@ package org.demo.whs.service;
 import org.demo.whs.entity.Inventory;
 import org.demo.whs.entity.StockMovements;
 import org.demo.whs.entity.dto.request.Inventory.InventoryMutationRequest;
+import org.demo.whs.entity.dto.request.StockMovements.SearchStockMovementsRequest;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
 import org.demo.whs.entity.enums.ReferenceType;
@@ -30,6 +31,17 @@ public interface StockMovementsService {
      * @return a paginated response containing the list of stock movements
      */
     PageResponse<StockMovementsResponse> getAll(Integer page, Integer size);
+
+    /**
+     * Retrieves a paginated list of stock movements matching the given traceability filter.
+     * Used by the inventory history view (per product / warehouse / location / batch).
+     *
+      * @param filter the search filter (all fields optional)
+      * @param page   the page number to retrieve
+      * @param size   the number of items per page
+      * @return a paginated response containing the matching stock movements
+      */
+    PageResponse<StockMovementsResponse> search(SearchStockMovementsRequest filter, Integer page, Integer size);
 
     /**
      * Retrieves a paginated list of stock movements based on a reference type and reference ID.

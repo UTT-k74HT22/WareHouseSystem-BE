@@ -2,6 +2,7 @@ package org.demo.whs.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.demo.whs.entity.dto.request.StockMovements.SearchStockMovementsRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.PageResponse;
 import org.demo.whs.entity.dto.response.StockMovements.StockMovementsResponse;
@@ -42,18 +43,21 @@ public class StockMovementsController {
     }
 
     /**
-     * Endpoint to retrieve all stock movements with pagination.
-     *
-     * @param page the page number to retrieve (default is 0)
-     * @param size the number of items per page (default is 20)
-     * @return a response entity containing a paginated list of stock movement responses
-     */
+      * Endpoint to retrieve all stock movements with pagination and optional traceability filters.
+      * Used by the inventory history view (filter by product / warehouse / location / batch).
+      *
+      * @param filter the search filter (all fields optional, bound from query params)
+      * @param page   the page number to retrieve (default is 0)
+      * @param size   the number of items per page (default is 20)
+      * @return a response entity containing a paginated list of stock movement responses
+      */
     @GetMapping
     @PreAuthorize("hasAuthority('PERM_STOCK_MOVEMENT_READ')")
     public ResponseEntity<BaseResponse<PageResponse<StockMovementsResponse>>> getMovements(
+            SearchStockMovementsRequest filter,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
-        PageResponse<StockMovementsResponse> response = stockMovementsService.getAll(page, size);
+        PageResponse<StockMovementsResponse> response = stockMovementsService.search(filter, page, size);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

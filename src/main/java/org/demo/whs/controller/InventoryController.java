@@ -12,6 +12,7 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.BaseResponse;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventorySummaryResponse;
@@ -82,6 +83,21 @@ public class InventoryController {
     public ResponseEntity<BaseResponse<List<InventoryByLocationResponse>>> getInventoryByLocation(
             InventoryFilterRequest filter) {
         return ResponseEntity.ok(BaseResponse.success(inventoryService.getInventoryByLocation(filter)));
+    }
+
+    /**
+      * Get aggregate stock per (warehouse, product).
+      * Only products that have inventory records are returned.
+      *
+      * @param filter Inventory filter criteria
+      * @return List of aggregate stock rows
+      */
+    @GetMapping("/by-product")
+    @Operation(summary = "Get stock by product", description = "Get aggregate stock grouped by warehouse and product")
+    @PreAuthorize("hasAuthority('PERM_INVENTORY_READ')")
+    public ResponseEntity<BaseResponse<List<InventoryByProductResponse>>> getStockByProduct(
+            InventoryFilterRequest filter) {
+        return ResponseEntity.ok(BaseResponse.success(inventoryService.getStockByProduct(filter)));
     }
 
     /**

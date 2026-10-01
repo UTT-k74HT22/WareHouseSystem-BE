@@ -10,6 +10,7 @@ import org.demo.whs.entity.dto.request.Inventory.InventoryReserveRequest;
 import org.demo.whs.entity.dto.request.Inventory.InventoryUnreserveRequest;
 import org.demo.whs.entity.dto.response.Inventory.CheckAvailabilityResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryByLocationResponse;
+import org.demo.whs.entity.dto.response.Inventory.InventoryByProductResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryLocationProjection;
 import org.demo.whs.entity.dto.response.Inventory.InventoryReserveResponse;
 import org.demo.whs.entity.dto.response.Inventory.InventoryResponse;
@@ -136,6 +137,14 @@ public class InventoryServiceImpl implements InventoryService {
 
         return inventoryRepository.getSummaryByProductIdAndWarehouseId(productId, warehouseId)
                 .orElseThrow(() -> new NotFoundException(PROD_001));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryByProductResponse> getStockByProduct(
+            InventoryFilterRequest filter) {
+        log.info("Getting stock grouped by product for filters: {}", filter);
+        return inventoryRepository.getStockByProduct(filter);
     }
 
     @Override
